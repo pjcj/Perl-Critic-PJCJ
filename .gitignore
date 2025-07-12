@@ -1,0 +1,17 @@
+# Dist::Zilla build directories
+.build/
+*.tar.gz
+
+# Perl temporary files
+*.bak
+*.old
+*~
+.#*
+
+# IDE files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
