@@ -24,7 +24,7 @@ sub violates {
 
     # Get the string content without the surrounding quotes
     my $string = $elem->string;
-    
+
     # Check if this is a "simple" string - no double quotes or @ symbols
     if ( $self->_is_simple_string($string) ) {
         return $self->violation( $DESC, $EXPL, $elem );
@@ -35,7 +35,7 @@ sub violates {
 
 sub _is_simple_string {
     my ( $self, $string ) = @_;
-    
+
     # Simple strings contain no double quotes or @ symbols
     return index($string, '"') == -1 && index($string, '@') == -1;
 }
@@ -56,12 +56,12 @@ This Policy is part of the Perl::Critic::Strings distribution.
 
 =head1 DESCRIPTION
 
-This policy requires that "simple" strings use double quotes rather than single quotes. 
-A simple string is one that contains no double quote characters (") and no at-sign (@) 
+This policy requires that "simple" strings use double quotes rather than single quotes.
+A simple string is one that contains no double quote characters (") and no at-sign (@)
 characters.
 
-The rationale is that double quotes are the "normal" case in Perl, and single quotes 
-should be reserved for cases where they are specifically needed to avoid interpolation 
+The rationale is that double quotes are the "normal" case in Perl, and single quotes
+should be reserved for cases where they are specifically needed to avoid interpolation
 or escaping.
 
 =head1 CONFIGURATION
@@ -79,9 +79,9 @@ Bad:
 Good:
 
     my $greeting = "hello";        # simple string with double quotes
-    my $name = "world";            # simple string with double quotes  
+    my $name = "world";            # simple string with double quotes
     my $message = "hello world";   # simple string with double quotes
-    
+
     # These are acceptable with single quotes because they're not "simple"
     my $email = 'user@domain.com';      # contains @, so single quotes OK
     my $quoted = 'He said "hello"';     # contains ", so single quotes OK

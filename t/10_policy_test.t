@@ -18,22 +18,22 @@ use PPI;
 
 sub test_code {
     my ($code, $expected_violations, $description) = @_;
-    
+
     my $doc = PPI::Document->new(\$code);
     my @violations;
-    
+
     $doc->find(sub {
         my ($top, $elem) = @_;
         return 0 unless $elem->isa('PPI::Token::Quote::Single');
-        
+
         my $violation = $policy->violates($elem, $doc);
         push @violations, $violation if $violation;
-        
+
         return 0;  # Don't descend further
     });
-    
+
     is(scalar @violations, $expected_violations, $description);
-    
+
     if (@violations && $expected_violations > 0) {
         like($violations[0]->description, qr/double quotes/, 'Violation mentions double quotes');
     }
@@ -64,10 +64,10 @@ my @violations;
 $doc->find(sub {
     my ($top, $elem) = @_;
     return 0 unless $elem->isa('PPI::Token::Quote::Single');
-    
+
     my $violation = $policy->violates($elem, $doc);
     push @violations, $violation if $violation;
-    
+
     return 0;
 });
 

@@ -19,6 +19,7 @@ Double quotes are the "normal" case in Perl, and single quotes should be reserve
 #### Examples
 
 **Bad:**
+
 ```perl
 my $greeting = 'hello';        # simple string, should use double quotes
 my $name = 'world';            # simple string, should use double quotes
@@ -26,9 +27,10 @@ my $message = 'hello world';   # simple string, should use double quotes
 ```
 
 **Good:**
+
 ```perl
 my $greeting = "hello";        # simple string with double quotes
-my $name = "world";            # simple string with double quotes  
+my $name = "world";            # simple string with double quotes
 my $message = "hello world";   # simple string with double quotes
 
 # These are acceptable with single quotes because they're not "simple"
