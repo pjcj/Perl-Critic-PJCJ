@@ -68,8 +68,7 @@ sub _check_quote_operators ($self, $elem) {
   # Only check our preferred delimiters: (), [], {}
   return unless $current_start =~ /^[\(\[\{]$/;
 
-  # Skip empty content - any delimiter is fine for empty quotes
-  return if $content eq "";
+  # Don't skip empty content - () is preferred even for empty quotes
 
   # Find optimal delimiter and check if current is suboptimal
   my ($optimal_delim, $current_is_optimal) = $self->_find_optimal_delimiter($content, $operator, $current_start, $current_end);
@@ -122,56 +121,27 @@ sub _find_optimal_delimiter ($self, $content, $operator = "qw", $current_start =
     { start => "{", end => "}", display => "${operator}{}", chars => ["{", "}"] },
   );
 
-  # Count delimiter chars that appear in content
+  # Count escape chars needed for each delimiter
+  # Escape count = number of delimiter chars that appear in the content
   for my $delim (@delimiters) {
     my $count = 0;
     for my $char (@{$delim->{chars}}) {
       $count += () = $content =~ /\Q$char\E/g;
     }
-    $delim->{char_count} = $count;
-  }
-
-  # Determine optimal strategy based on content
-  my $has_parens = $delimiters[0]->{char_count} > 0;
-  my $has_brackets = $delimiters[1]->{char_count} > 0;
-  my $has_braces = $delimiters[2]->{char_count} > 0;
-
-  if ($has_parens && $has_brackets && $has_braces) {
-    # All delimiters present - any is acceptable
-    for my $delim (@delimiters) {
-      $delim->{escape_count} = 0;  # All equally good
-    }
-  } elsif (!$has_parens && !$has_brackets && !$has_braces) {
-    # No delimiters in content - prefer {} as default
-    $delimiters[0]->{escape_count} = 1;  # ()
-    $delimiters[1]->{escape_count} = 1;  # []
-    $delimiters[2]->{escape_count} = 0;  # {} preferred
-  } else {
-    # Some delimiters present - prefer the ones that match content
-    # Also allow () as acceptable when others are optimal (it's the preferred fallback)
-    for my $delim (@delimiters) {
-      if ($delim->{char_count} > 0) {
-        $delim->{escape_count} = 0;  # Matching delimiters are optimal
-      } elsif ($delim->{start} eq "(") {
-        $delim->{escape_count} = 0;  # () is always acceptable as fallback
-      } else {
-        $delim->{escape_count} = 1;  # Other non-matching delimiters are suboptimal
-      }
-    }
+    $delim->{escape_count} = $count;
   }
 
   # Find minimum escape count
   my $min_count = (sort { $a <=> $b } map { $_->{escape_count} } @delimiters)[0];
 
-  # Return the preferred optimal delimiter (first one with min count)
+  # Find optimal delimiter: minimum escapes, then preference order
   my ($optimal) = sort {
-    $a->{escape_count} <=> $b->{escape_count}
+    $a->{escape_count} <=> $b->{escape_count} ||  # Minimize escapes first
+    ($a->{start} eq '(' ? 0 : $a->{start} eq '[' ? 1 : 2) <=>  # Then prefer () > [] > {}
+    ($b->{start} eq '(' ? 0 : $b->{start} eq '[' ? 1 : 2)
   } @delimiters;
 
-  # Check if current delimiter is optimal:
-  # Current delimiter is optimal if:
-  # 1. It has the minimum escape count, OR
-  # 2. It's the preferred delimiter (first in list) when tied
+  # Check if current delimiter is optimal
   my $current_is_optimal = 0;
   my $current_delim;
   for my $delim (@delimiters) {
@@ -182,9 +152,17 @@ sub _find_optimal_delimiter ($self, $content, $operator = "qw", $current_start =
   }
 
   if ($current_delim) {
-    # Current is optimal if it has the minimum escape count
+    # Current is optimal if it has the minimum escape count AND
+    # is the preferred choice among those with minimum escape count
     if ($current_delim->{escape_count} == $min_count) {
-      $current_is_optimal = 1;
+      # Among delimiters with minimum escape count, check if current is preferred
+      my @min_delims = grep { $_->{escape_count} == $min_count } @delimiters;
+      my ($preferred) = sort {
+        ($a->{start} eq '(' ? 0 : $a->{start} eq '[' ? 1 : 2) <=>
+        ($b->{start} eq '(' ? 0 : $b->{start} eq '[' ? 1 : 2)
+      } @min_delims;
+
+      $current_is_optimal = ($current_delim eq $preferred);
     }
   }
 
