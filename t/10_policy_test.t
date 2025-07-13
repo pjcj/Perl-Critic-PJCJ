@@ -38,11 +38,10 @@ sub test_code ($code, $expected_violations, $description) {
   is scalar @violations, $expected_violations, $description;
 
   if (@violations && $expected_violations > 0) {
-    like(
+    like
       $violations[0]->description,
       qr/double quotes/,
-      "Violation mentions double quotes"
-    );
+      "Violation mentions double quotes";
   }
 }
 
