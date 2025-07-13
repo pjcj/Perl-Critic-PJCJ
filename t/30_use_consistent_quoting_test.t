@@ -100,8 +100,7 @@ subtest "Simple strings (prefer double quotes for interpolation)" => sub {
     "Escaped single quotes should use q() to avoid escapes";
   bad 'my $output = "Price: \$10"',
     "Escaped dollar signs should use single quotes";
-  bad 'my $email = "\@domain"',
-    "Escaped at-signs should use single quotes";
+  bad 'my $email = "\@domain"', "Escaped at-signs should use single quotes";
   good 'my $mixed = "\$a $b"',
     "Mixed escaped and real interpolation should stay double quotes";
 
@@ -267,10 +266,9 @@ subtest "Edge cases" => sub {
     "qq// should use double quotes for simple content";
   bad 'my $x = qq(simple)',
     "qq() should use double quotes for simple content";
-  bad q(my $x = q'simple'),
-    "q'' should use double quotes for simple content";
-  bad 'my $x = q/simple/', "q// should use double quotes for simple content";
-  bad 'my $x = q(simple)', "q() should use double quotes for simple content";
+  bad q(my $x = q'simple'), "q'' should use double quotes for simple content";
+  bad 'my $x = q/simple/',  "q// should use double quotes for simple content";
+  bad 'my $x = q(simple)',  "q() should use double quotes for simple content";
 };
 
 subtest "Priority rules" => sub {
@@ -395,6 +393,58 @@ subtest "Priority rules" => sub {
   bad 'my @x = qw[simple words]',
     "qw[] should use qw() - () preferred over []";
   good 'my @x = qw(simple words)', "qw() is most preferred bracket delimiter";
+};
+
+subtest "Coverage edge cases" => sub {
+  good q[my $x = q(has 'single' and "double" quotes)],
+    "q() is justified when content has both quote types";
+
+  bad 'my $x = q(literal $var here)',
+    'q() with literal $ should use single quotes';
+
+  # Test applies_to and default_themes methods
+  my $policy
+    = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+
+  # Call default_themes
+  my @themes = $policy->default_themes;
+  is scalar @themes, 1,          "default_themes returns one theme";
+  is $themes[0],     "cosmetic", "default theme is cosmetic";
+
+  # Call applies_to
+  my @types = $policy->applies_to;
+  is scalar @types, 6, "applies_to returns 6 token types";
+  like $types[0], qr/Quote/, "applies_to returns quote token types";
+
+  # Test invalid token type that should fail parsing
+  my $doc = PPI::Document->new(\'my $x = 42');
+  $doc->find(
+    sub ($top, $elem) {
+      if ($elem->isa("PPI::Token::Number")) {
+        # This should return undef from _parse_quote_token
+        my $violation = $policy->violates($elem, $doc);
+        is $violation, undef, "Non-quote tokens don't violate";
+      }
+      0
+    }
+  );
+
+  # More edge cases for better coverage
+  # Test q() with literal @ but no literal $
+  bad 'my $x = q(user@domain.com)',
+    'q() with only literal @ should use double quotes';
+
+  # Test single quoted string that wouldn't interpolate anyway
+  bad q(my $x = 'no special chars'),
+    "Single quotes for non-interpolating string should use double quotes";
+
+  # Test escaping conditions that tie
+  good 'my @x = qw(has[only]brackets)', "qw() with only brackets";
+  good 'my @x = qw[has(only)parens]',   "qw[] with only parens";
+
+  # Test edge case with whitespace variations
+  bad 'my @x = qw     <simple words>',
+    "qw<> with multiple spaces should use qw()";
 };
 
 done_testing;
