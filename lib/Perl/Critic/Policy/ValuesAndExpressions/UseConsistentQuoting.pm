@@ -67,8 +67,8 @@ sub _check_quote_operators ($self, $elem) {
     = $self->_parse_quote_token($elem);
   return unless defined $current_start;  # Skip if parsing failed
 
-  # Only check our preferred delimiters: (), [], {}
-  return unless $current_start =~ /^[\(\[\{]$/;
+  # Only check our preferred delimiters: (), [], <>, {}
+  return unless $current_start =~ /^[\(\[\<\{]$/;
 
   # Don't skip empty content - () is preferred even for empty quotes
 
@@ -133,6 +133,11 @@ sub _find_optimal_delimiter (
       display => "${operator}[]",
       chars   => [ "[", "]" ],
     }, {
+      start   => "<",
+      end     => ">",
+      display => "${operator}<>",
+      chars   => [ "<", ">" ],
+    }, {
       start   => "{",
       end     => "}",
       display => "${operator}{}",
@@ -157,9 +162,9 @@ sub _find_optimal_delimiter (
   # Find optimal delimiter: minimum escapes, then preference order
   my ($optimal) = sort {
     $a->{escape_count} <=> $b->{escape_count} ||  # Minimize escapes first
-      ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : 2)
-      <=>                                         # Then prefer () > [] > {}
-      ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : 2)
+      ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : $a->{start} eq "<" ? 2 : 3)
+      <=>                                         # Then prefer () > [] > <> > {}
+      ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : $b->{start} eq "<" ? 2 : 3)
   } @delimiters;
 
   # Check if current delimiter is optimal

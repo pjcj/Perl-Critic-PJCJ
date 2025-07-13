@@ -152,11 +152,13 @@ subtest "Quote operators (from RequireOptimalQuoteDelimiters)" => sub {
   good q[my @x = qw()], "Empty qw() is preferred";
 
   # When all delimiters appear in content, prefer () (least escapes needed)
-  bad q(my @x = qw{has(parens)[and]{braces}}),
+  bad q{my @x = qw{has(parens)[and]<angles>{braces}}},
     "All delimiters present - should use qw()";
-  bad q(my @x = qw[has(parens)[and]{braces}]),
+  bad q{my @x = qw[has(parens)[and]<angles>{braces}]},
     "All delimiters present - should use qw()";
-  good q[my @x = qw(has(parens)[and]{braces})],
+  bad q{my @x = qw<has(parens)[and]<angles>{braces}>},
+    "All delimiters present - should use qw()";
+  good q{my @x = qw(has(parens)[and]<angles>{braces})},
     "qw() preferred when all delimiters present";
 
   # Tie-breaking: when escape counts equal, prefer () over [] over <> over {}
@@ -180,8 +182,10 @@ subtest "Quote operators (from RequireOptimalQuoteDelimiters)" => sub {
     "[] optimal when content has only parens";
   good q{my @x = qw(text[only]brackets)},
     "() optimal when content has only brackets";
-  good q{my @x = qw<text<only>angles>},
-    "<> optimal when content has only angles";
+  bad q{my @x = qw<text<only>angles>},
+    "qw<> with angles should use qw() - fewer escapes";
+  good q{my @x = qw(text<only>angles)},
+    "() optimal when content has angles";
   good q[my @x = qw(text{only}braces)],
     "() optimal when content has only braces";
 };
@@ -194,7 +198,7 @@ subtest "Combined tests" => sub {
     my $regex = qr<text<with>angles>;
     my $ok = "world";
     my @ok_words = qw[more(parens)];
-    my $ok_regex = qr<good<angles>>;
+    my $ok_regex = qr(good<angles>);
   ], 3, "Code with multiple types of violations";
 
   # Check violation messages
