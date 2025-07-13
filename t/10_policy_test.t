@@ -4,12 +4,13 @@ use v5.20.0;
 use strict;
 use warnings;
 use feature 'signatures';
-no warnings 'experimental::signatures';
 
 use Test2::V0;
 
+no warnings 'experimental::signatures';
+
 # Test the policy directly without using Perl::Critic framework
-use lib qw(lib);
+use lib qw( lib );
 use Perl::Critic::Policy::ValuesAndExpressions::RequireDoubleQuotedStrings;
 
 my $Policy
@@ -87,7 +88,7 @@ subtest 'Multiple violations in complex code' => sub {
     }
   );
 
-  is scalar @violations, 2, 'Found exactly 2 violations in complex code';
+  is @violations, 2, 'Found exactly 2 violations in complex code';
 };
 
 done_testing;
