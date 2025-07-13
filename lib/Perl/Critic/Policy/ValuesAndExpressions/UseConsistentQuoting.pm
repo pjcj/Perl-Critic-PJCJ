@@ -137,8 +137,8 @@ sub _find_optimal_delimiter ($self, $content, $operator = "qw", $current_start =
   # Find optimal delimiter: minimum escapes, then preference order
   my ($optimal) = sort {
     $a->{escape_count} <=> $b->{escape_count} ||  # Minimize escapes first
-    ($a->{start} eq '(' ? 0 : $a->{start} eq '[' ? 1 : 2) <=>  # Then prefer () > [] > {}
-    ($b->{start} eq '(' ? 0 : $b->{start} eq '[' ? 1 : 2)
+    ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : 2) <=>  # Then prefer () > [] > {}
+    ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : 2)
   } @delimiters;
 
   # Check if current delimiter is optimal
@@ -158,8 +158,8 @@ sub _find_optimal_delimiter ($self, $content, $operator = "qw", $current_start =
       # Among delimiters with minimum escape count, check if current is preferred
       my @min_delims = grep { $_->{escape_count} == $min_count } @delimiters;
       my ($preferred) = sort {
-        ($a->{start} eq '(' ? 0 : $a->{start} eq '[' ? 1 : 2) <=>
-        ($b->{start} eq '(' ? 0 : $b->{start} eq '[' ? 1 : 2)
+        ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : 2) <=>
+        ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : 2)
       } @min_delims;
 
       $current_is_optimal = ($current_delim eq $preferred);
