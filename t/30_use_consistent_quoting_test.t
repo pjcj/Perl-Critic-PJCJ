@@ -188,6 +188,46 @@ subtest "Quote operators (from RequireOptimalQuoteDelimiters)" => sub {
     "() optimal when content has angles";
   good q[my @x = qw(text{only}braces)],
     "() optimal when content has only braces";
+
+  # Test exotic delimiters - these should be violations when content conflicts
+  subtest "Exotic delimiters" => sub {
+    bad q(my $text = qq/path\/to\/file/),
+      "qq// with slashes should use qq() to avoid escapes";
+    good q[my $text = qq(path/to/file)],
+      "qq() optimal when content has slashes";
+    bad q(my $text = q|option\|value|),
+      "q|| with pipes should use q() to avoid escapes";
+    good q[my $text = q(option|value)],
+      "q() optimal when content has pipes";
+    bad q(my $text = q"say \"hello\""),
+      'q"" with quotes should use q() to avoid escapes';
+    good q[my $text = q(say "hello")],
+      "q() optimal when content has quotes";
+    bad q(my $output = qx'echo \'hello\''),
+      "qx'' with single quotes should use qx() to avoid escapes";
+    good q[my $output = qx(echo 'hello')],
+      "qx() optimal when content has single quotes";
+    bad q(my $text = q#path\#to\#file#),
+      "q## with hashes should use q() to avoid escapes";
+    good q[my $text = q(path#to#file)],
+      "q() optimal when content has hashes";
+    bad q(my $text = q!wow\!amazing!),
+      "q!! with exclamation marks should use q() to avoid escapes";
+    good q[my $text = q(wow!amazing)],
+      "q() optimal when content has exclamation marks";
+    bad q(my $text = q%100\%complete%),
+      "q%% with percent signs should use q() to avoid escapes";
+    good q[my $text = q(100%complete)],
+      "q() optimal when content has percent signs";
+    bad q(my $text = q&fish\&chips&),
+      "q&& with ampersands should use q() to avoid escapes";
+    good q[my $text = q(fish&chips)],
+      "q() optimal when content has ampersands";
+    bad q(my $text = q~home\~user~),
+      "q~~ with tildes should use q() to avoid escapes";
+    good q[my $text = q(home~user)],
+      "q() optimal when content has tildes";
+  };
 };
 
 subtest "Combined tests" => sub {
@@ -202,9 +242,9 @@ subtest "Combined tests" => sub {
   ], 3, "Code with multiple types of violations";
 
   # Check violation messages
-  like $violations[0]->description, qr/consistent/,
+  like $violations[0]->description, qr(consistent),
     "First violation mentions consistency";
-  like $violations[1]->description, qr/consistent/,
+  like $violations[1]->description, qr(consistent),
     "Second violation mentions consistency";
 };
 
@@ -214,9 +254,9 @@ subtest "Edge cases" => sub {
     "qw with whitespace before delimiter";
   bad q[my @x = qw  {word(with)parens}], "qw with tab before delimiter";
 
-  # Different quote styles
-  good q(my $x = q'simple'), "q'' is not checked (not in our delimiter list)";
-  good q(my $x = q/simple/), "q// is not checked (not in our delimiter list)";
+  # Different quote styles - these are now checked and should prefer brackets
+  bad q(my $x = q'simple'), "q'' should use q() for simple content";
+  bad q(my $x = q/simple/), "q// should use q() for simple content";
 };
 
 done_testing;

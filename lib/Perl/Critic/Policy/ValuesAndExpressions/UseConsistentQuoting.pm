@@ -67,8 +67,7 @@ sub _check_quote_operators ($self, $elem) {
     = $self->_parse_quote_token($elem);
   return unless defined $current_start;  # Skip if parsing failed
 
-  # Only check our preferred delimiters: (), [], <>, {}
-  return unless $current_start =~ /^[\(\[\<\{]$/;
+  # Check all delimiters, including exotic ones
 
   # Don't skip empty content - () is preferred even for empty quotes
 
@@ -95,16 +94,19 @@ sub _parse_quote_token ($self, $elem) {
   my $content = $elem->content();
 
   # Parse quote-like operators: qw{}, q{}, qq{}, qx{}, qr{}
+  # Handle all possible delimiters, not just bracket pairs
   # Order matters: longer matches first
   if ($content =~ /\A(qw|qq|qx|qr|q)\s*(.)(.*)\z/s) {
     my ($op, $start_delim, $rest) = ($1, $2, $3);
     my $end_delim = $start_delim;
 
-    # Handle bracket pairs
+    # Handle bracket pairs - they have different start/end delimiters
     if    ($start_delim eq "(") { $end_delim = ")" }
     elsif ($start_delim eq "[") { $end_delim = "]" }
     elsif ($start_delim eq "{") { $end_delim = "}" }
     elsif ($start_delim eq "<") { $end_delim = ">" }
+    # For all other delimiters (/, |, ", ', #, !, %, &, ~, etc.)
+    # the start and end delimiter are the same
 
     # Remove the ending delimiter from the content
     $rest =~ s/\Q$end_delim\E\z//;
@@ -121,6 +123,7 @@ sub _find_optimal_delimiter (
   $current_start = "",
   $current_end   = "",
 ) {
+  # Only support bracket operators - any other delimiter should be replaced
   my @delimiters = (
     {
       start   => "(",
@@ -156,44 +159,43 @@ sub _find_optimal_delimiter (
   }
 
   # Find minimum escape count
-  my $min_count
-    = (sort { $a <=> $b } map { $_->{escape_count} } @delimiters)[0];
+  my $min_count = (sort { $a <=> $b } map { $_->{escape_count} } @delimiters)[0];
 
-  # Find optimal delimiter: minimum escapes, then preference order
+  # Find optimal delimiter: minimize escapes, then preference order
   my ($optimal) = sort {
-    $a->{escape_count} <=> $b->{escape_count} ||  # Minimize escapes first
-      ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : $a->{start} eq "<" ? 2 : 3)
-      <=>                                         # Then prefer () > [] > <> > {}
-      ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : $b->{start} eq "<" ? 2 : 3)
+    $a->{escape_count} <=> $b->{escape_count} ||    # Minimize escapes first
+      $self->_delimiter_preference_order($a->{start}) <=>  # Then prefer by order
+      $self->_delimiter_preference_order($b->{start})
   } @delimiters;
 
-  # Check if current delimiter is optimal
-  my $current_is_optimal = 0;
+  # Check if current delimiter is a bracket operator
+  my $current_is_bracket = 0;
   my $current_delim;
   for my $delim (@delimiters) {
     if ($delim->{start} eq $current_start && $delim->{end} eq $current_end) {
       $current_delim = $delim;
+      $current_is_bracket = 1;
       last;
     }
   }
 
-  if ($current_delim) {
-    # Current is optimal if it has the minimum escape count AND
-    # is the preferred choice among those with minimum escape count
-    if ($current_delim->{escape_count} == $min_count) {
-      # Among delimiters with minimum escape count, check if current is
-      # preferred
-      my @min_delims = grep { $_->{escape_count} == $min_count } @delimiters;
-      my ($preferred) = sort {
-        ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : 2)
-          <=> ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : 2)
-      } @min_delims;
-
-      $current_is_optimal = ($current_delim eq $preferred);
-    }
+  # If current delimiter is not a bracket operator, it's never optimal
+  # If current delimiter is a bracket operator, check if it's the optimal one
+  my $current_is_optimal = 0;
+  if ($current_is_bracket && $current_delim) {
+    $current_is_optimal = ($current_delim eq $optimal);
   }
 
   return ($optimal, $current_is_optimal);
+}
+
+sub _delimiter_preference_order ($self, $delimiter_start) {
+  # Preference order for bracket operators: () > [] > <> > {}
+  return 0 if $delimiter_start eq "(";
+  return 1 if $delimiter_start eq "[";
+  return 2 if $delimiter_start eq "<";
+  return 3 if $delimiter_start eq "{";
+  return 99;  # Should never reach here for valid bracket operators
 }
 
 1;
