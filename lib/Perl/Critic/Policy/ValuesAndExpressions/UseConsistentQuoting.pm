@@ -18,7 +18,7 @@ Readonly::Scalar my $EXPL_DOUBLE =>
   q[Simple strings (containing no double quotes or @ symbols) should use ]
   . q(double quotes for consistency);
 Readonly::Scalar my $EXPL_OPTIMAL =>
-  q(Choose (), [], or {} delimiters that require the fewest escape characters);
+  q(Choose (), [], <> or {} delimiters that require the fewest escape characters);
 
 sub supported_parameters { return () }
 sub default_severity     { return $SEVERITY_MEDIUM }
@@ -80,7 +80,7 @@ sub _check_quote_operators ($self, $elem) {
   # Check if current delimiter is suboptimal
   if (!$current_is_optimal) {
     return $self->violation($DESC,
-      "$EXPL_OPTIMAL (use $optimal_delim->{display})", $elem);
+      "$EXPL_OPTIMAL (hint: use $optimal_delim->{display})", $elem);
   }
 
   return;
