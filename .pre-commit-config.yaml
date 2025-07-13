@@ -87,7 +87,7 @@ repos:
         name: perlcritic
         description: Ensure perl files adhere to standards
         language: perl
-        entry: perlcritic --verbose 1 lib t
+        entry: perlcritic --verbose "%f:%l:%c:%p:%e\n" lib t
         pass_filenames: false
       - id: jscpd
         name: Check for duplicated code

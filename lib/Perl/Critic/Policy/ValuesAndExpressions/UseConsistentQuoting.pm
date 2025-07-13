@@ -77,7 +77,7 @@ sub _check_quote_operators ($self, $elem) {
   if (!$current_is_optimal) {
     return $self->violation(
       $DESC,
-      "$EXPL_OPTIMAL (consider using $optimal_delim->{display})",
+      "$EXPL_OPTIMAL (use $optimal_delim->{display})",
       $elem
     );
   }
