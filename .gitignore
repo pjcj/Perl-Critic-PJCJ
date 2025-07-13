@@ -12,6 +12,7 @@ cover_db/
 # Perl temporary files
 *.bak
 *.old
+*.tdy
 *~
 
 # OS generated files
