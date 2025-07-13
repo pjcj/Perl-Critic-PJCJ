@@ -66,24 +66,47 @@ sub violates ($self, $elem, $) {
 sub _check_single_quoted ($self, $elem) {
   # Get the string content without the surrounding quotes
   my $string = $elem->string;
+  my $content = $elem->content;
 
   # Rule 1: Prefer interpolating quotes unless literal $ or @ OR content has double quotes
   # Single quotes are appropriate for:
-  # 1. Strings with literal $ or @
+  # 1. Strings with literal $ or @ that shouldn't be interpolated
   # 2. Strings that contain double quotes (to avoid escaping)
+  # 3. Strings with escaped single quotes (to avoid escaping)
 
-  if ($string !~ /[\$\@]/ && index($string, '"') == -1) {
-    # No $ or @ and no double quotes, so should use double quotes per Rule 1
-    return $self->violation($DESC, $EXPL_DOUBLE, $elem);
+  # Check if string has double quotes - then single quotes are justified
+  if (index($string, '"') != -1) {
+    return;  # Single quotes justified to avoid escaping double quotes
   }
 
-  return;
+  # Check if string has escaped single quotes - then q() would be better
+  if ($content =~ /\\'/) {
+    return $self->violation($DESC, "Use q() to avoid escaping single quotes", $elem);
+  }
+
+  # Check if string contains literal $ or @ that shouldn't be interpolated
+  # Look for unescaped $ or @ patterns that indicate actual variables
+  if ($self->_has_literal_variables($string)) {
+    return;  # Single quotes justified for literal variables
+  }
+
+  # Simple content with no special needs should use double quotes
+  return $self->violation($DESC, $EXPL_DOUBLE, $elem);
 }
 
 sub _check_double_quoted ($self, $elem) {
-  # Double quotes are generally preferred, so no violations for double-quoted strings
-  # unless they contain literal $ or @ that shouldn't be interpolated
-  # But we can't detect that reliably, so we accept all double-quoted strings
+  # Check if this double-quoted string actually needs interpolation
+  my $string = $elem->string;
+  my $content = $elem->content;
+
+  # Check for escaped dollar signs - these should probably use single quotes
+  if ($content =~ /\\\$/) {
+    return $self->violation($DESC, "Use single quotes for strings with literal \$ to avoid escaping", $elem);
+  }
+
+  # For now, be conservative and don't flag double-quoted strings
+  # The interpolations() method might be too aggressive for our use case
+  # We'll focus on the specific problematic cases mentioned by the user
   return;
 }
 
@@ -117,20 +140,26 @@ sub _check_q_literal ($self, $elem) {
 
   my $has_single_quotes = index($string, "'") != -1;
   my $has_double_quotes = index($string, '"') != -1;
-  my $has_literal_vars  = $string =~ /[\$\@]/;
+  my $has_literal_vars  = $self->_has_literal_variables($string);
 
   # If content has both single and double quotes, q() is appropriate
   if ($has_single_quotes && $has_double_quotes) {
     return;  # q() is justified
   }
 
-  # Check if content is truly "simple" - no special characters that justify q()
-  my $has_special_chars = $string =~ /[|\/\"#!%&~()\[\]<>{}]/;
-
-  # If simple content (no special chars, no $ or @ and doesn't require q() for quote conflicts)
-  if (!$has_literal_vars && !$has_single_quotes && !$has_special_chars) {
+  # Check if content has characters that might justify q() usage
+  # We'll be more conservative - only flag truly simple alphanumeric content
+  my $is_simple_content = $string =~ /^[a-zA-Z0-9\s]+$/;
+  # If simple content with no quotes and no literal variables, use double quotes
+  if (!$has_literal_vars && !$has_single_quotes && !$has_double_quotes && $is_simple_content) {
     # Simple content should use double quotes per Rule 1
     return $self->violation($DESC, $EXPL_DOUBLE, $elem);
+  }
+  # If content only has double quotes but no single quotes and no variables, could use single quotes
+  if (!$has_literal_vars && !$has_single_quotes && $has_double_quotes) {
+    # Content with only double quotes - q() might not be justified, could use single quotes
+    # But we'll be conservative here and allow q() for now
+    return;
   }
 
   # If has literal vars but no single quotes, should use single quotes
@@ -290,6 +319,25 @@ sub _delimiter_preference_order ($self, $delimiter_start) {
   return 2 if $delimiter_start eq "<";
   return 3 if $delimiter_start eq "{";
   return 99;  # Should never reach here for valid bracket operators
+}
+
+sub _has_literal_variables ($self, $string) {
+  # Look for unescaped $ or @ followed by patterns that indicate actual variables
+  # This is more sophisticated than just checking for any $ or @ character
+  # We want to detect things like $var, @array, $hash{key}, ${var}, etc.
+  # but NOT \$10, \@email, etc.
+  # Pattern explanation:
+  # (?<!\\)     - negative lookbehind: not preceded by backslash (not escaped)
+  # [\$\@]      - dollar sign or at sign
+  # (?:         - non-capturing group for what follows the sigil:
+  #   \w+       - word characters (variable names like $var, @array)
+  #   |[{][^}]*[}] - hash/array access like ${var} or @{array}
+  #   |\[       - array index start like $arr[ or @arr[
+  #   |\d+      - special variables like $1, $2, etc.
+  #   |[!?^&*()_+=\[\]{}|\\:";'<>.,/] - specific punctuation variables
+  # )
+  # More conservative approach - only match known special variable punctuation
+  return $string =~ /(?<!\\)[\$\@](?:\w+|[{][^}]*[}]|\[|\d+|[!?^&*()_+=\[\]{}|\\:";'<>.,\/])/;
 }
 
 1;

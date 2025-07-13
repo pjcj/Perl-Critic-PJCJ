@@ -94,6 +94,10 @@ subtest "Simple strings (prefer double quotes for interpolation)" => sub {
     my $y = "world";
     my $z = 'user@example.com';
   ), 1, "Only simple single-quoted string violates";
+
+  # Test cases for escaped characters - should recommend better quoting
+  bad q(my $x = 'I\'m happy'), "Escaped single quotes should use q() to avoid escapes";
+  bad 'my $output = "Price: \$10"', "Escaped dollar signs should use single quotes";
 };
 
 subtest "Quote operators" => sub {
