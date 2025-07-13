@@ -12,6 +12,10 @@ subtest "Module loading" => sub {
     require
     Perl::Critic::Policy::ValuesAndExpressions::RequireDoubleQuotedStrings,
     "Can load RequireDoubleQuotedStrings policy";
+  ok
+    require
+    Perl::Critic::Policy::ValuesAndExpressions::RequireOptimalQuoteDelimiters,
+    "Can load RequireOptimalQuoteDelimiters policy";
 };
 
 done_testing;

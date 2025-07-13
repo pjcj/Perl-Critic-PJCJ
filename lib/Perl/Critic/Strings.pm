@@ -38,6 +38,11 @@ string quoting practices in Perl code.
 Requires that "simple" strings (containing no double quotes or @ symbols)
 use double quotes rather than single quotes.
 
+=item L<Perl::Critic::Policy::ValuesAndExpressions::RequireOptimalQuoteDelimiters>
+
+Requires that quote-like operators use the delimiter that minimizes the
+number of escape characters needed.
+
 =back
 
 =head1 AUTHOR

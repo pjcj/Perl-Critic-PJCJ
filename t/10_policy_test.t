@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+## no critic (ValuesAndExpressions::RequireOptimalQuoteDelimiters)
+
 use v5.20.0;
 use strict;
 use warnings;

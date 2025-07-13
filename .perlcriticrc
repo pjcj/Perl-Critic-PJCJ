@@ -1600,3 +1600,4 @@ allow = %ENV %SIG $> $0
 
 
 [ValuesAndExpressions::RequireDoubleQuotedStrings]
+[ValuesAndExpressions::RequireOptimalQuoteDelimiters]

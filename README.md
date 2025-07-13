@@ -6,7 +6,9 @@ practices in Perl code.
 ## Description
 
 This distribution provides Perl::Critic policies that help maintain consistent
-and readable string quoting conventions in Perl code.
+and readable string quoting conventions in Perl code. It includes policies for
+both simple string quoting (single vs double quotes) and optimal delimiter
+selection for quote-like operators.
 
 ## Policies
 
@@ -45,6 +47,45 @@ my $quoted = 'He said "hello"';     # contains ", so single quotes OK
 my $complex = 'It\'s a nice day';   # escaping needed anyway
 ```
 
+### Perl::Critic::Policy::ValuesAndExpressions::RequireOptimalQuoteDelimiters
+
+This policy requires that quote-like operators (`q{}`, `qq{}`, `qw{}`, `qx{}`,
+`qr{}`) use the delimiter that requires the fewest escape characters. The policy
+considers three preferred delimiters in order: parentheses `()`, square brackets
+`[]`, and curly braces `{}`.
+
+#### Rationale
+
+Choosing the optimal delimiter minimizes the need for escape characters, making
+code more readable and less error-prone. When escape counts are equal,
+parentheses
+are preferred as the most conventional choice.
+
+#### Examples
+
+**Bad:**
+
+```perl
+my @words = qw{word(with)parens};      # should use qw[] - parens need escape
+my $cmd = qx{command[with]brackets};   # should use qx{} - brackets need escape
+my $str = qq{simple string};           # should use qq() - no escaping needed
+```
+
+**Good:**
+
+```perl
+my @words = qw[word(with)parens];      # [] optimal - content has parens
+my $cmd = qx{command[with]brackets};   # {} optimal - content has brackets
+my $str = qq(simple string);           # () optimal - no special chars
+my $complex = qw(has(parens)[and]{braces}); # () preferred when all tied
+```
+
+**Acceptable (no better alternative):**
+
+```perl
+my $equal = qw{content(has)both[types]}; # all delimiters need 2+ escapes
+```
+
 ## Installation
 
 To install this module, run the following commands:
@@ -64,10 +105,17 @@ make install
 
 ## Usage
 
-Add the policy to your `.perlcriticrc` file:
+Add the policies to your `.perlcriticrc` file:
 
 ```ini
 [ValuesAndExpressions::RequireDoubleQuotedStrings]
+[ValuesAndExpressions::RequireOptimalQuoteDelimiters]
+```
+
+Or include the entire distribution:
+
+```ini
+include = Perl::Critic::Strings
 ```
 
 Then run perlcritic on your code:
@@ -75,6 +123,12 @@ Then run perlcritic on your code:
 ```bash
 perlcritic --single-policy \
   ValuesAndExpressions::RequireDoubleQuotedStrings MyScript.pl
+
+perlcritic --single-policy \
+  ValuesAndExpressions::RequireOptimalQuoteDelimiters MyScript.pl
+
+# Or run all policies from the distribution
+perlcritic --include Perl::Critic::Strings MyScript.pl
 ```
 
 ## Development

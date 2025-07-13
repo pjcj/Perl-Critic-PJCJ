@@ -6,17 +6,17 @@ use warnings;
 use feature "signatures";
 no warnings "experimental::signatures";
 
-use Readonly;
+use Readonly ();
 
-use Perl::Critic::Utils qw{ :severities };
+use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 use base "Perl::Critic::Policy";
 
 our $VERSION = "0.001";
 
-Readonly::Scalar my $DESC => q{Use double quotes for simple strings};
+Readonly::Scalar my $DESC => q(Use double quotes for simple strings);
 Readonly::Scalar my $EXPL =>
-  q{Simple strings (containing no double quotes or @ symbols) should use }
-  . q{double quotes for consistency};
+  q[Simple strings (containing no double quotes or @ symbols) should use ]
+  . q(double quotes for consistency);
 
 sub supported_parameters { return () }
 sub default_severity     { return $SEVERITY_MEDIUM }
