@@ -1,20 +1,26 @@
 # Perl::Critic::Strings
 
-A Perl::Critic policy distribution for enforcing consistent string quoting practices in Perl code.
+A Perl::Critic policy distribution for enforcing consistent string quoting
+practices in Perl code.
 
 ## Description
 
-This distribution provides Perl::Critic policies that help maintain consistent and readable string quoting conventions in Perl code.
+This distribution provides Perl::Critic policies that help maintain consistent
+and readable string quoting conventions in Perl code.
 
 ## Policies
 
 ### Perl::Critic::Policy::ValuesAndExpressions::RequireDoubleQuotedStrings
 
-This policy requires that "simple" strings use double quotes rather than single quotes. A simple string is one that contains no double quote characters (") and no at-sign (@) characters.
+This policy requires that "simple" strings use double quotes rather than single
+quotes. A simple string is one that contains no double quote characters (") and
+no at-sign (@) characters.
 
 #### Rationale
 
-Double quotes are the "normal" case in Perl, and single quotes should be reserved for cases where they are specifically needed to avoid interpolation or escaping.
+Double quotes are the "normal" case in Perl, and single quotes should be
+reserved for cases where they are specifically needed to avoid interpolation
+or escaping.
 
 #### Examples
 
@@ -67,7 +73,8 @@ Add the policy to your `.perlcriticrc` file:
 Then run perlcritic on your code:
 
 ```bash
-perlcritic --single-policy ValuesAndExpressions::RequireDoubleQuotedStrings MyScript.pl
+perlcritic --single-policy \
+  ValuesAndExpressions::RequireDoubleQuotedStrings MyScript.pl
 ```
 
 ## Development

@@ -1,14 +1,17 @@
 #!/usr/bin/env perl
 
-use 5.010001;
+use v5.20.0;
 use strict;
 use warnings;
 
-use Test::More;
+use Test2::V0;
 
-BEGIN {
-    use_ok('Perl::Critic::Strings');
-    use_ok('Perl::Critic::Policy::ValuesAndExpressions::RequireDoubleQuotedStrings');
-}
+subtest 'Module loading' => sub {
+  ok require Perl::Critic::Strings, 'Can load Perl::Critic::Strings';
+  ok
+    require
+    Perl::Critic::Policy::ValuesAndExpressions::RequireDoubleQuotedStrings,
+    'Can load RequireDoubleQuotedStrings policy';
+};
 
-done_testing();
+done_testing;

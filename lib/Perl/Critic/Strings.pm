@@ -1,6 +1,6 @@
 package Perl::Critic::Strings;
 
-use 5.010001;
+use v5.20.0;
 use strict;
 use warnings;
 
@@ -15,6 +15,14 @@ __END__
 =head1 NAME
 
 Perl::Critic::Strings - Perl::Critic policies for string handling
+
+=head1 SYNOPSIS
+
+  # In your .perlcriticrc file:
+  include = Perl::Critic::Strings
+
+  # Or from the command line:
+  perlcritic --include Perl::Critic::Strings lib/
 
 =head1 DESCRIPTION
 
