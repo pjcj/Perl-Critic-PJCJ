@@ -17,7 +17,7 @@ Readonly::Scalar my $DESC => "Use consistent and optimal quoting";
 Readonly::Scalar my $EXPL_DOUBLE =>
   "Simple strings should use double quotes for consistency";
 Readonly::Scalar my $EXPL_SINGLE =>
-  "Strings with literal \$ or \@ should use single quotes";
+  'Strings with literal $ or @ should use single quotes';
 Readonly::Scalar my $EXPL_NO_QQ => 'Use "" instead of qq()';
 Readonly::Scalar my $EXPL_NO_Q  => "Use '' instead of q()";
 Readonly::Scalar my $EXPL_OPTIMAL =>
@@ -133,7 +133,7 @@ sub _check_double_quoted ($self, $elem) {
 
     # Only suggest single quotes if no other interpolation exists
     if (!$has_other_interpolation) {
-      return $self->violation($DESC, 'Use single quotes for strings with only escaped \$ or \@ to avoid escaping', $elem);
+      return $self->violation($DESC, 'Use single quotes for strings with only escaped $ or @ to avoid escaping', $elem);
     }
   }
 

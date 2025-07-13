@@ -77,7 +77,7 @@ subtest "Simple strings (prefer double quotes for interpolation)" => sub {
     "String with single quote needs double quotes";
   good 'my $x = "Hello $name"',
     "String with interpolation needs double quotes";
-  good q(my $x = 'literal$var'), "String with literal \$ using single quotes";
+  good q(my $x = 'literal$var'), 'String with literal $ using single quotes';
   good q[my $x = qq(contains 'both' and "quotes")],
     "Complex content may need qq() delimiters";
 
@@ -106,7 +106,7 @@ subtest "Simple strings (prefer double quotes for interpolation)" => sub {
     "Mixed escaped and real interpolation should stay double quotes";
 
   # Test case for literal $ that should use single quotes
-  good q(my $text = 'A $ here'), "Literal \$ should use single quotes";
+  good q(my $text = 'A $ here'), 'Literal $ should use single quotes';
 };
 
 subtest "Quote operators" => sub {
@@ -267,7 +267,7 @@ subtest "Edge cases" => sub {
     "qq// should use double quotes for simple content";
   bad 'my $x = qq(simple)',
     "qq() should use double quotes for simple content";
-  bad 'my $x = q\'simple\'',
+  bad q(my $x = q'simple'),
     "q'' should use double quotes for simple content";
   bad 'my $x = q/simple/', "q// should use double quotes for simple content";
   bad 'my $x = q(simple)', "q() should use double quotes for simple content";
@@ -275,7 +275,7 @@ subtest "Edge cases" => sub {
 
 subtest "Priority rules" => sub {
   # Rule 1: Always prefer interpolating quotes unless strings should not be interpolated
-  bad 'my $x = \'simple\'', "Simple string should use double quotes";
+  bad q(my $x = 'simple'), "Simple string should use double quotes";
   good 'my $x = "simple"', "Simple string with double quotes";
   good q(my $x = 'literal$var'),
     'String with literal $ should use single quotes';
@@ -326,11 +326,11 @@ subtest "Priority rules" => sub {
   # qx operators with escaped characters
   bad 'my $output = qx/ls \/tmp/',
     "qx// with slashes should use qx() to avoid escapes";
-  good "my \$output = qx(ls /tmp)", "qx() optimal when content has slashes";
+  good 'my $output = qx(ls /tmp)', "qx() optimal when content has slashes";
 
   bad 'my $output = qx|echo \|pipe|',
     "qx|| with pipes should use qx() to avoid escapes";
-  good "my \$output = qx(echo |pipe)", "qx() optimal when content has pipes";
+  good 'my $output = qx(echo |pipe)', "qx() optimal when content has pipes";
 
   # qw operators with various escaped characters
   bad 'my @words = qw/word\/with\/slashes/',
