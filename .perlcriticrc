@@ -1599,5 +1599,4 @@ allow = %ENV %SIG $> $0
 # maximum_violations_per_document    = no_limit
 
 
-[ValuesAndExpressions::RequireDoubleQuotedStrings]
-[ValuesAndExpressions::RequireOptimalQuoteDelimiters]
+[ValuesAndExpressions::UseConsistentQuoting]

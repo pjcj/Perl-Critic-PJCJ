@@ -33,15 +33,12 @@ string quoting practices in Perl code.
 
 =over 4
 
-=item L<Perl::Critic::Policy::ValuesAndExpressions::RequireDoubleQuotedStrings>
+=item L<Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting>
 
-Requires that "simple" strings (containing no double quotes or @ symbols)
-use double quotes rather than single quotes.
-
-=item L<Perl::Critic::Policy::ValuesAndExpressions::RequireOptimalQuoteDelimiters>
-
-Requires that quote-like operators use the delimiter that minimizes the
-number of escape characters needed.
+Enforces consistent and optimal quoting practices. This policy combines two
+requirements: simple strings (containing no double quotes or @ symbols) should
+use double quotes, and quote-like operators should use delimiters that minimize
+escape characters.
 
 =back
 

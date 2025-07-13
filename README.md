@@ -5,28 +5,29 @@ practices in Perl code.
 
 ## Description
 
-This distribution provides Perl::Critic policies that help maintain consistent
-and readable string quoting conventions in Perl code. It includes policies for
+This distribution provides a Perl::Critic policy that helps maintain consistent
+and readable string quoting conventions in Perl code. It combines rules for
 both simple string quoting (single vs double quotes) and optimal delimiter
 selection for quote-like operators.
 
-## Policies
+## Policy
 
-### Perl::Critic::Policy::ValuesAndExpressions::RequireDoubleQuotedStrings
+### Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting
 
-This policy requires that "simple" strings use double quotes rather than single
-quotes. A simple string is one that contains no double quote characters (") and
-no at-sign (@) characters.
+This policy enforces consistent and optimal quoting practices by combining two
+requirements:
+
+1. **Simple strings** (containing no double quotes, @ symbols, or escapes) should use double quotes rather than single quotes
+2. **Quote operators** should use delimiters that minimize the need for escape characters
 
 #### Rationale
 
-Double quotes are the "normal" case in Perl, and single quotes should be
-reserved for cases where they are specifically needed to avoid interpolation
-or escaping.
+- Double quotes are the "normal" case in Perl, and single quotes should be reserved for cases where they are specifically needed to avoid interpolation or escaping
+- Choosing optimal delimiters for quote operators minimizes escape characters, making code more readable and less error-prone
 
 #### Examples
 
-**Bad:**
+**Simple Strings - Bad:**
 
 ```perl
 my $greeting = 'hello';        # simple string, should use double quotes
@@ -34,7 +35,7 @@ my $name = 'world';            # simple string, should use double quotes
 my $message = 'hello world';   # simple string, should use double quotes
 ```
 
-**Good:**
+**Simple Strings - Good:**
 
 ```perl
 my $greeting = "hello";        # simple string with double quotes
@@ -47,43 +48,21 @@ my $quoted = 'He said "hello"';     # contains ", so single quotes OK
 my $complex = 'It\'s a nice day';   # escaping needed anyway
 ```
 
-### Perl::Critic::Policy::ValuesAndExpressions::RequireOptimalQuoteDelimiters
-
-This policy requires that quote-like operators (`q{}`, `qq{}`, `qw{}`, `qx{}`,
-`qr{}`) use the delimiter that requires the fewest escape characters. The policy
-considers three preferred delimiters in order: parentheses `()`, square brackets
-`[]`, and curly braces `{}`.
-
-#### Rationale
-
-Choosing the optimal delimiter minimizes the need for escape characters, making
-code more readable and less error-prone. When escape counts are equal,
-parentheses
-are preferred as the most conventional choice.
-
-#### Examples
-
-**Bad:**
+**Quote Operators - Bad:**
 
 ```perl
-my @words = qw{word(with)parens};      # should use qw[] - parens need escape
-my $cmd = qx{command[with]brackets};   # should use qx{} - brackets need escape
-my $str = qq{simple string};           # should use qq() - no escaping needed
+my @words = qw{word(with)parens};      # should use qw() - content has parens
+my $cmd = qx{command[with]brackets};   # should use qx[] - content has brackets
+my $str = qq[simple string];           # should use qq{} - no special chars
 ```
 
-**Good:**
+**Quote Operators - Good:**
 
 ```perl
-my @words = qw[word(with)parens];      # [] optimal - content has parens
-my $cmd = qx{command[with]brackets};   # {} optimal - content has brackets
-my $str = qq(simple string);           # () optimal - no special chars
-my $complex = qw(has(parens)[and]{braces}); # () preferred when all tied
-```
-
-**Acceptable (no better alternative):**
-
-```perl
-my $equal = qw{content(has)both[types]}; # all delimiters need 2+ escapes
+my @words = qw(word(with)parens);      # () optimal - content has parens
+my $cmd = qx[command[with]brackets];   # [] optimal - content has brackets
+my $str = qq{simple string};           # {} optimal - no special chars
+my $complex = qw{has(parens)[and]{braces}}; # any delimiter OK when all present
 ```
 
 ## Installation
@@ -105,11 +84,10 @@ make install
 
 ## Usage
 
-Add the policies to your `.perlcriticrc` file:
+Add the policy to your `.perlcriticrc` file:
 
 ```ini
-[ValuesAndExpressions::RequireDoubleQuotedStrings]
-[ValuesAndExpressions::RequireOptimalQuoteDelimiters]
+[ValuesAndExpressions::UseConsistentQuoting]
 ```
 
 Or include the entire distribution:
@@ -122,10 +100,7 @@ Then run perlcritic on your code:
 
 ```bash
 perlcritic --single-policy \
-  ValuesAndExpressions::RequireDoubleQuotedStrings MyScript.pl
-
-perlcritic --single-policy \
-  ValuesAndExpressions::RequireOptimalQuoteDelimiters MyScript.pl
+  ValuesAndExpressions::UseConsistentQuoting MyScript.pl
 
 # Or run all policies from the distribution
 perlcritic --include Perl::Critic::Strings MyScript.pl

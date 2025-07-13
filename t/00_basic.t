@@ -10,12 +10,8 @@ subtest "Module loading" => sub {
   ok require Perl::Critic::Strings, "Can load Perl::Critic::Strings";
   ok
     require
-    Perl::Critic::Policy::ValuesAndExpressions::RequireDoubleQuotedStrings,
-    "Can load RequireDoubleQuotedStrings policy";
-  ok
-    require
-    Perl::Critic::Policy::ValuesAndExpressions::RequireOptimalQuoteDelimiters,
-    "Can load RequireOptimalQuoteDelimiters policy";
+    Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting,
+    "Can load UseConsistentQuoting policy";
 };
 
 done_testing;
