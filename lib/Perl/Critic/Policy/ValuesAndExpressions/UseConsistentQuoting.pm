@@ -81,17 +81,7 @@ sub _check_single_quoted ($self, $elem) {
 
   # Use PPI's interpolations() method to test if this content would interpolate
   # in double quotes
-  # Create a temporary double-quoted string to test interpolation
-  my $test_content = qq("$string");
-  my $test_doc     = PPI::Document->new(\$test_content);
-
-  my $would_interpolate = 0;
-  $test_doc->find(
-    sub ($top, $test_elem) {
-      $would_interpolate = $test_elem->interpolations
-        if $test_elem->isa("PPI::Token::Quote::Double");
-    }
-  );
+  my $would_interpolate = $self->_would_interpolate($string);
 
   # If content would not interpolate in double quotes, suggest double quotes
   if (!$would_interpolate && index($string, '"') == -1) {
@@ -109,21 +99,8 @@ sub _check_double_quoted ($self, $elem) {
   # Check for escaped dollar/at signs, but only suggest single quotes if no
   # other interpolation
   if ($content =~ /\\[\$\@]/) {
-    # Create a test version with escaped chars removed to check for other
-    # interpolation
-    my $test_content = qq("$string");
-    my $test_doc     = PPI::Document->new(\$test_content);
-
-    my $has_other_interpolation = 0;
-    $test_doc->find(
-      sub ($top, $test_elem) {
-        $has_other_interpolation = $test_elem->interpolations
-          if $test_elem->isa("PPI::Token::Quote::Double");
-      }
-    );
-
     # Only suggest single quotes if no other interpolation exists
-    if (!$has_other_interpolation) {
+    if (!$self->_would_interpolate($string)) {
       return $self->violation(
         $Desc,
         'Use single quotes for strings with escaped $ or @ to avoid escaping',
@@ -165,7 +142,7 @@ sub _check_q_literal ($self, $elem) {
 
   my $has_single_quotes = index($string, "'") != -1;
   my $has_double_quotes = index($string, '"') != -1;
-  my $has_literal_vars  = $self->_has_literal_variables($string);
+  my $would_interpolate = $self->_would_interpolate($string);
 
   # If content has both single and double quotes, q() is appropriate
   if ($has_single_quotes && $has_double_quotes) {
@@ -175,8 +152,8 @@ sub _check_q_literal ($self, $elem) {
   # Check if content has characters that might justify q() usage
   # We'll be more conservative - only flag truly simple alphanumeric content
   my $is_simple_content = $string =~ /^[a-zA-Z0-9\s]+$/;
-  # If simple content with no quotes and no literal variables, use double quotes
-  if ( !$has_literal_vars
+  # If simple content with no quotes and would not interpolate, use double quotes
+  if ( !$would_interpolate
     && !$has_single_quotes
     && !$has_double_quotes
     && $is_simple_content)
@@ -184,15 +161,15 @@ sub _check_q_literal ($self, $elem) {
     # Simple content should use double quotes per Rule 1
     return $self->violation($Desc, $Expl_double, $elem);
   }
-  # If content only has double quotes but no single quotes and no variables, could use single quotes
-  if (!$has_literal_vars && !$has_single_quotes && $has_double_quotes) {
+  # If content only has double quotes but no single quotes and no interpolation, could use single quotes
+  if (!$would_interpolate && !$has_single_quotes && $has_double_quotes) {
     # Content with only double quotes - q() might not be justified, could use single quotes
     # But we'll be conservative here and allow q() for now
     return;
   }
 
-  # If has literal vars but no single quotes, should use single quotes
-  if ($has_literal_vars && !$has_single_quotes) {
+  # If would interpolate but no single quotes, should use single quotes
+  if ($would_interpolate && !$has_single_quotes) {
     return $self->violation($Desc, $Expl_no_q, $elem);
   }
 
@@ -350,24 +327,20 @@ sub _delimiter_preference_order ($self, $delimiter_start) {
   return 99;  # Should never reach here for valid bracket operators
 }
 
-sub _has_literal_variables ($self, $string) {
-  # Look for unescaped $ or @ followed by patterns that indicate actual variables
-  # This is more sophisticated than just checking for any $ or @ character
-  # We want to detect things like $var, @array, $hash{key}, ${var}, etc.
-  # but NOT \$10, \@email, etc.
-  # Pattern explanation:
-  # (?<!\\)     - negative lookbehind: not preceded by backslash (not escaped)
-  # [\$\@]      - dollar sign or at sign
-  # (?:         - non-capturing group for what follows the sigil:
-  #   \w+       - word characters (variable names like $var, @array)
-  #   |[{][^}]*[}] - hash/array access like ${var} or @{array}
-  #   |\[       - array index start like $arr[ or @arr[
-  #   |\d+      - special variables like $1, $2, etc.
-  #   |[!?^&*()_+=\[\]{}|\\:";'<>.,/] - specific punctuation variables
-  # )
-  # More conservative approach - only match known special variable punctuation
-  return $string
-    =~ /(?<!\\)[\$\@](?:\w+|[{][^}]*[}]|\[|\d+|[!?^&*()_+=\[\]{}|\\:";'<>.,\/])/;
+sub _would_interpolate ($self, $string) {
+  # Test if this string content would interpolate if put in double quotes
+  # This is the authoritative way to check - let PPI decide
+  my $test_content = qq("$string");
+  my $test_doc     = PPI::Document->new(\$test_content);
+
+  my $would_interpolate = 0;
+  $test_doc->find(sub ($top, $test_elem) {
+    $would_interpolate = $test_elem->interpolations
+      if $test_elem->isa("PPI::Token::Quote::Double");
+    0
+  });
+
+  return $would_interpolate;
 }
 
 1;
