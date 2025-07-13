@@ -17,13 +17,18 @@ selection for quote-like operators.
 This policy enforces consistent and optimal quoting practices by combining two
 requirements:
 
-1. **Simple strings** (containing no double quotes, @ symbols, or escapes) should use double quotes rather than single quotes
-2. **Quote operators** should use delimiters that minimize the need for escape characters
+1. **Simple strings** (containing no double quotes, @ symbols, or escapes)
+   should use double quotes rather than single quotes
+2. **Quote operators** should use delimiters that minimize the need for
+   escape characters
 
 #### Rationale
 
-- Double quotes are the "normal" case in Perl, and single quotes should be reserved for cases where they are specifically needed to avoid interpolation or escaping
-- Choosing optimal delimiters for quote operators minimizes escape characters, making code more readable and less error-prone
+- Double quotes are the "normal" case in Perl, and single quotes should be
+  reserved for cases where they are specifically needed to avoid interpolation
+  or escaping
+- Choosing optimal delimiters for quote operators minimizes escape characters,
+  making code more readable and less error-prone
 
 #### Examples
 
