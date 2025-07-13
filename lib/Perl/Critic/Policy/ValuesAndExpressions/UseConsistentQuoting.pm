@@ -235,10 +235,11 @@ escaping.
 
 =item * Quote Operators
 
-Quote-like operators (C<q{}>, C<qq{}>, C<qw{}>, C<qx{}>, C<qr//>) should use the
-delimiter that requires the fewest escape characters. The policy considers three
-preferred delimiters in order: parentheses C<()>, square brackets C<[]>, and
-curly braces C<{}>.
+Quote-like operators (C<q()>, C<qq()>, C<qw()>, C<qx()>, C<qr()>) should use the
+delimiter that requires the fewest escape characters. When multiple delimiters
+require the same number of escapes, the policy prefers them in order:
+parentheses C<()>, square brackets C<[]>, angle brackets C<< <> >>, and curly
+braces C<{}>.
 
 =back
 
@@ -268,16 +269,19 @@ Good:
 
 Bad:
 
-    my @list = qw{word(with)parens};      # should use qw() - parens
-                                           # need escaping anyway
-    my $cmd = qx{command[with]brackets};  # should use qx[] - brackets
-                                           # need escaping
+    my @list = qw{word(with)parens};      # should use qw[] - fewer escapes
+    my $cmd = qx{command[with]brackets};  # should use qx() - fewer escapes
+    my $regex = qr{text<with>angles};     # should use qr<> - fewer escapes
+    my $simple = qw<no delimiters here>;  # should use qw() - preferred
+    my $words = qw{simple words};         # should use qw() - preferred
 
 Good:
 
-    my @list = qw(word(with)parens);      # () optimal - content has parens
-    my $cmd = qx[command[with]brackets];  # [] optimal - content has brackets
-    my $simple = qw{no delimiters here};  # {} optimal - no special chars
+    my @list = qw[word(with)parens];      # [] optimal - content has parentheses
+    my $cmd = qx(command[with]brackets);  # () optimal - content has brackets
+    my $regex = qr<text<with>angles>;     # <> optimal - content has angles
+    my $simple = qw(no delimiters here);  # () preferred - no special chars
+    my $words = qw(simple words);         # () preferred for simple content
 
 =head1 AUTHOR
 

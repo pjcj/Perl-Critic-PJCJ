@@ -20,7 +20,7 @@ requirements:
 1. **Simple strings** (containing no double quotes, @ symbols, or escapes)
    should use double quotes rather than single quotes
 2. **Quote operators** should use delimiters that minimize the need for
-   escape characters
+   escape characters, with preference order: `()` > `[]` > `<>` > `{}`
 
 #### Rationale
 
@@ -28,7 +28,10 @@ requirements:
   reserved for cases where they are specifically needed to avoid interpolation
   or escaping
 - Choosing optimal delimiters for quote operators minimizes escape characters,
-  making code more readable and less error-prone
+  making code more readable and less error-prone. When multiple delimiters
+  require the same number of escapes, the policy prefers them in order:
+  parentheses `()`, square brackets `[]`, angle brackets `<>`, then curly
+  braces `{}`
 
 #### Examples
 
@@ -56,18 +59,22 @@ my $complex = 'It\'s a nice day';   # escaping needed anyway
 **Quote Operators - Bad:**
 
 ```perl
-my @words = qw{word(with)parens};      # should use qw() - content has parens
-my $cmd = qx{command[with]brackets};   # should use qx[] - content has brackets
-my $str = qq[simple string];           # should use qq{} - no special chars
+my @words = qw{word(with)parens};      # should use qw[] - fewer escapes needed
+my $cmd = qx{command[with]brackets};   # should use qx() - fewer escapes needed
+my $regex = qr{text<with>angles};      # should use qr<> - fewer escapes needed
+my $str = qq<simple string>;           # should use qq() - no special chars
+my $list = qw{simple words};           # should use qw() - preferred
 ```
 
 **Quote Operators - Good:**
 
 ```perl
-my @words = qw(word(with)parens);      # () optimal - content has parens
-my $cmd = qx[command[with]brackets];   # [] optimal - content has brackets
-my $str = qq{simple string};           # {} optimal - no special chars
-my $complex = qw{has(parens)[and]{braces}}; # any delimiter OK when all present
+my @words = qw[word(with)parens];      # [] optimal - content has parentheses
+my $cmd = qx(command[with]brackets);   # () optimal - content has brackets
+my $regex = qr<text<with>angles>;      # <> optimal - content has angles
+my $str = qq(simple string);           # () preferred - no special chars
+my $list = qw(simple words);           # () preferred for simple content
+my $braces = qw<word{with}braces>;     # <> optimal - content has braces
 ```
 
 ## Installation
