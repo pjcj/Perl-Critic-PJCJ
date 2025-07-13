@@ -5,76 +5,73 @@ practices in Perl code.
 
 ## Description
 
-This distribution provides a Perl::Critic policy that helps maintain consistent
-and readable string quoting conventions in Perl code. It combines rules for
-both simple string quoting (single vs double quotes) and optimal delimiter
-selection for quote-like operators.
+This distribution provides a Perl::Critic policy that enforces consistent quoting
+to improve code readability and maintainability. It applies five priority rules
+to ensure optimal string and quote operator usage.
 
 ## Policy
 
 ### Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting
 
-This policy enforces consistent and optimal quoting practices by combining two
-requirements:
+This policy enforces consistent and optimal quoting practices through five priority rules:
 
-1. **Simple strings** (containing no double quotes, @ symbols, or escapes)
-   should use double quotes rather than single quotes
-2. **Quote operators** should use delimiters that minimize the need for
-   escape characters, with preference order: `()` > `[]` > `<>` > `{}`
+1. **Prefer double quotes for simple strings** - Use `""` as the default for most strings. Only use single quotes when the string contains literal `$` or `@` that should not be interpolated.
+
+2. **Minimize escape characters** - Choose delimiters that require the fewest backslash escapes.
+
+3. **Prefer "" over qq()** - Use simple double quotes instead of `qq()` when possible.
+
+4. **Prefer '' over q()** - Use simple single quotes instead of `q()` for literal strings.
+
+5. **Use only bracket delimiters** - Only use bracket delimiters `()`, `[]`, `<>`, `{}` for quote-like operators. Choose the delimiter that minimizes escape characters. When escape counts are equal, prefer them in this order: `()`, `[]`, `<>`, `{}`.
 
 #### Rationale
 
-- Double quotes are the "normal" case in Perl, and single quotes should be
-  reserved for cases where they are specifically needed to avoid interpolation
-  or escaping
-- Choosing optimal delimiters for quote operators minimizes escape characters,
-  making code more readable and less error-prone. When multiple delimiters
-  require the same number of escapes, the policy prefers them in order:
-  parentheses `()`, square brackets `[]`, angle brackets `<>`, then curly
-  braces `{}`
+- Double quotes are preferred for consistency and to allow potential interpolation
+- Minimizing escape characters improves readability and reduces errors
+- Simple quotes are preferred over their `q()` and `qq()` equivalents when possible
+- Only bracket delimiters should be used (no exotic delimiters like `/`, `|`, `#`, etc.)
+- Optimal delimiter selection reduces visual noise in code
 
 #### Examples
 
-**Simple Strings - Bad:**
+**Bad examples:**
 
 ```perl
-my $greeting = 'hello';        # simple string, should use double quotes
-my $name = 'world';            # simple string, should use double quotes
-my $message = 'hello world';   # simple string, should use double quotes
+# Rule 1: Simple strings should use double quotes
+my $greeting = 'hello';           # should use double quotes
+
+# Rule 2, 5: Suboptimal escaping and exotic delimiters  
+my @words = qw{word(with)parens}; # should use qw[] to avoid escaping
+my $file = q/path\/to\/file/;     # exotic delimiter needs escaping
+
+# Rule 3: Should prefer "" over qq()
+my $text = qq(simple);            # should use "" instead of qq()
+
+# Rule 4: Should prefer '' over q()  
+my $literal = q(contains$literal); # should use '' instead of q()
 ```
 
-**Simple Strings - Good:**
+**Good examples:**
 
 ```perl
-my $greeting = "hello";        # simple string with double quotes
-my $name = "world";            # simple string with double quotes
-my $message = "hello world";   # simple string with double quotes
+# Rule 1: Double quotes for simple strings, single quotes for literals
+my $greeting = "hello";           # double quotes for simple strings
+my $email = 'user@domain.com';    # literal @ uses single quotes
+my $var = 'Price: $10';           # literal $ uses single quotes
 
-# These are acceptable with single quotes because they're not "simple"
-my $email = 'user@domain.com';      # contains @, so single quotes OK
-my $quoted = 'He said "hello"';     # contains ", so single quotes OK
-my $complex = 'It\'s a nice day';   # escaping needed anyway
-```
+# Rule 2, 5: Optimal delimiter selection
+my @words = qw[word(with)parens]; # [] avoids escaping parentheses
+my $cmd = qx(command[with]brackets); # () avoids escaping brackets
+my $file = "path/to/file";        # "" avoids escaping
 
-**Quote Operators - Bad:**
+# Rule 3, 4: Simple quotes preferred
+my $text = "simple";              # "" preferred over qq()
+my $literal = 'contains$literal'; # '' preferred over q()
 
-```perl
-my @words = qw{word(with)parens};      # should use qw[] - fewer escapes needed
-my $cmd = qx{command[with]brackets};   # should use qx() - fewer escapes needed
-my $regex = qr{text<with>angles};      # should use qr<> - fewer escapes needed
-my $str = qq<simple string>;           # should use qq() - no special chars
-my $list = qw{simple words};           # should use qw() - preferred
-```
-
-**Quote Operators - Good:**
-
-```perl
-my @words = qw[word(with)parens];      # [] optimal - content has parentheses
-my $cmd = qx(command[with]brackets);   # () optimal - content has brackets
-my $regex = qr<text<with>angles>;      # <> optimal - content has angles
-my $str = qq(simple string);           # () preferred - no special chars
-my $list = qw(simple words);           # () preferred for simple content
-my $braces = qw<word{with}braces>;     # <> optimal - content has braces
+# Exotic delimiters avoided
+my @list = qw(one two);           # bracket delimiters only
+my $path = "some/path";           # "" instead of q|some|path|
 ```
 
 ## Installation

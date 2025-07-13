@@ -13,17 +13,15 @@ use base "Perl::Critic::Policy";
 
 our $VERSION = "0.001";
 
-Readonly::Scalar my $DESC => q(Use consistent and optimal quoting);
+Readonly::Scalar my $DESC => "Use consistent and optimal quoting";
 Readonly::Scalar my $EXPL_DOUBLE =>
-  q[Simple strings should use double quotes for consistency];
+  "Simple strings should use double quotes for consistency";
 Readonly::Scalar my $EXPL_SINGLE =>
-  q[Strings with literal $ or @ should use single quotes];
-Readonly::Scalar my $EXPL_NO_QQ =>
-  q[Use "" instead of qq() when possible];
-Readonly::Scalar my $EXPL_NO_Q =>
-  q[Use '' instead of q() when possible];
+  'Strings with literal $ or @ should use single quotes';
+Readonly::Scalar my $EXPL_NO_QQ => 'Use "" instead of qq() when possible';
+Readonly::Scalar my $EXPL_NO_Q  => "Use '' instead of q() when possible";
 Readonly::Scalar my $EXPL_OPTIMAL =>
-  q(Choose (), [], <> or {} delimiters that require the fewest escape characters);
+  "Choose (), [], <> or {} delimiters that require the fewest escape characters";
 
 sub supported_parameters { return () }
 sub default_severity     { return $SEVERITY_MEDIUM }
@@ -98,7 +96,8 @@ sub _check_q_literal ($self, $elem) {
 
   if (defined $current_start) {
     my ($optimal_delim, $current_is_optimal)
-      = $self->_find_optimal_delimiter($content, $operator, $current_start, $current_end);
+      = $self->_find_optimal_delimiter($content, $operator, $current_start,
+        $current_end);
 
     if (!$current_is_optimal) {
       return $self->violation($DESC,
@@ -111,11 +110,11 @@ sub _check_q_literal ($self, $elem) {
 
   my $has_single_quotes = index($string, "'") != -1;
   my $has_double_quotes = index($string, '"') != -1;
-  my $has_literal_vars = $string =~ /[\$\@]/;
+  my $has_literal_vars  = $string =~ /[\$\@]/;
 
   # If content has both single and double quotes, q() is appropriate
   if ($has_single_quotes && $has_double_quotes) {
-    return; # q() is justified
+    return;  # q() is justified
   }
 
   # Check if content is truly "simple" - no special characters that justify q()
@@ -144,7 +143,8 @@ sub _check_qq_interpolate ($self, $elem) {
 
   if (defined $current_start) {
     my ($optimal_delim, $current_is_optimal)
-      = $self->_find_optimal_delimiter($content, $operator, $current_start, $current_end);
+      = $self->_find_optimal_delimiter($content, $operator, $current_start,
+        $current_end);
 
     if (!$current_is_optimal) {
       return $self->violation($DESC,
@@ -185,7 +185,6 @@ sub _check_quote_operators ($self, $elem) {
 
   return;
 }
-
 
 sub _parse_quote_token ($self, $elem) {
   my $content = $elem->content();
@@ -256,12 +255,13 @@ sub _find_optimal_delimiter (
   }
 
   # Find minimum escape count
-  my $min_count = (sort { $a <=> $b } map { $_->{escape_count} } @delimiters)[0];
+  my $min_count
+    = (sort { $a <=> $b } map { $_->{escape_count} } @delimiters)[0];
 
   # Find optimal delimiter: minimize escapes, then preference order
   my ($optimal) = sort {
-    $a->{escape_count} <=> $b->{escape_count} ||    # Minimize escapes first
-      $self->_delimiter_preference_order($a->{start}) <=>  # Then prefer by order
+    $a->{escape_count} <=> $b->{escape_count} ||  # Minimize escapes first
+      $self->_delimiter_preference_order($a->{start}) <=> # Then prefer by order
       $self->_delimiter_preference_order($b->{start})
   } @delimiters;
 
@@ -270,7 +270,7 @@ sub _find_optimal_delimiter (
   my $current_delim;
   for my $delim (@delimiters) {
     if ($delim->{start} eq $current_start && $delim->{end} eq $current_end) {
-      $current_delim = $delim;
+      $current_delim      = $delim;
       $current_is_bracket = 1;
       last;
     }
@@ -303,62 +303,92 @@ __END__
 
 =head1 NAME
 
-Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting - Use
-consistent and optimal quoting
+Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting - Use consistent and optimal quoting
 
 =head1 SYNOPSIS
 
-  # Bad:
-  my $greeting = 'hello';                # simple string should use
-                                          # double quotes
-  my @words = qw{word(with)parens};     # should use qw[] to minimize
-                                         # escaping
-  my $text = qq(simple);                 # should use "" instead of qq()
-  my $literal = q(literal);              # should use '' instead of q()
+  # Bad examples:
+  my $greeting = 'hello';           # simple strings should use double quotes
+  my @words = qw{word(with)parens}; # should use qw[] to avoid escaping
+  my $text = qq(simple);            # should use "" instead of qq()
+  my $file = q/path\/to\/file/;     # exotic delimiter needs escaping
 
-  # Good:
-  my $greeting = "hello";               # simple string with double quotes
-  my @words = qw[word(with)parens];     # optimal delimiter choice
-  my $text = "simple";                  # double quotes instead of qq()
-  my $literal = 'literal$var';          # single quotes for literal $
+  # Good examples:
+  my $greeting = "hello";           # double quotes for simple strings
+  my @words = qw[word(with)parens]; # optimal delimiter choice
+  my $text = "simple";              # "" preferred over qq()
+  my $file = "path/to/file";        # "" avoids escaping
+
+=head1 DESCRIPTION
+
+This policy enforces consistent quoting to improve code readability and maintainability.
+It applies five priority rules in order:
+
+=head2 Rule 1: Prefer double quotes for simple strings
+
+Use double quotes (C<"">) as the default for most strings. Only use single quotes
+when the string contains literal C<$> or C<@> that should not be interpolated.
+
+  # Good
+  my $name = "John";              # simple string uses double quotes
+  my $email = 'user@domain.com';  # literal @ uses single quotes
+  my $var = 'Price: $10';         # literal $ uses single quotes
+
+  # Bad
+  my $name = 'John';              # should use double quotes
+
+=head2 Rule 2: Minimize escape characters
+
+Choose delimiters that require the fewest backslash escapes.
+
+  # Good
+  my $path = "path/to/file";      # no escaping needed
+  my @list = qw[word(with)parens xx]; # [] avoids escaping parentheses
+
+  # Bad
+  my $path = q/path\/to\/file/;   # requires escaping slashes
+  my @list = qw(word\(with\)parens xx); # requires escaping parentheses
+
+=head2 Rule 3: Prefer "" over qq()
+
+Use simple double quotes instead of C<qq()> when possible.
+
+  # Good
+  my $text = "hello world";
+
+  # Bad
+  my $text = qq(hello world);
+
+=head2 Rule 4: Prefer '' over q()
+
+Use simple single quotes instead of C<q()> for literal strings.
+
+  # Good
+  my $literal = 'contains$literal';
+
+  # Bad
+  my $literal = q(contains$literal);
+
+=head2 Rule 5: Use only bracket delimiters
+
+Only use bracket delimiters C<()>, C<[]>, C<< <> >>, C<{}> for quote-like operators.
+Choose the delimiter that minimizes escape characters. When escape counts are equal,
+prefer them in this order: C<()>, C<[]>, C<< <> >>, C<{}>.
+
+  # Good
+  my @words = qw(simple list);     # () preferred when no escapes needed
+  my @data = qw[has(parens)];      # [] optimal - avoids escaping ()
+  my $cmd = qx(has[brackets]);     # () optimal - avoids escaping []
+  my $text = q(has<angles>);       # () optimal - avoids escaping <>
+
+  # Bad - exotic delimiters
+  my @words = qw/word word/;       # should use qw()
+  my $path = q|some|path|;         # should use ""
+  my $text = qq#some#text#;        # should use ""
 
 =head1 AFFILIATION
 
 This Policy is part of the Perl::Critic::Strings distribution.
-
-=head1 DESCRIPTION
-
-This policy enforces consistent quoting rules with the following priority:
-
-=over 4
-
-=item 1. Always prefer interpolating quotes unless strings should not be interpolated
-
-Simple strings should use double quotes (C<"">) to allow for potential
-interpolation. Single quotes (C<''>) should only be used when the string
-contains literal C<$> or C<@> characters that should not be interpolated.
-
-=item 2. Always prefer fewer escaped characters
-
-Choose delimiters that minimize the number of escape sequences needed.
-
-=item 3. Prefer C<""> to C<qq()>
-
-Use double quotes instead of C<qq()> when the content doesn't contain
-double quote characters.
-
-=item 4. Prefer C<''> to C<q()>
-
-Use single quotes instead of C<q()> when the content doesn't contain
-single quote characters and contains literal C<$> or C<@>.
-
-=item 5. Prefer bracketed delimiters in order
-
-When using quote-like operators, prefer bracket delimiters in this order:
-parentheses C<()>, square brackets C<[]>, angle brackets C<< <> >>,
-curly braces C<{}>.
-
-=back
 
 =head1 CONFIGURATION
 
@@ -366,38 +396,47 @@ This Policy is not configurable except for the standard options.
 
 =head1 EXAMPLES
 
-=head2 Examples
+=head2 String Literals
 
-Bad:
+  # Bad
+  my $greeting = 'hello';          # Rule 1: should use double quotes
+  my $email = "user@domain.com";   # Rule 1: should use single quotes (literal @)
+  my $path = 'C:\Program Files';   # Rule 1: should use double quotes
 
-    my $greeting = 'hello';        # simple string, should use double quotes
-    my $name = q(world);           # should use "" instead of q()
-    my $literal = q(literal);      # should use '' instead of q()
-    my $text = qq(simple text);    # should use "" instead of qq()
-
-Good:
-
-    my $greeting = "hello";        # simple string with double quotes
-    my $name = "world";            # allows potential interpolation
-    my $literal = 'literal$var';   # single quotes for literal $
-    my $text = "simple text";      # double quotes instead of qq()
-    my $both = qq(has "quotes");   # qq() when content has double quotes
+  # Good
+  my $greeting = "hello";          # double quotes for simple strings
+  my $email = 'user@domain.com';   # single quotes for literal @
+  my $path = "C:\\Program Files";  # double quotes allow escaping
 
 =head2 Quote Operators
 
-Bad:
+  # Bad
+  my $simple = q(hello);           # Rule 4: should use ''
+  my $text = qq(hello);            # Rule 3: should use ""
+  my @words = qw/one two/;         # Rule 5: should use qw()
+  my $cmd = qx|ls|;                # Rule 5: should use qx()
 
-    my @list = qw{word(with)parens};      # should use qw[] - fewer escapes
-    my $cmd = qx{command[with]brackets};  # should use qx() - fewer escapes
-    my $simple = qw<no delimiters here>;  # should use qw() - preferred
-    my $words = qw{simple words};         # should use qw() - preferred
+  # Good
+  my $simple = 'hello$literal';    # single quotes for literal content
+  my $text = "hello";              # double quotes preferred
+  my @words = qw(one two);         # bracket delimiters only
+  my $cmd = qx(ls);                # bracket delimiters only
 
-Good:
+=head2 Optimal Delimiter Selection
 
-    my @list = qw[word(with)parens];      # [] optimal - content has parentheses
-    my $cmd = qx(command[with]brackets);  # () optimal - content has brackets
-    my $simple = qw(no delimiters here);  # () preferred - no special chars
-    my $words = qw(simple words);         # () preferred for simple content
+  # Bad - suboptimal escaping
+  my @list = qw(word\(with\)parens);     # () requires escaping parentheses
+  my $cmd = qx[command\[with\]brackets]; # [] requires escaping brackets
+  my $text = q{word\{with\}braces};      # {} requires escaping braces
+
+  # Good - minimal escaping
+  my @list = qw[word(with)parens];       # [] avoids escaping parentheses
+  my $cmd = qx(command[with]brackets);   # () avoids escaping brackets
+
+=head2 Complex Content
+
+  # When content has multiple delimiter types, choose the one requiring fewest escapes
+  my $both = qq(has 'single' and "double" quotes); # qq() needed for both quote types
 
 =head1 AUTHOR
 
