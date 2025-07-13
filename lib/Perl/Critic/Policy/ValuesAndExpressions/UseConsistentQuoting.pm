@@ -23,6 +23,7 @@ Readonly::Scalar my $EXPL_OPTIMAL =>
 sub supported_parameters { return () }
 sub default_severity     { return $SEVERITY_MEDIUM }
 sub default_themes       { return qw( cosmetic ) }
+
 sub applies_to {
   return qw(
     PPI::Token::Quote::Single
@@ -49,7 +50,7 @@ sub _check_single_quoted ($self, $elem) {
   my $string = $elem->string;
 
   # Also check if the original content has any escapes
-  my $content = $elem->content;
+  my $content     = $elem->content;
   my $has_escapes = $content =~ /\\/;
 
   # Check if this is a "simple" string - no double quotes, @ symbols, or escapes
@@ -62,7 +63,8 @@ sub _check_single_quoted ($self, $elem) {
 
 sub _check_quote_operators ($self, $elem) {
   # Get current delimiters and content by parsing the token
-  my ($current_start, $current_end, $content, $operator) = $self->_parse_quote_token($elem);
+  my ($current_start, $current_end, $content, $operator)
+    = $self->_parse_quote_token($elem);
   return unless defined $current_start;  # Skip if parsing failed
 
   # Only check our preferred delimiters: (), [], {}
@@ -71,15 +73,14 @@ sub _check_quote_operators ($self, $elem) {
   # Don't skip empty content - () is preferred even for empty quotes
 
   # Find optimal delimiter and check if current is suboptimal
-  my ($optimal_delim, $current_is_optimal) = $self->_find_optimal_delimiter($content, $operator, $current_start, $current_end);
+  my ($optimal_delim, $current_is_optimal)
+    = $self->_find_optimal_delimiter($content, $operator, $current_start,
+      $current_end);
 
   # Check if current delimiter is suboptimal
   if (!$current_is_optimal) {
-    return $self->violation(
-      $DESC,
-      "$EXPL_OPTIMAL (use $optimal_delim->{display})",
-      $elem
-    );
+    return $self->violation($DESC,
+      "$EXPL_OPTIMAL (use $optimal_delim->{display})", $elem);
   }
 
   return;
@@ -100,10 +101,10 @@ sub _parse_quote_token ($self, $elem) {
     my $end_delim = $start_delim;
 
     # Handle bracket pairs
-    if ($start_delim eq "(") { $end_delim = ")"; }
-    elsif ($start_delim eq "[") { $end_delim = "]"; }
-    elsif ($start_delim eq "{") { $end_delim = "}"; }
-    elsif ($start_delim eq "<") { $end_delim = ">"; }
+    if    ($start_delim eq "(") { $end_delim = ")" }
+    elsif ($start_delim eq "[") { $end_delim = "]" }
+    elsif ($start_delim eq "{") { $end_delim = "}" }
+    elsif ($start_delim eq "<") { $end_delim = ">" }
 
     # Remove the ending delimiter from the content
     $rest =~ s/\Q$end_delim\E\z//;
@@ -114,31 +115,51 @@ sub _parse_quote_token ($self, $elem) {
   return;  # Parsing failed
 }
 
-sub _find_optimal_delimiter ($self, $content, $operator = "qw", $current_start = "", $current_end = "") {
+sub _find_optimal_delimiter (
+  $self, $content,
+  $operator      = "qw",
+  $current_start = "",
+  $current_end   = "",
+) {
   my @delimiters = (
-    { start => "(", end => ")", display => "${operator}()", chars => ["(", ")"] },
-    { start => "[", end => "]", display => "${operator}[]", chars => ["[", "]"] },
-    { start => "{", end => "}", display => "${operator}{}", chars => ["{", "}"] },
+    {
+      start   => "(",
+      end     => ")",
+      display => "${operator}()",
+      chars   => [ "(", ")" ],
+    }, {
+      start   => "[",
+      end     => "]",
+      display => "${operator}[]",
+      chars   => [ "[", "]" ],
+    }, {
+      start   => "{",
+      end     => "}",
+      display => "${operator}{}",
+      chars   => [ "{", "}" ],
+    },
   );
 
   # Count escape chars needed for each delimiter
   # Escape count = number of delimiter chars that appear in the content
   for my $delim (@delimiters) {
     my $count = 0;
-    for my $char (@{$delim->{chars}}) {
+    for my $char (@{ $delim->{chars} }) {
       $count += () = $content =~ /\Q$char\E/g;
     }
     $delim->{escape_count} = $count;
   }
 
   # Find minimum escape count
-  my $min_count = (sort { $a <=> $b } map { $_->{escape_count} } @delimiters)[0];
+  my $min_count
+    = (sort { $a <=> $b } map { $_->{escape_count} } @delimiters)[0];
 
   # Find optimal delimiter: minimum escapes, then preference order
   my ($optimal) = sort {
     $a->{escape_count} <=> $b->{escape_count} ||  # Minimize escapes first
-    ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : 2) <=>  # Then prefer () > [] > {}
-    ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : 2)
+      ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : 2)
+      <=>                                         # Then prefer () > [] > {}
+      ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : 2)
   } @delimiters;
 
   # Check if current delimiter is optimal
@@ -155,11 +176,12 @@ sub _find_optimal_delimiter ($self, $content, $operator = "qw", $current_start =
     # Current is optimal if it has the minimum escape count AND
     # is the preferred choice among those with minimum escape count
     if ($current_delim->{escape_count} == $min_count) {
-      # Among delimiters with minimum escape count, check if current is preferred
+      # Among delimiters with minimum escape count, check if current is
+      # preferred
       my @min_delims = grep { $_->{escape_count} == $min_count } @delimiters;
       my ($preferred) = sort {
-        ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : 2) <=>
-        ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : 2)
+        ($a->{start} eq "(" ? 0 : $a->{start} eq "[" ? 1 : 2)
+          <=> ($b->{start} eq "(" ? 0 : $b->{start} eq "[" ? 1 : 2)
       } @min_delims;
 
       $current_is_optimal = ($current_delim eq $preferred);
@@ -177,13 +199,16 @@ __END__
 
 =head1 NAME
 
-Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting - Use consistent and optimal quoting
+Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting - Use
+consistent and optimal quoting
 
 =head1 SYNOPSIS
 
   # Bad:
-  my $greeting = 'hello';                # simple string should use double quotes
-  my @words = qw{word(with)parens};     # should use qw() to minimize escaping
+  my $greeting = 'hello';                # simple string should use
+                                          # double quotes
+  my @words = qw{word(with)parens};     # should use qw() to minimize
+                                         # escaping
 
   # Good:
   my $greeting = "hello";               # simple string with double quotes
@@ -202,7 +227,8 @@ This policy combines two quoting requirements:
 =item * Simple Strings
 
 "Simple" strings (those containing no double quote characters (") and no at-sign
-(@) characters) should use double quotes rather than single quotes. The rationale
+(@) characters) should use double quotes rather than single quotes. The
+rationale
 is that double quotes are the "normal" case in Perl, and single quotes should be
 reserved for cases where they are specifically needed to avoid interpolation or
 escaping.
@@ -242,8 +268,10 @@ Good:
 
 Bad:
 
-    my @list = qw{word(with)parens};      # should use qw() - parens need escaping anyway
-    my $cmd = qx{command[with]brackets};  # should use qx[] - brackets need escaping
+    my @list = qw{word(with)parens};      # should use qw() - parens
+                                           # need escaping anyway
+    my $cmd = qx{command[with]brackets};  # should use qx[] - brackets
+                                           # need escaping
 
 Good:
 

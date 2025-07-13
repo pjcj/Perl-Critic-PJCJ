@@ -13,7 +13,8 @@ no warnings "experimental::signatures";
 use lib qw( lib );
 use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
 
-my $Policy = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+my $Policy
+  = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
 # Create a mock PPI document for testing
 use PPI;
@@ -59,14 +60,15 @@ sub bad ($code, $description) {
 
 subtest "Simple strings (from RequireDoubleQuotedStrings)" => sub {
   # Should violate
-  bad q(my $x = 'hello'), "Single quoted simple string";
-  bad q(my $x = 'world'), "Another simple string";
+  bad q(my $x = 'hello'),       "Single quoted simple string";
+  bad q(my $x = 'world'),       "Another simple string";
   bad q(my $x = 'hello world'), "Simple string with space";
 
   # Should NOT violate
-  good q(my $x = "hello"), "Double quoted simple string";
+  good q(my $x = "hello"),           "Double quoted simple string";
   good q(my $x = 'user@domain.com'), "String with @ using single quotes";
-  good q(my $x = 'He said "hello"'), "String with double quotes using single quotes";
+  good q(my $x = 'He said "hello"'),
+    "String with double quotes using single quotes";
   good q(my $x = 'It\'s a nice day'), "String with escaping";
 
   # Multiple violations
@@ -86,19 +88,25 @@ subtest "Simple strings (from RequireDoubleQuotedStrings)" => sub {
 
 subtest "Quote operators (from RequireOptimalQuoteDelimiters)" => sub {
   # Minimize escapes first - content with parens should avoid () delimiters
-  bad q[my @x = qw(word(with)parens)], "qw() with parens should use qw[] to avoid escapes";
+  bad q[my @x = qw(word(with)parens)],
+    "qw() with parens should use qw[] to avoid escapes";
   good q{my @x = qw[word(with)parens]}, "qw[] with parens avoids escapes";
-  bad q[my @x = qw{word(with)parens}], "qw{} with parens should use qw[] to avoid escapes";
+  bad q[my @x = qw{word(with)parens}],
+    "qw{} with parens should use qw[] to avoid escapes";
 
   # Content with brackets should avoid [] delimiters
-  bad q(my @x = qw[word[with]brackets]), "qw[] with brackets should use qw() to avoid escapes";
+  bad q(my @x = qw[word[with]brackets]),
+    "qw[] with brackets should use qw() to avoid escapes";
   good q{my @x = qw(word[with]brackets)}, "qw() with brackets avoids escapes";
-  bad q(my @x = qw{word[with]brackets}), "qw{} with brackets should use qw() to avoid escapes";
+  bad q(my @x = qw{word[with]brackets}),
+    "qw{} with brackets should use qw() to avoid escapes";
 
   # Content with braces should avoid {} delimiters
-  bad q(my @x = qw{word{with}braces}), "qw{} with braces should use qw() to avoid escapes";
+  bad q(my @x = qw{word{with}braces}),
+    "qw{} with braces should use qw() to avoid escapes";
   good q[my @x = qw(word{with}braces)], "qw() with braces avoids escapes";
-  bad q(my @x = qw[word{with}braces]), "qw[] with braces should use qw() to avoid escapes";
+  bad q(my @x = qw[word{with}braces]),
+    "qw[] with braces should use qw() to avoid escapes";
 
   # Simple content (no delimiters) should prefer () first
   bad q(my @x = qw{simple words}), "qw{} with no delimiters should use qw()";
@@ -106,17 +114,23 @@ subtest "Quote operators (from RequireOptimalQuoteDelimiters)" => sub {
   good q[my @x = qw(simple words)], "qw() is preferred for simple content";
 
   # Other operators follow same rules
-  bad q[my $x = q(text(with)parens)], "q() with parens should use q[] to avoid escapes";
+  bad q[my $x = q(text(with)parens)],
+    "q() with parens should use q[] to avoid escapes";
   good q{my $x = q[text(with)parens]}, "q[] with parens avoids escapes";
 
-  bad q(my $x = qq[text[with]brackets]), "qq[] with brackets should use qq() to avoid escapes";
+  bad q(my $x = qq[text[with]brackets]),
+    "qq[] with brackets should use qq() to avoid escapes";
   good q{my $x = qq(text[with]brackets)}, "qq() with brackets avoids escapes";
 
-  bad q(my $x = qx[command[with]brackets]), "qx[] with brackets should use qx() to avoid escapes";
-  good q{my $x = qx(command[with]brackets)}, "qx() with brackets avoids escapes";
+  bad q(my $x = qx[command[with]brackets]),
+    "qx[] with brackets should use qx() to avoid escapes";
+  good q{my $x = qx(command[with]brackets)},
+    "qx() with brackets avoids escapes";
 
-  bad q(my $x = qr[pattern[with]brackets]), "qr[] with brackets should use qr() to avoid escapes";
-  good q{my $x = qr(pattern[with]brackets)}, "qr() with brackets avoids escapes";
+  bad q(my $x = qr[pattern[with]brackets]),
+    "qr[] with brackets should use qr() to avoid escapes";
+  good q{my $x = qr(pattern[with]brackets)},
+    "qr() with brackets avoids escapes";
 
   # Empty quotes should prefer () first
   bad q(my @x = qw{}), "Empty qw{} should use qw()";
@@ -124,19 +138,26 @@ subtest "Quote operators (from RequireOptimalQuoteDelimiters)" => sub {
   good q[my @x = qw()], "Empty qw() is preferred";
 
   # When all delimiters appear in content, prefer () (least escapes needed)
-  bad q(my @x = qw{has(parens)[and]{braces}}), "All delimiters present - should use qw()";
-  bad q(my @x = qw[has(parens)[and]{braces}]), "All delimiters present - should use qw()";
-  good q[my @x = qw(has(parens)[and]{braces})], "qw() preferred when all delimiters present";
+  bad q(my @x = qw{has(parens)[and]{braces}}),
+    "All delimiters present - should use qw()";
+  bad q(my @x = qw[has(parens)[and]{braces}]),
+    "All delimiters present - should use qw()";
+  good q[my @x = qw(has(parens)[and]{braces})],
+    "qw() preferred when all delimiters present";
 
   # Tie-breaking: when escape counts equal, prefer () over [] over {}
   bad q(my @x = qw{one[bracket}), "When tied, () is preferred over {}";
   bad q(my @x = qw[one[bracket]), "When tied, () is preferred over []";
-  good q{my @x = qw(one[bracket])}, "() is preferred when escape counts are tied";
+  good q{my @x = qw(one[bracket])},
+    "() is preferred when escape counts are tied";
 
   # Content with only one type of delimiter that's not the preferred one
-  good q{my @x = qw[text(only)parens]}, "[] optimal when content has only parens";
-  good q{my @x = qw(text[only]brackets)}, "() optimal when content has only brackets";
-  good q[my @x = qw(text{only}braces)], "() optimal when content has only braces";
+  good q{my @x = qw[text(only)parens]},
+    "[] optimal when content has only parens";
+  good q{my @x = qw(text[only]brackets)},
+    "() optimal when content has only brackets";
+  good q[my @x = qw(text{only}braces)],
+    "() optimal when content has only braces";
 };
 
 subtest "Combined tests" => sub {
@@ -149,13 +170,16 @@ subtest "Combined tests" => sub {
   ], 2, "Code with both types of violations";
 
   # Check violation messages
-  like $violations[0]->description, qr/consistent/, "First violation mentions consistency";
-  like $violations[1]->description, qr/consistent/, "Second violation mentions consistency";
+  like $violations[0]->description, qr/consistent/,
+    "First violation mentions consistency";
+  like $violations[1]->description, qr/consistent/,
+    "Second violation mentions consistency";
 };
 
 subtest "Edge cases" => sub {
   # Whitespace in quote operators
-  bad q[my @x = qw  {word(with)parens}], "qw with whitespace before delimiter";
+  bad q[my @x = qw  {word(with)parens}],
+    "qw with whitespace before delimiter";
   bad q[my @x = qw  {word(with)parens}], "qw with tab before delimiter";
 
   # Different quote styles
