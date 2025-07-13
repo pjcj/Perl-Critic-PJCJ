@@ -1597,3 +1597,6 @@ allow = %ENV %SIG $> $0
 # add_themes                         =
 # severity                           = 4
 # maximum_violations_per_document    = no_limit
+
+
+[ValuesAndExpressions::RequireDoubleQuotedStrings]

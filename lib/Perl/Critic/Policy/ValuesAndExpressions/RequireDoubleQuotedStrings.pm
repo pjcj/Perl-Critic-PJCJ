@@ -3,15 +3,15 @@ package Perl::Critic::Policy::ValuesAndExpressions::RequireDoubleQuotedStrings;
 use v5.20.0;
 use strict;
 use warnings;
-use feature 'signatures';
-no warnings 'experimental::signatures';
+use feature "signatures";
+no warnings "experimental::signatures";
 
 use Readonly;
 
 use Perl::Critic::Utils qw{ :severities };
-use base 'Perl::Critic::Policy';
+use base "Perl::Critic::Policy";
 
-our $VERSION = '0.001';
+our $VERSION = "0.001";
 
 Readonly::Scalar my $DESC => q{Use double quotes for simple strings};
 Readonly::Scalar my $EXPL =>
@@ -21,7 +21,7 @@ Readonly::Scalar my $EXPL =>
 sub supported_parameters { return () }
 sub default_severity     { return $SEVERITY_MEDIUM }
 sub default_themes       { return qw( cosmetic ) }
-sub applies_to           { return 'PPI::Token::Quote::Single' }
+sub applies_to           { return "PPI::Token::Quote::Single" }
 
 sub violates ($self, $elem, $) {
   # Get the string content without the surrounding quotes
