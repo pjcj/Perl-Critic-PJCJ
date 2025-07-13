@@ -6,37 +6,30 @@ use warnings;
 use feature "signatures";
 no warnings "experimental::signatures";
 
-use Readonly ();
-
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 use base "Perl::Critic::Policy";
 
 our $VERSION = "0.001";
 
-Readonly::Scalar my $DESC => "Use consistent and optimal quoting";
-Readonly::Scalar my $EXPL_DOUBLE =>
-  "Simple strings should use double quotes for consistency";
-Readonly::Scalar my $EXPL_SINGLE =>
-  'Strings with literal $ or @ should use single quotes';
-Readonly::Scalar my $EXPL_NO_QQ => 'Use "" instead of qq()';
-Readonly::Scalar my $EXPL_NO_Q  => "Use '' instead of q()";
-Readonly::Scalar my $EXPL_OPTIMAL =>
-  "Choose (), [], <> or {} delimiters that require the fewest escape characters";
+my $Desc        = "Use consistent and optimal quoting";
+my $Expl_double = "simple strings should use double quotes for consistency";
+my $Expl_no_qq  = 'use "" instead of qq()';
+my $Expl_no_q   = "use '' instead of q()";
+my $Expl_optimal
+  = "choose (), [], <> or {} delimiters that require the fewest escape characters";
 
-sub supported_parameters { return () }
-sub default_severity     { return $SEVERITY_MEDIUM }
-sub default_themes       { return qw( cosmetic ) }
+sub supported_parameters { }
+sub default_severity     { $SEVERITY_MEDIUM }
+sub default_themes       { qw( cosmetic ) }
 
-sub applies_to {
-  return qw(
-    PPI::Token::Quote::Single
-    PPI::Token::Quote::Double
-    PPI::Token::Quote::Literal
-    PPI::Token::Quote::Interpolate
-    PPI::Token::QuoteLike::Words
-    PPI::Token::QuoteLike::Command
-  );
-}
+sub applies_to { qw(
+  PPI::Token::Quote::Single
+  PPI::Token::Quote::Double
+  PPI::Token::Quote::Literal
+  PPI::Token::Quote::Interpolate
+  PPI::Token::QuoteLike::Words
+  PPI::Token::QuoteLike::Command
+) }
 
 sub violates ($self, $elem, $) {
   # Handle single-quoted strings
@@ -60,19 +53,20 @@ sub violates ($self, $elem, $) {
   }
 
   # Handle other quote-like operators (qw, qx)
-  return $self->_check_quote_operators($elem);
+  $self->_check_quote_operators($elem)
 }
 
 sub _check_single_quoted ($self, $elem) {
   # Get the string content without the surrounding quotes
-  my $string = $elem->string;
+  my $string  = $elem->string;
   my $content = $elem->content;
 
-  # Rule 1: Prefer interpolating quotes unless literal $ or @ OR content has double quotes
+  # Rule 1: Prefer interpolating quotes unless literal $ or @ OR content has
+  # double quotes
+  #
   # Single quotes are appropriate for:
   # 1. Strings with literal $ or @ that shouldn't be interpolated
   # 2. Strings that contain double quotes (to avoid escaping)
-  # 3. Strings with escaped single quotes (to avoid escaping)
 
   # Check if string has double quotes - then single quotes are justified
   if (index($string, '"') != -1) {
@@ -81,27 +75,27 @@ sub _check_single_quoted ($self, $elem) {
 
   # Check if string has escaped single quotes - then q() would be better
   if ($content =~ /\\'/) {
-    return $self->violation($DESC, "Use q() to avoid escaping single quotes", $elem);
+    return $self->violation($Desc, "use q() to avoid escaping single quotes",
+      $elem);
   }
 
-  # Use PPI's interpolations() method to test if this content would interpolate in double quotes
+  # Use PPI's interpolations() method to test if this content would interpolate
+  # in double quotes
   # Create a temporary double-quoted string to test interpolation
-  my $test_content = '"' . $string . '"';
-  my $test_doc = PPI::Document->new(\$test_content);
+  my $test_content = qq("$string");
+  my $test_doc     = PPI::Document->new(\$test_content);
 
   my $would_interpolate = 0;
-  $test_doc->find(sub {
-    my ($top, $test_elem) = @_;
-    if ($test_elem->isa("PPI::Token::Quote::Double")) {
-      $would_interpolate = $test_elem->interpolations();
-      return 0; # Stop searching
+  $test_doc->find(
+    sub ($top, $test_elem) {
+      $would_interpolate = $test_elem->interpolations
+        if $test_elem->isa("PPI::Token::Quote::Double");
     }
-    return 0;
-  });
+  );
 
   # If content would not interpolate in double quotes, suggest double quotes
   if (!$would_interpolate && index($string, '"') == -1) {
-    return $self->violation($DESC, $EXPL_DOUBLE, $elem);
+    return $self->violation($Desc, $Expl_double, $elem);
   }
 
   return;
@@ -109,31 +103,32 @@ sub _check_single_quoted ($self, $elem) {
 
 sub _check_double_quoted ($self, $elem) {
   # Check if this double-quoted string actually needs interpolation
-  my $string = $elem->string;
+  my $string  = $elem->string;
   my $content = $elem->content;
 
-  # Check for escaped dollar/at signs, but only suggest single quotes if no other interpolation
+  # Check for escaped dollar/at signs, but only suggest single quotes if no
+  # other interpolation
   if ($content =~ /\\[\$\@]/) {
-    # Create a test version with escaped chars removed to check for other interpolation
-    my $test_string = $string;
-    $test_string =~ s/\\[\$\@]//g;  # Remove escaped $ and @ chars
-
-    my $test_content = '"' . $test_string . '"';
-    my $test_doc = PPI::Document->new(\$test_content);
+    # Create a test version with escaped chars removed to check for other
+    # interpolation
+    my $test_content = qq("$string");
+    my $test_doc     = PPI::Document->new(\$test_content);
 
     my $has_other_interpolation = 0;
-    $test_doc->find(sub {
-      my ($top, $test_elem) = @_;
-      if ($test_elem->isa("PPI::Token::Quote::Double")) {
-        $has_other_interpolation = $test_elem->interpolations();
-        return 0; # Stop searching
+    $test_doc->find(
+      sub ($top, $test_elem) {
+        $has_other_interpolation = $test_elem->interpolations
+          if $test_elem->isa("PPI::Token::Quote::Double");
       }
-      return 0;
-    });
+    );
 
     # Only suggest single quotes if no other interpolation exists
     if (!$has_other_interpolation) {
-      return $self->violation($DESC, 'Use single quotes for strings with only escaped $ or @ to avoid escaping', $elem);
+      return $self->violation(
+        $Desc,
+        'Use single quotes for strings with escaped $ or @ to avoid escaping',
+        $elem
+      );
     }
   }
 
@@ -150,8 +145,8 @@ sub _check_delimiter_optimization ($self, $elem) {
         $current_end);
 
     if (!$current_is_optimal) {
-      return $self->violation($DESC,
-        "$EXPL_OPTIMAL (hint: use $optimal_delim->{display})", $elem);
+      return $self->violation($Desc,
+        "$Expl_optimal (hint: use $optimal_delim->{display})", $elem);
     }
   }
   return;
@@ -181,9 +176,13 @@ sub _check_q_literal ($self, $elem) {
   # We'll be more conservative - only flag truly simple alphanumeric content
   my $is_simple_content = $string =~ /^[a-zA-Z0-9\s]+$/;
   # If simple content with no quotes and no literal variables, use double quotes
-  if (!$has_literal_vars && !$has_single_quotes && !$has_double_quotes && $is_simple_content) {
+  if ( !$has_literal_vars
+    && !$has_single_quotes
+    && !$has_double_quotes
+    && $is_simple_content)
+  {
     # Simple content should use double quotes per Rule 1
-    return $self->violation($DESC, $EXPL_DOUBLE, $elem);
+    return $self->violation($Desc, $Expl_double, $elem);
   }
   # If content only has double quotes but no single quotes and no variables, could use single quotes
   if (!$has_literal_vars && !$has_single_quotes && $has_double_quotes) {
@@ -194,7 +193,7 @@ sub _check_q_literal ($self, $elem) {
 
   # If has literal vars but no single quotes, should use single quotes
   if ($has_literal_vars && !$has_single_quotes) {
-    return $self->violation($DESC, $EXPL_NO_Q, $elem);
+    return $self->violation($Desc, $Expl_no_q, $elem);
   }
 
   return;
@@ -212,7 +211,7 @@ sub _check_qq_interpolate ($self, $elem) {
   # Check if content can be represented as a simple double-quoted string
   if (index($string, '"') == -1) {
     # No double quotes in content, so can use ""
-    return $self->violation($DESC, $EXPL_NO_QQ, $elem);
+    return $self->violation($Desc, $Expl_no_qq, $elem);
   }
 
   return;
@@ -235,8 +234,8 @@ sub _check_quote_operators ($self, $elem) {
 
   # Check if current delimiter is suboptimal
   if (!$current_is_optimal) {
-    return $self->violation($DESC,
-      "$EXPL_OPTIMAL (hint: use $optimal_delim->{display})", $elem);
+    return $self->violation($Desc,
+      "$Expl_optimal (hint: use $optimal_delim->{display})", $elem);
   }
 
   return;
@@ -367,7 +366,8 @@ sub _has_literal_variables ($self, $string) {
   #   |[!?^&*()_+=\[\]{}|\\:";'<>.,/] - specific punctuation variables
   # )
   # More conservative approach - only match known special variable punctuation
-  return $string =~ /(?<!\\)[\$\@](?:\w+|[{][^}]*[}]|\[|\d+|[!?^&*()_+=\[\]{}|\\:";'<>.,\/])/;
+  return $string
+    =~ /(?<!\\)[\$\@](?:\w+|[{][^}]*[}]|\[|\d+|[!?^&*()_+=\[\]{}|\\:";'<>.,\/])/;
 }
 
 1;
