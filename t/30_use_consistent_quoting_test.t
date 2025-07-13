@@ -100,6 +100,10 @@ subtest "Simple strings (prefer double quotes for interpolation)" => sub {
     "Escaped single quotes should use q() to avoid escapes";
   bad 'my $output = "Price: \$10"',
     "Escaped dollar signs should use single quotes";
+  bad 'my $email = "\@domain"',
+    "Escaped at-signs should use single quotes";
+  good 'my $mixed = "\$a $b"',
+    "Mixed escaped and real interpolation should stay double quotes";
 
   # Test case for literal $ that should use single quotes
   good q(my $text = 'A $ here'), "Literal \$ should use single quotes";

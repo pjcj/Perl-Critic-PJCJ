@@ -92,7 +92,7 @@ sub _check_single_quoted ($self, $elem) {
   my $would_interpolate = 0;
   $test_doc->find(sub {
     my ($top, $test_elem) = @_;
-    if ($test_elem->isa('PPI::Token::Quote::Double')) {
+    if ($test_elem->isa("PPI::Token::Quote::Double")) {
       $would_interpolate = $test_elem->interpolations();
       return 0; # Stop searching
     }
@@ -112,13 +112,30 @@ sub _check_double_quoted ($self, $elem) {
   my $string = $elem->string;
   my $content = $elem->content;
 
-  # Check for escaped dollar signs - these should use single quotes
-  if ($content =~ /\\\$/) {
-    return $self->violation($DESC, "Use single quotes for strings with literal \$ to avoid escaping", $elem);
-  }
+  # Check for escaped dollar/at signs, but only suggest single quotes if no other interpolation
+  if ($content =~ /\\[\$\@]/) {
+    # Create a test version with escaped chars removed to check for other interpolation
+    my $test_string = $string;
+    $test_string =~ s/\\[\$\@]//g;  # Remove escaped $ and @ chars
 
-  # For now, be conservative with double-quoted strings
-  # The main logic is in single-quoted string checking
+    my $test_content = '"' . $test_string . '"';
+    my $test_doc = PPI::Document->new(\$test_content);
+
+    my $has_other_interpolation = 0;
+    $test_doc->find(sub {
+      my ($top, $test_elem) = @_;
+      if ($test_elem->isa("PPI::Token::Quote::Double")) {
+        $has_other_interpolation = $test_elem->interpolations();
+        return 0; # Stop searching
+      }
+      return 0;
+    });
+
+    # Only suggest single quotes if no other interpolation exists
+    if (!$has_other_interpolation) {
+      return $self->violation($DESC, 'Use single quotes for strings with only escaped \$ or \@ to avoid escaping', $elem);
+    }
+  }
 
   return;
 }
