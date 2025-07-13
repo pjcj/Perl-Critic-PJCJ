@@ -96,8 +96,13 @@ subtest "Simple strings (prefer double quotes for interpolation)" => sub {
   ), 1, "Only simple single-quoted string violates";
 
   # Test cases for escaped characters - should recommend better quoting
-  bad q(my $x = 'I\'m happy'), "Escaped single quotes should use q() to avoid escapes";
-  bad 'my $output = "Price: \$10"', "Escaped dollar signs should use single quotes";
+  bad q(my $x = 'I\'m happy'),
+    "Escaped single quotes should use q() to avoid escapes";
+  bad 'my $output = "Price: \$10"',
+    "Escaped dollar signs should use single quotes";
+
+  # Test case for literal $ that should use single quotes
+  good q(my $text = 'A $ here'), "Literal \$ should use single quotes";
 };
 
 subtest "Quote operators" => sub {
@@ -248,8 +253,7 @@ subtest "Combined tests" => sub {
 
 subtest "Edge cases" => sub {
   # Whitespace in quote operators
-  bad 'my @x = qw  {word(with)parens}',
-    "qw with whitespace before delimiter";
+  bad 'my @x = qw  {word(with)parens}', "qw with whitespace before delimiter";
   bad 'my @x = qw\t{word(with)parens}', "qw with tab before delimiter";
 
   # Different quote styles - prefer "" to qq and '' to q
@@ -259,7 +263,8 @@ subtest "Edge cases" => sub {
     "qq// should use double quotes for simple content";
   bad 'my $x = qq(simple)',
     "qq() should use double quotes for simple content";
-  bad 'my $x = q\'simple\'', "q'' should use double quotes for simple content";
+  bad 'my $x = q\'simple\'',
+    "q'' should use double quotes for simple content";
   bad 'my $x = q/simple/', "q// should use double quotes for simple content";
   bad 'my $x = q(simple)', "q() should use double quotes for simple content";
 };
@@ -385,8 +390,7 @@ subtest "Priority rules" => sub {
     "qw<> should use qw() - () preferred over <>";
   bad 'my @x = qw[simple words]',
     "qw[] should use qw() - () preferred over []";
-  good 'my @x = qw(simple words)',
-    "qw() is most preferred bracket delimiter";
+  good 'my @x = qw(simple words)', "qw() is most preferred bracket delimiter";
 };
 
 done_testing;
