@@ -18,8 +18,8 @@ Readonly::Scalar my $EXPL_DOUBLE =>
   "Simple strings should use double quotes for consistency";
 Readonly::Scalar my $EXPL_SINGLE =>
   'Strings with literal $ or @ should use single quotes';
-Readonly::Scalar my $EXPL_NO_QQ => 'Use "" instead of qq() when possible';
-Readonly::Scalar my $EXPL_NO_Q  => "Use '' instead of q() when possible";
+Readonly::Scalar my $EXPL_NO_QQ => 'Use "" instead of qq()';
+Readonly::Scalar my $EXPL_NO_Q  => "Use '' instead of q()";
 Readonly::Scalar my $EXPL_OPTIMAL =>
   "Choose (), [], <> or {} delimiters that require the fewest escape characters";
 
@@ -87,10 +87,7 @@ sub _check_double_quoted ($self, $elem) {
   return;
 }
 
-sub _check_q_literal ($self, $elem) {
-  my $string = $elem->string;
-
-  # First check if delimiter is optimal (Rule 2 & 5)
+sub _check_delimiter_optimization ($self, $elem) {
   my ($current_start, $current_end, $content, $operator)
     = $self->_parse_quote_token($elem);
 
@@ -103,6 +100,16 @@ sub _check_q_literal ($self, $elem) {
       return $self->violation($DESC,
         "$EXPL_OPTIMAL (hint: use $optimal_delim->{display})", $elem);
     }
+  }
+  return;
+}
+
+sub _check_q_literal ($self, $elem) {
+  my $string = $elem->string;
+
+  # First check if delimiter is optimal (Rule 2 & 5)
+  if (my $violation = $self->_check_delimiter_optimization($elem)) {
+    return $violation;
   }
 
   # Rule 4: Prefer simpler quotes to q() when content is simple
@@ -138,18 +145,8 @@ sub _check_qq_interpolate ($self, $elem) {
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
-  my ($current_start, $current_end, $content, $operator)
-    = $self->_parse_quote_token($elem);
-
-  if (defined $current_start) {
-    my ($optimal_delim, $current_is_optimal)
-      = $self->_find_optimal_delimiter($content, $operator, $current_start,
-        $current_end);
-
-    if (!$current_is_optimal) {
-      return $self->violation($DESC,
-        "$EXPL_OPTIMAL (hint: use $optimal_delim->{display})", $elem);
-    }
+  if (my $violation = $self->_check_delimiter_optimization($elem)) {
+    return $violation;
   }
 
   # Rule 3: Prefer "" to qq() when possible

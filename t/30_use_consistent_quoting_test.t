@@ -65,17 +65,17 @@ subtest "Simple strings (prefer double quotes for interpolation)" => sub {
   bad q(my $x = 'world'), "Another simple string should use double quotes";
   bad q(my $x = 'hello world'),
     "Simple string with space should use double quotes";
-  bad q(my $x = q(simple)), "q() simple string should use double quotes";
+  bad 'my $x = q(simple)', "q() simple string should use double quotes";
 
   # Should NOT violate - appropriate use of quotes
-  good q(my $x = "hello"), "Double quoted simple string";
+  good 'my $x = "hello"', "Double quoted simple string";
   good q(my $x = 'user@domain.com'),
     "String with literal @ using single quotes";
   good q(my $x = 'He said "hello"'),
     "String with double quotes using single quotes";
   good q(my $x = "It's a nice day"),
     "String with single quote needs double quotes";
-  good q(my $x = "Hello $name"),
+  good 'my $x = "Hello $name"',
     "String with interpolation needs double quotes";
   good q(my $x = 'literal$var'), "String with literal \$ using single quotes";
   good q[my $x = qq(contains 'both' and "quotes")],
@@ -98,142 +98,142 @@ subtest "Simple strings (prefer double quotes for interpolation)" => sub {
 
 subtest "Quote operators" => sub {
   # Minimize escapes first - content with parens should avoid () delimiters
-  bad q[my @x = qw(word(with)parens)],
+  bad 'my @x = qw(word(with)parens)',
     "qw() with parens should use qw[] to avoid escapes";
-  good q<my @x = qw[word(with)parens]>, "qw[] with parens avoids escapes";
-  bad q[my @x = qw{word(with)parens}],
+  good 'my @x = qw[word(with)parens]', "qw[] with parens avoids escapes";
+  bad 'my @x = qw{word(with)parens}',
     "qw{} with parens should use qw[] to avoid escapes";
 
   # Content with brackets should avoid [] delimiters
-  bad q(my @x = qw[word[with]brackets]),
+  bad 'my @x = qw[word[with]brackets]',
     "qw[] with brackets should use qw() to avoid escapes";
-  good q<my @x = qw(word[with]brackets)>, "qw() with brackets avoids escapes";
-  bad q(my @x = qw{word[with]brackets}),
+  good 'my @x = qw(word[with]brackets)', "qw() with brackets avoids escapes";
+  bad 'my @x = qw{word[with]brackets}',
     "qw{} with brackets should use qw() to avoid escapes";
 
   # Content with braces should avoid {} delimiters
-  bad q(my @x = qw{word{with}braces}),
+  bad 'my @x = qw{word{with}braces}',
     "qw{} with braces should use qw() to avoid escapes";
-  good q[my @x = qw(word{with}braces)], "qw() with braces avoids escapes";
-  bad q(my @x = qw[word{with}braces]),
+  good 'my @x = qw(word{with}braces)', "qw() with braces avoids escapes";
+  bad 'my @x = qw[word{with}braces]',
     "qw[] with braces should use qw() to avoid escapes";
 
   # Content with angles should avoid <> delimiters
-  bad q(my @x = qw<word<with>angles>),
+  bad 'my @x = qw<word<with>angles>',
     "qw<> with angles should use qw() to avoid escapes";
-  good q[my @x = qw(word<with>angles)], "qw() with angles avoids escapes";
-  bad q(my @x = qw[word<with>angles]),
+  good 'my @x = qw(word<with>angles)', "qw() with angles avoids escapes";
+  bad 'my @x = qw[word<with>angles]',
     "qw[] with angles should use qw() to avoid escapes";
-  bad q(my @x = qw{word<with>angles}),
+  bad 'my @x = qw{word<with>angles}',
     "qw{} with angles should use qw() to avoid escapes";
 
   # Simple content (no delimiters) should prefer () first
-  bad q(my @x = qw{simple words}), "qw{} with no delimiters should use qw()";
-  bad q(my @x = qw[simple words]), "qw[] with no delimiters should use qw()";
-  bad q(my @x = qw<simple words>), "qw<> with no delimiters should use qw()";
-  good q[my @x = qw(simple words)], "qw() is preferred for simple content";
+  bad 'my @x = qw{simple words}', "qw{} with no delimiters should use qw()";
+  bad 'my @x = qw[simple words]', "qw[] with no delimiters should use qw()";
+  bad 'my @x = qw<simple words>', "qw<> with no delimiters should use qw()";
+  good 'my @x = qw(simple words)', "qw() is preferred for simple content";
 
   # Other operators follow same rules
-  bad q[my $x = q(text(with)parens)],
+  bad 'my $x = q(text(with)parens)',
     "q() with parens should use q[] to avoid escapes";
-  good q<my $x = q[text(with)parens]>, "q[] with parens avoids escapes";
+  good 'my $x = q[text(with)parens]', "q[] with parens avoids escapes";
 
-  bad q(my $x = qq[text[with]brackets]),
+  bad 'my $x = qq[text[with]brackets]',
     'qq[] with brackets should use "" to avoid escapes';
-  good q<my $x = "text[with]brackets">, "qq() with brackets avoids escapes";
+  good 'my $x = "text[with]brackets"', "qq() with brackets avoids escapes";
 
-  bad q(my $x = qx[command[with]brackets]),
+  bad 'my $x = qx[command[with]brackets]',
     "qx[] with brackets should use qx() to avoid escapes";
-  good q<my $x = qx(command[with]brackets)>,
+  good 'my $x = qx(command[with]brackets)',
     "qx() with brackets avoids escapes";
 
   # Empty quotes should prefer () first
-  bad q(my @x = qw{}), "Empty qw{} should use qw()";
-  bad q(my @x = qw[]), "Empty qw[] should use qw()";
-  good q[my @x = qw()], "Empty qw() is preferred";
+  bad 'my @x = qw{}', "Empty qw{} should use qw()";
+  bad 'my @x = qw[]', "Empty qw[] should use qw()";
+  good 'my @x = qw()', "Empty qw() is preferred";
 
   # When all delimiters appear in content, prefer () (least escapes needed)
-  bad q(my @x = qw{has(parens)[and]<angles>{braces}}),
+  bad 'my @x = qw{has(parens)[and]<angles>{braces}}',
     "All delimiters present - should use qw()";
-  bad q(my @x = qw[has(parens)[and]<angles>{braces}]),
+  bad 'my @x = qw[has(parens)[and]<angles>{braces}]',
     "All delimiters present - should use qw()";
-  bad q(my @x = qw<has(parens)[and]<angles>{braces}>),
+  bad 'my @x = qw<has(parens)[and]<angles>{braces}>',
     "All delimiters present - should use qw()";
-  good q[my @x = qw(has(parens)[and]<angles>{braces})],
+  good 'my @x = qw(has(parens)[and]<angles>{braces})',
     "qw() preferred when all delimiters present";
 
   # Tie-breaking: when escape counts equal, prefer () over [] over <> over {}
-  bad q(my @x = qw{one[bracket}), "When tied, () is preferred over {}";
-  bad q(my @x = qw<one[bracket>), "When tied, () is preferred over <>";
-  bad q(my @x = qw[one[bracket]), "When tied, () is preferred over []";
-  good q<my @x = qw(one[bracket])>,
+  bad 'my @x = qw{one[bracket}', "When tied, () is preferred over {}";
+  bad 'my @x = qw<one[bracket>', "When tied, () is preferred over <>";
+  bad 'my @x = qw[one[bracket]', "When tied, () is preferred over []";
+  good 'my @x = qw(one[bracket])',
     "() is preferred when escape counts are tied";
 
   # Test [] vs <> vs {} preference order
-  bad q[my @x = qw{one(paren}], "When tied, [] is preferred over {}";
-  bad q[my @x = qw<one(paren>], "When tied, [] is preferred over <>";
-  good q<my @x = qw[one(paren)]>, "[] is preferred over <> and {}";
+  bad 'my @x = qw{one(paren}', "When tied, [] is preferred over {}";
+  bad 'my @x = qw<one(paren>', "When tied, [] is preferred over <>";
+  good 'my @x = qw[one(paren)]', "[] is preferred over <> and {}";
 
   # Test <> vs {} preference order
-  bad q<my @x = qw{one(paren)[bracket}>, "When tied, <> is preferred over {}";
-  good q{my @x = qw<one(paren)[bracket>}, "<> is preferred over {}";
+  bad 'my @x = qw{one(paren)[bracket}', "When tied, <> is preferred over {}";
+  good 'my @x = qw<one(paren)[bracket>', "<> is preferred over {}";
 
   # Content with only one type of delimiter that's not the preferred one
-  good q<my @x = qw[text(only)parens]>,
+  good 'my @x = qw[text(only)parens]',
     "[] optimal when content has only parens";
-  good q<my @x = qw(text[only]brackets)>,
+  good 'my @x = qw(text[only]brackets])',
     "() optimal when content has only brackets";
-  bad q(my @x = qw<text<only>angles>),
+  bad 'my @x = qw<text<only>angles>',
     "qw<> with angles should use qw() - fewer escapes";
-  good q[my @x = qw(text<only>angles)], "() optimal when content has angles";
-  good q[my @x = qw(text{only}braces)],
+  good 'my @x = qw(text<only>angles)', "() optimal when content has angles";
+  good 'my @x = qw(text{only}braces)',
     "() optimal when content has only braces";
 
   # Test exotic delimiters - these should be violations when content conflicts
   subtest "Exotic delimiters" => sub {
-    bad q(my $text = qq/path\/to\/file/),
+    bad 'my $text = qq/path\/to\/file/',
       "qq// with slashes should use qq() to avoid escapes";
-    good q[my $text = qq(path"to"file)],
+    good 'my $text = qq(path"to"file)',
       "qq() optimal when content has double quotes";
-    bad q(my $text = q|option\|value|),
+    bad 'my $text = q|option\|value|',
       "q|| with pipes should use q() to avoid escapes";
-    good q[my $text = q(option|value)], "q() optimal when content has pipes";
-    bad q(my $text = q"say \"hello\""),
+    good 'my $text = q(option|value)', "q() optimal when content has pipes";
+    bad 'my $text = q"say \"hello\""',
       'q"" with quotes should use q() to avoid escapes';
-    good q[my $text = q(say "hello")], "q() optimal when content has quotes";
+    good 'my $text = q(say "hello")', "q() optimal when content has quotes";
     bad q(my $output = qx'echo \'hello\''),
       "qx'' with single quotes should use qx() to avoid escapes";
     good q[my $output = qx(echo 'hello')],
       "qx() optimal when content has single quotes";
-    bad q(my $text = q#path\#to\#file#),
+    bad 'my $text = q#path\#to\#file#',
       "q## with hashes should use q() to avoid escapes";
-    good q[my $text = q(path#to#file)], "q() optimal when content has hashes";
-    bad q(my $text = q!wow\!amazing!),
+    good 'my $text = q(path#to#file)', "q() optimal when content has hashes";
+    bad 'my $text = q!wow\!amazing!',
       "q!! with exclamation marks should use q() to avoid escapes";
-    good q[my $text = q(wow!amazing)],
+    good 'my $text = q(wow!amazing)',
       "q() optimal when content has exclamation marks";
-    bad q(my $text = q%100\%complete%),
+    bad 'my $text = q%100\%complete%',
       "q%% with percent signs should use q() to avoid escapes";
-    good q[my $text = q(100%complete)],
+    good 'my $text = q(100%complete)',
       "q() optimal when content has percent signs";
-    bad q(my $text = q&fish\&chips&),
+    bad 'my $text = q&fish\&chips&',
       "q&& with ampersands should use q() to avoid escapes";
-    good q[my $text = q(fish&chips)],
+    good 'my $text = q(fish&chips)',
       "q() optimal when content has ampersands";
-    bad q(my $text = q~home\~user~),
+    bad 'my $text = q~home\~user~',
       "q~~ with tildes should use q() to avoid escapes";
-    good q[my $text = q(home~user)], "q() optimal when content has tildes";
+    good 'my $text = q(home~user)', "q() optimal when content has tildes";
   };
 };
 
 subtest "Combined tests" => sub {
   # Code with both types of violations
-  my @violations = count_violations q[
+  my @violations = count_violations q<
     my $simple = 'hello';
     my @words = qw{word(with)parens};
     my $ok = "world";
     my @ok_words = qw[more(parens)];
-  ], 2, "Code with multiple types of violations";
+  >, 2, "Code with multiple types of violations";
 
   # Check violation messages
   like $violations[0]->description, qr(consistent),
@@ -244,144 +244,144 @@ subtest "Combined tests" => sub {
 
 subtest "Edge cases" => sub {
   # Whitespace in quote operators
-  bad q[my @x = qw  {word(with)parens}],
+  bad 'my @x = qw  {word(with)parens}',
     "qw with whitespace before delimiter";
-  bad q[my @x = qw  {word(with)parens}], "qw with tab before delimiter";
+  bad 'my @x = qw\t{word(with)parens}', "qw with tab before delimiter";
 
   # Different quote styles - prefer "" to qq and '' to q
   bad q(my $x = qq'simple'),
     "qq'' should use double quotes for simple content";
-  bad q(my $x = qq/simple/),
+  bad 'my $x = qq/simple/',
     "qq// should use double quotes for simple content";
-  bad q(my $x = qq(simple)),
+  bad 'my $x = qq(simple)',
     "qq() should use double quotes for simple content";
-  bad q(my $x = q'simple'), "q'' should use double quotes for simple content";
-  bad q(my $x = q/simple/), "q// should use double quotes for simple content";
-  bad q(my $x = q(simple)), "q() should use double quotes for simple content";
+  bad 'my $x = q\'simple\'', "q'' should use double quotes for simple content";
+  bad 'my $x = q/simple/', "q// should use double quotes for simple content";
+  bad 'my $x = q(simple)', "q() should use double quotes for simple content";
 };
 
 subtest "Priority rules" => sub {
   # Rule 1: Always prefer interpolating quotes unless strings should not be interpolated
-  bad q(my $x = 'simple'), "Simple string should use double quotes";
-  good q(my $x = "simple"), "Simple string with double quotes";
+  bad 'my $x = \'simple\'', "Simple string should use double quotes";
+  good 'my $x = "simple"', "Simple string with double quotes";
   good q(my $x = 'literal$var'),
     'String with literal $ should use single quotes';
   good q(my $x = 'literal@var'),
     'String with literal @ should use single quotes';
 
   # Rule 2: Always prefer fewer escaped characters
-  bad q(my $text = q/path\/to\/file/),
+  bad 'my $text = q/path\/to\/file/',
     'q// with slashes should use "" to avoid escapes';
-  good q(my $text = "path/to/file"), '"" optimal when content has slashes';
+  good 'my $text = "path/to/file"', '"" optimal when content has slashes';
 
   # Various quote operators with escaped characters
-  bad q(my $text = q|option\|value|),
+  bad 'my $text = q|option\|value|',
     'q|| with pipes should use "" to avoid escapes';
-  good q(my $text = "option|value"), '"" optimal when content has pipes';
+  good 'my $text = "option|value"', '"" optimal when content has pipes';
 
-  bad q(my $text = q#path\#to\#file#),
+  bad 'my $text = q#path\#to\#file#',
     'q## with hashes should use "" to avoid escapes';
-  good q(my $text = "path#to#file"), '"" optimal when content has hashes';
+  good 'my $text = "path#to#file"', '"" optimal when content has hashes';
 
-  bad q(my $text = q!wow\!amazing!),
+  bad 'my $text = q!wow\!amazing!',
     'q!! with exclamation should use "" to avoid escapes';
-  good q(my $text = "wow!amazing"), '"" optimal when content has exclamation';
+  good 'my $text = "wow!amazing"', '"" optimal when content has exclamation';
 
-  bad q(my $text = q%100\%complete%),
+  bad 'my $text = q%100\%complete%',
     'q%% with percent should use "" to avoid escapes';
-  good q(my $text = "100%complete"), '"" optimal when content has percent';
+  good 'my $text = "100%complete"', '"" optimal when content has percent';
 
-  bad q(my $text = q&fish\&chips&),
+  bad 'my $text = q&fish\&chips&',
     'q&& with ampersand should use "" to avoid escapes';
-  good q(my $text = "fish&chips"), '"" optimal when content has ampersand';
+  good 'my $text = "fish&chips"', '"" optimal when content has ampersand';
 
-  bad q(my $text = q~home\~user~),
+  bad 'my $text = q~home\~user~',
     'q~~ with tilde should use "" to avoid escapes';
-  good q(my $text = "home~user"), '"" optimal when content has tilde';
+  good 'my $text = "home~user"', '"" optimal when content has tilde';
 
   # qq operators with escaped characters
-  bad q(my $text = qq/path\/to\/file/),
+  bad 'my $text = qq/path\/to\/file/',
     'qq// with slashes should use "" to avoid escapes';
-  good q(my $text = "path/to/file"),
+  good 'my $text = "path/to/file"',
     '"" optimal for interpolated strings with slashes';
 
-  bad q(my $text = qq|option\|value|),
+  bad 'my $text = qq|option\|value|',
     'qq|| with pipes should use "" to avoid escapes';
-  good q(my $text = "option|value"),
+  good 'my $text = "option|value"',
     '"" optimal for interpolated strings with pipes';
 
   # qx operators with escaped characters
-  bad q(my $output = qx/ls \/tmp/),
-    'qx// with slashes should use qx() to avoid escapes';
-  good q(my $output = qx(ls /tmp)), 'qx() optimal when content has slashes';
+  bad 'my $output = qx/ls \/tmp/',
+    "qx// with slashes should use qx() to avoid escapes";
+  good "my \$output = qx(ls /tmp)", "qx() optimal when content has slashes";
 
-  bad q(my $output = qx|echo \|pipe|),
-    'qx|| with pipes should use qx() to avoid escapes';
-  good q(my $output = qx(echo |pipe)), 'qx() optimal when content has pipes';
+  bad 'my $output = qx|echo \|pipe|',
+    "qx|| with pipes should use qx() to avoid escapes";
+  good "my \$output = qx(echo |pipe)", "qx() optimal when content has pipes";
 
   # qw operators with various escaped characters
-  bad q(my @words = qw/word\/with\/slashes/),
-    'qw// with slashes should use qw() to avoid escapes';
-  good q(my @words = qw(word/with/slashes)),
-    'qw() optimal when words have slashes';
+  bad 'my @words = qw/word\/with\/slashes/',
+    "qw// with slashes should use qw() to avoid escapes";
+  good 'my @words = qw(word/with/slashes)',
+    "qw() optimal when words have slashes";
 
-  bad q(my @words = qw|word\|with\|pipes|),
-    'qw|| with pipes should use qw() to avoid escapes';
-  good q(my @words = qw(word|with|pipes)),
-    'qw() optimal when words have pipes';
+  bad 'my @words = qw|word\|with\|pipes|',
+    "qw|| with pipes should use qw() to avoid escapes";
+  good 'my @words = qw(word|with|pipes)',
+    "qw() optimal when words have pipes";
 
   # Mixed content - choose delimiter that minimizes total escapes
-  bad q(my $text = q/has\/slashes(and)parens/),
-    'q// should use q[] - fewer total escapes';
-  good q(my $text = q[has/slashes(and)parens]),
-    'q[] optimal - avoids escaping parens, allows slashes';
+  bad 'my $text = q/has\/slashes(and)parens/',
+    "q// should use q[] - fewer total escapes";
+  good 'my $text = q[has/slashes(and)parens]',
+    "q[] optimal - avoids escaping parens, allows slashes";
 
-  bad q(my $text = q(has(parens)\/and\/slashes)),
+  bad 'my $text = q(has(parens)\/and\/slashes)',
     'q() should use "" - fewer total escapes';
-  good q(my $text = "has(parens)/and/slashes/"),
+  good 'my $text = "has(parens)/and/slashes/"',
     '"" optimal - avoids escaping slashes, allows parens';
 
   # String literals vs quote operators - prefer simpler forms when no escapes needed
-  bad q(my $text = q(simple)), 'q() should use "" for simple content';
-  good q(my $text = "simple"), '"" preferred over q() for simple content';
+  bad 'my $text = q(simple)', 'q() should use "" for simple content';
+  good 'my $text = "simple"', '"" preferred over q() for simple content';
 
-  bad q(my $text = q(literal)), 'q() should use "" for literal content';
-  good q(my $text = "literal"), '"" preferred over q() for literal content';
+  bad 'my $text = q(literal)', 'q() should use "" for literal content';
+  good 'my $text = "literal"', '"" preferred over q() for literal content';
 
   # When content has quotes, use appropriate delimiter
   good q(my $text = 'contains "double" quotes'),
-    '\'\' appropriate when content has double quotes';
+    "'' appropriate when content has double quotes";
   good q(my $text = "contains 'single' quotes"),
     '"" appropriate when content has single quotes';
-  good q(my $text = qq(contains 'both' and "quotes")),
-    'qq() appropriate when content has both quote types';
+  good q[my $text = qq(contains 'both' and "quotes")],
+    "qq() appropriate when content has both quote types";
 
   # Rule 3: Prefer "" to qq
-  bad q(my $x = qq(simple)),
+  bad 'my $x = qq(simple)',
     "qq() should use double quotes for simple content";
-  good q(my $x = "simple"), "Double quotes preferred over qq()";
-  bad q(my $x = qq/hello/), "qq// should use double quotes";
+  good 'my $x = "simple"', "Double quotes preferred over qq()";
+  bad 'my $x = qq/hello/', "qq// should use double quotes";
 
   # Rule 4: Prefer '' to q
-  bad q(my $x = q(literal$x)),
+  bad 'my $x = q(literal$x)',
     "q() should use single quotes for literal content";
   good q(my $x = 'literal$x'), "Single quotes preferred over q()";
-  bad q(my $x = q/literal$x/), "q// should use single quotes";
+  bad 'my $x = q/literal$x/', "q// should use single quotes";
 
   # Rule 5: Prefer bracketed delimiters in order (), [], <>, {}
-  bad q(my @x = qw/word word/), "qw// should use qw() - brackets preferred";
-  bad q(my @x = qw|word word|), "qw|| should use qw() - brackets preferred";
-  bad q(my @x = qw#word word#), "qw## should use qw() - brackets preferred";
-  good q(my @x = qw(word word)), "qw() uses preferred bracket delimiters";
+  bad 'my @x = qw/word word/', "qw// should use qw() - brackets preferred";
+  bad 'my @x = qw|word word|', "qw|| should use qw() - brackets preferred";
+  bad 'my @x = qw#word word#', "qw## should use qw() - brackets preferred";
+  good 'my @x = qw(word word)', "qw() uses preferred bracket delimiters";
 
   # Bracket priority: () > [] > <> > {}
-  bad q(my @x = qw{simple words}),
+  bad 'my @x = qw{simple words}',
     "qw{} should use qw() - () preferred over {}";
-  bad q(my @x = qw<simple words>),
+  bad 'my @x = qw<simple words>',
     "qw<> should use qw() - () preferred over <>";
-  bad q(my @x = qw[simple words]),
+  bad 'my @x = qw[simple words]',
     "qw[] should use qw() - () preferred over []";
-  good q(my @x = qw(simple words)),
+  good 'my @x = qw(simple words)',
     "qw() is most preferred bracket delimiter";
 };
 

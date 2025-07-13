@@ -5,32 +5,44 @@ practices in Perl code.
 
 ## Description
 
-This distribution provides a Perl::Critic policy that enforces consistent quoting
-to improve code readability and maintainability. It applies five priority rules
-to ensure optimal string and quote operator usage.
+This distribution provides a Perl::Critic policy that enforces consistent
+quoting to improve code readability and maintainability. It applies five
+priority rules to ensure optimal string and quote operator usage.
 
 ## Policy
 
 ### Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting
 
-This policy enforces consistent and optimal quoting practices through five priority rules:
+This policy enforces consistent and optimal quoting practices through five
+priority rules:
 
-1. **Prefer double quotes for simple strings** - Use `""` as the default for most strings. Only use single quotes when the string contains literal `$` or `@` that should not be interpolated.
+1. **Prefer double quotes for simple strings** - Use `""` as the default for
+   most strings. Only use single quotes when the string contains literal `$`
+   or `@` that should not be interpolated.
 
-2. **Minimize escape characters** - Choose delimiters that require the fewest backslash escapes.
+2. **Minimize escape characters** - Choose delimiters that require the fewest
+   backslash escapes.
 
-3. **Prefer "" over qq()** - Use simple double quotes instead of `qq()` when possible.
+3. **Prefer "" over qq()** - Use simple double quotes instead of `qq()`
+   when possible.
 
-4. **Prefer '' over q()** - Use simple single quotes instead of `q()` for literal strings.
+4. **Prefer '' over q()** - Use simple single quotes instead of `q()` for
+   literal strings.
 
-5. **Use only bracket delimiters** - Only use bracket delimiters `()`, `[]`, `<>`, `{}` for quote-like operators. Choose the delimiter that minimizes escape characters. When escape counts are equal, prefer them in this order: `()`, `[]`, `<>`, `{}`.
+5. **Use only bracket delimiters** - Only use bracket delimiters `()`, `[]`,
+   `<>`, `{}` for quote-like operators. Choose the delimiter that minimizes
+   escape characters. When escape counts are equal, prefer them in this
+   order: `()`, `[]`, `<>`, `{}`.
 
 #### Rationale
 
-- Double quotes are preferred for consistency and to allow potential interpolation
+- Double quotes are preferred for consistency and to allow potential
+  interpolation
 - Minimizing escape characters improves readability and reduces errors
-- Simple quotes are preferred over their `q()` and `qq()` equivalents when possible
-- Only bracket delimiters should be used (no exotic delimiters like `/`, `|`, `#`, etc.)
+- Simple quotes are preferred over their `q()` and `qq()` equivalents when
+  possible
+- Only bracket delimiters should be used (no exotic delimiters like `/`,
+  `|`, `#`, etc.)
 - Optimal delimiter selection reduces visual noise in code
 
 #### Examples
@@ -41,14 +53,14 @@ This policy enforces consistent and optimal quoting practices through five prior
 # Rule 1: Simple strings should use double quotes
 my $greeting = 'hello';           # should use double quotes
 
-# Rule 2, 5: Suboptimal escaping and exotic delimiters  
+# Rule 2, 5: Suboptimal escaping and exotic delimiters
 my @words = qw{word(with)parens}; # should use qw[] to avoid escaping
 my $file = q/path\/to\/file/;     # exotic delimiter needs escaping
 
 # Rule 3: Should prefer "" over qq()
 my $text = qq(simple);            # should use "" instead of qq()
 
-# Rule 4: Should prefer '' over q()  
+# Rule 4: Should prefer '' over q()
 my $literal = q(contains$literal); # should use '' instead of q()
 ```
 
