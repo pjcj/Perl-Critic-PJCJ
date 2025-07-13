@@ -17,7 +17,7 @@ Readonly::Scalar my $DESC => "Use consistent and optimal quoting";
 Readonly::Scalar my $EXPL_DOUBLE =>
   "Simple strings should use double quotes for consistency";
 Readonly::Scalar my $EXPL_SINGLE =>
-  'Strings with literal $ or @ should use single quotes';
+  "Strings with literal \$ or \@ should use single quotes";
 Readonly::Scalar my $EXPL_NO_QQ => 'Use "" instead of qq()';
 Readonly::Scalar my $EXPL_NO_Q  => "Use '' instead of q()";
 Readonly::Scalar my $EXPL_OPTIMAL =>
@@ -84,14 +84,27 @@ sub _check_single_quoted ($self, $elem) {
     return $self->violation($DESC, "Use q() to avoid escaping single quotes", $elem);
   }
 
-  # Check if string contains literal $ or @ that shouldn't be interpolated
-  # Look for unescaped $ or @ patterns that indicate actual variables
-  if ($self->_has_literal_variables($string)) {
-    return;  # Single quotes justified for literal variables
+  # Use PPI's interpolations() method to test if this content would interpolate in double quotes
+  # Create a temporary double-quoted string to test interpolation
+  my $test_content = '"' . $string . '"';
+  my $test_doc = PPI::Document->new(\$test_content);
+
+  my $would_interpolate = 0;
+  $test_doc->find(sub {
+    my ($top, $test_elem) = @_;
+    if ($test_elem->isa('PPI::Token::Quote::Double')) {
+      $would_interpolate = $test_elem->interpolations();
+      return 0; # Stop searching
+    }
+    return 0;
+  });
+
+  # If content would not interpolate in double quotes, suggest double quotes
+  if (!$would_interpolate && index($string, '"') == -1) {
+    return $self->violation($DESC, $EXPL_DOUBLE, $elem);
   }
 
-  # Simple content with no special needs should use double quotes
-  return $self->violation($DESC, $EXPL_DOUBLE, $elem);
+  return;
 }
 
 sub _check_double_quoted ($self, $elem) {
@@ -99,14 +112,14 @@ sub _check_double_quoted ($self, $elem) {
   my $string = $elem->string;
   my $content = $elem->content;
 
-  # Check for escaped dollar signs - these should probably use single quotes
+  # Check for escaped dollar signs - these should use single quotes
   if ($content =~ /\\\$/) {
     return $self->violation($DESC, "Use single quotes for strings with literal \$ to avoid escaping", $elem);
   }
 
-  # For now, be conservative and don't flag double-quoted strings
-  # The interpolations() method might be too aggressive for our use case
-  # We'll focus on the specific problematic cases mentioned by the user
+  # For now, be conservative with double-quoted strings
+  # The main logic is in single-quoted string checking
+
   return;
 }
 
