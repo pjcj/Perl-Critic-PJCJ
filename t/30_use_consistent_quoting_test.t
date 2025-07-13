@@ -1,7 +1,5 @@
 #!/usr/bin/env perl
 
-## no critic (ValuesAndExpressions::UseConsistentQuoting)
-
 use v5.20.0;
 use strict;
 use warnings;
@@ -20,8 +18,7 @@ my $Policy = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->n
 # Create a mock PPI document for testing
 use PPI;
 
-sub test_code ($code, $expected_violations, $description) {
-
+sub count_violations ($code, $expected_violations, $description) {
   my $doc = PPI::Document->new(\$code);
   my @violations;
 
@@ -49,31 +46,38 @@ sub test_code ($code, $expected_violations, $description) {
   }
 
   is scalar @violations, $expected_violations, $description;
-
   return @violations;
+}
+
+sub good ($code, $description) {
+  count_violations($code, 0, $description);
+}
+
+sub bad ($code, $description) {
+  count_violations($code, 1, $description);
 }
 
 subtest "Simple strings (from RequireDoubleQuotedStrings)" => sub {
   # Should violate
-  test_code q{my $x = 'hello'}, 1, "Single quoted simple string violates";
-  test_code q{my $x = 'world'}, 1, "Another simple string violates";
-  test_code q{my $x = 'hello world'}, 1, "Simple string with space violates";
+  bad q{my $x = 'hello'}, "Single quoted simple string";
+  bad q{my $x = 'world'}, "Another simple string";
+  bad q{my $x = 'hello world'}, "Simple string with space";
 
   # Should NOT violate
-  test_code q{my $x = "hello"}, 0, "Double quoted simple string is OK";
-  test_code q{my $x = 'user@domain.com'}, 0, "String with @ is OK with single quotes";
-  test_code q{my $x = 'He said "hello"'}, 0, "String with double quotes is OK with single quotes";
-  test_code q{my $x = 'It\'s a nice day'}, 0, "String with escaping is OK";
+  good q{my $x = "hello"}, "Double quoted simple string";
+  good q{my $x = 'user@domain.com'}, "String with @ using single quotes";
+  good q{my $x = 'He said "hello"'}, "String with double quotes using single quotes";
+  good q{my $x = 'It\'s a nice day'}, "String with escaping";
 
   # Multiple violations
-  test_code q{
+  count_violations q{
     my $x = 'hello';
     my $y = 'world';
     my $z = 'foo';
   }, 3, "Multiple simple strings all violate";
 
   # Mixed violations
-  test_code q{
+  count_violations q{
     my $x = 'hello';
     my $y = "world";
     my $z = 'user@example.com';
@@ -82,44 +86,44 @@ subtest "Simple strings (from RequireDoubleQuotedStrings)" => sub {
 
 subtest "Quote operators (from RequireOptimalQuoteDelimiters)" => sub {
   # qw() tests
-  test_code q{my @x = qw{word(with)parens}}, 1, "qw{} with parens should use qw()";
-  test_code q{my @x = qw(word(with)parens)}, 0, "qw() with parens is optimal";
-  test_code q{my @x = qw{word[with]brackets}}, 1, "qw{} with brackets should use qw[]";
-  test_code q{my @x = qw[word[with]brackets]}, 0, "qw[] with brackets is optimal";
-  test_code q{my @x = qw{simple words}}, 0, "qw{} with no special chars is optimal";
+  bad q{my @x = qw{word(with)parens}}, "qw{} with parens should use qw()";
+  good q{my @x = qw(word(with)parens)}, "qw() with parens is optimal";
+  bad q{my @x = qw{word[with]brackets}}, "qw{} with brackets should use qw[]";
+  good q{my @x = qw[word[with]brackets]}, "qw[] with brackets is optimal";
+  good q{my @x = qw{simple words}}, "qw{} with no special chars is optimal";
 
   # q() tests
-  test_code q{my $x = q{text(with)parens}}, 1, "q{} with parens should use q()";
-  test_code q{my $x = q(text(with)parens)}, 0, "q() with parens is optimal";
+  bad q{my $x = q{text(with)parens}}, "q{} with parens should use q()";
+  good q{my $x = q(text(with)parens)}, "q() with parens is optimal";
 
   # qq() tests
-  test_code q{my $x = qq{text[with]brackets}}, 1, "qq{} with brackets should use qq[]";
-  test_code q{my $x = qq[text[with]brackets]}, 0, "qq[] with brackets is optimal";
+  bad q{my $x = qq{text[with]brackets}}, "qq{} with brackets should use qq[]";
+  good q{my $x = qq[text[with]brackets]}, "qq[] with brackets is optimal";
 
   # qx() tests
-  test_code q{my $x = qx{command[with]brackets}}, 1, "qx{} with brackets should use qx[]";
-  test_code q{my $x = qx[command[with]brackets]}, 0, "qx[] with brackets is optimal";
+  bad q{my $x = qx{command[with]brackets}}, "qx{} with brackets should use qx[]";
+  good q{my $x = qx[command[with]brackets]}, "qx[] with brackets is optimal";
 
   # qr() tests
-  test_code q{my $x = qr{pattern[with]brackets}}, 1, "qr{} with brackets should use qr[]";
-  test_code q{my $x = qr[pattern[with]brackets]}, 0, "qr[] with brackets is optimal";
+  bad q{my $x = qr{pattern[with]brackets}}, "qr{} with brackets should use qr[]";
+  good q{my $x = qr[pattern[with]brackets]}, "qr[] with brackets is optimal";
 
   # Empty quotes should not violate
-  test_code q{my @x = qw{}}, 0, "Empty qw{} is OK";
-  test_code q{my @x = qw()}, 0, "Empty qw() is OK";
-  test_code q{my @x = qw[]}, 0, "Empty qw[] is OK";
+  good q{my @x = qw{}}, "Empty qw{} is OK";
+  good q{my @x = qw()}, "Empty qw() is OK";
+  good q{my @x = qw[]}, "Empty qw[] is OK";
 
   # Complex cases with multiple delimiters
-  test_code q{my @x = qw{has(parens)[and]{braces}}}, 0, "All delimiters present - any is OK";
+  good q{my @x = qw{has(parens)[and]{braces}}}, "All delimiters present - any is OK";
 
   # Tie-breaking cases
-  test_code q{my @x = qw{one[bracket}}, 1, "When tied, () is preferred over {}";
-  test_code q{my @x = qw(one[bracket)}, 0, "() with one bracket is OK (tied with [])";
+  bad q{my @x = qw{one[bracket}}, "When tied, () is preferred over {}";
+  good q{my @x = qw(one[bracket)}, "() with one bracket is OK (tied with [])";
 };
 
 subtest "Combined tests" => sub {
   # Code with both types of violations
-  my @violations = test_code q{
+  my @violations = count_violations q{
     my $simple = 'hello';
     my @words = qw{word(with)parens};
     my $ok = "world";
@@ -133,12 +137,12 @@ subtest "Combined tests" => sub {
 
 subtest "Edge cases" => sub {
   # Whitespace in quote operators
-  test_code q{my @x = qw  {word(with)parens}}, 1, "qw with whitespace before delimiter";
-  test_code q{my @x = qw	{word(with)parens}}, 1, "qw with tab before delimiter";
+  bad q{my @x = qw  {word(with)parens}}, "qw with whitespace before delimiter";
+  bad q{my @x = qw	{word(with)parens}}, "qw with tab before delimiter";
 
   # Different quote styles
-  test_code q{my $x = q'simple'}, 0, "q'' is not checked (not in our delimiter list)";
-  test_code q{my $x = q/simple/}, 0, "q// is not checked (not in our delimiter list)";
+  good q{my $x = q'simple'}, "q'' is not checked (not in our delimiter list)";
+  good q{my $x = q/simple/}, "q// is not checked (not in our delimiter list)";
 };
 
 done_testing;
