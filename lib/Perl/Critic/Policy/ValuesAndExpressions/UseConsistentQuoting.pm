@@ -31,7 +31,7 @@ sub applies_to { qw(
   PPI::Token::QuoteLike::Command
 ) }
 
-sub _would_interpolate ($self, $string) {
+sub would_interpolate ($self, $string) {
   # Test if this string content would interpolate if put in double quotes
   # This is the authoritative way to check - let PPI decide
   my $test_content = qq("$string");
@@ -49,7 +49,7 @@ sub _would_interpolate ($self, $string) {
   $would_interpolate
 }
 
-sub _delimiter_preference_order ($self, $delimiter_start) {
+sub delimiter_preference_order ($self, $delimiter_start) {
   # Preference order for bracket operators: () > [] > <> > {}
   return 0 if $delimiter_start eq "(";
   return 1 if $delimiter_start eq "[";
@@ -58,7 +58,7 @@ sub _delimiter_preference_order ($self, $delimiter_start) {
   99  # Should never reach here for valid bracket operators
 }
 
-sub _parse_quote_token ($self, $elem) {
+sub parse_quote_token ($self, $elem) {
   my $content = $elem->content;
 
   # Parse quote-like operators: qw{}, q{}, qq{}, qx{}
@@ -83,7 +83,7 @@ sub _parse_quote_token ($self, $elem) {
   }
 }
 
-sub _find_optimal_delimiter (
+sub find_optimal_delimiter (
   $self, $content,
   $operator      = "qw",
   $current_start = "",
@@ -131,8 +131,8 @@ sub _find_optimal_delimiter (
   # Find optimal delimiter: minimize escapes, then preference order
   my ($optimal) = sort {
     $a->{escape_count} <=> $b->{escape_count} ||  # Minimize escapes first
-      $self->_delimiter_preference_order($a->{start}) <=> # Then prefer by order
-      $self->_delimiter_preference_order($b->{start})
+      $self->delimiter_preference_order($a->{start}) <=>  # Then prefer by order
+      $self->delimiter_preference_order($b->{start})
   } @delimiters;
 
   # Check if current delimiter is a bracket operator
@@ -156,14 +156,14 @@ sub _find_optimal_delimiter (
   ($optimal, $current_is_optimal)
 }
 
-sub _check_delimiter_optimization ($self, $elem) {
+sub check_delimiter_optimization ($self, $elem) {
   my ($current_start, $current_end, $content, $operator)
-    = $self->_parse_quote_token($elem);
+    = $self->parse_quote_token($elem);
 
   return unless defined $current_start;
 
   my ($optimal_delim, $current_is_optimal)
-    = $self->_find_optimal_delimiter($content, $operator, $current_start,
+    = $self->find_optimal_delimiter($content, $operator, $current_start,
       $current_end);
 
   if (!$current_is_optimal) {
@@ -212,7 +212,7 @@ sub check_single_quoted ($self, $elem) {
 
   # Use PPI's interpolations() method to test if this content would interpolate
   # in double quotes
-  my $would_interpolate = $self->_would_interpolate($string);
+  my $would_interpolate = $self->would_interpolate($string);
 
   # If content would not interpolate in double quotes, suggest double quotes
   if (!$would_interpolate && index($string, '"') == -1) {
@@ -229,7 +229,7 @@ sub check_double_quoted ($self, $elem) {
   # other interpolation
   if ($content =~ /\\[\$\@]/) {
     # Only suggest single quotes if no other interpolation exists
-    if (!$self->_would_interpolate($string)) {
+    if (!$self->would_interpolate($string)) {
       return $self->violation(
         $Desc,
         'Use single quotes for strings with escaped $ or @ to avoid escaping',
@@ -243,7 +243,7 @@ sub check_q_literal ($self, $elem) {
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
-  if (my $violation = $self->_check_delimiter_optimization($elem)) {
+  if (my $violation = $self->check_delimiter_optimization($elem)) {
     return $violation;
   }
 
@@ -252,7 +252,7 @@ sub check_q_literal ($self, $elem) {
 
   my $has_single_quotes = index($string, "'") != -1;
   my $has_double_quotes = index($string, '"') != -1;
-  my $would_interpolate = $self->_would_interpolate($string);
+  my $would_interpolate = $self->would_interpolate($string);
 
   # If content has both single and double quotes, q() is appropriate
   if ($has_single_quotes && $has_double_quotes) {
@@ -291,7 +291,7 @@ sub check_qq_interpolate ($self, $elem) {
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
-  if (my $violation = $self->_check_delimiter_optimization($elem)) {
+  if (my $violation = $self->check_delimiter_optimization($elem)) {
     return $violation;
   }
 
@@ -306,7 +306,7 @@ sub check_qq_interpolate ($self, $elem) {
 sub check_quote_operators ($self, $elem) {
   # Get current delimiters and content by parsing the token
   my ($current_start, $current_end, $content, $operator)
-    = $self->_parse_quote_token($elem);
+    = $self->parse_quote_token($elem);
   return unless defined $current_start;  # Skip if parsing failed
 
   # Check all delimiters, including exotic ones
@@ -315,7 +315,7 @@ sub check_quote_operators ($self, $elem) {
 
   # Find optimal delimiter and check if current is suboptimal
   my ($optimal_delim, $current_is_optimal)
-    = $self->_find_optimal_delimiter($content, $operator, $current_start,
+    = $self->find_optimal_delimiter($content, $operator, $current_start,
       $current_end);
 
   # Check if current delimiter is suboptimal
