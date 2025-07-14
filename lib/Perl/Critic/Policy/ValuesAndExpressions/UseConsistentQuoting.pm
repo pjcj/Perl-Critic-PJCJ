@@ -451,6 +451,109 @@ This Policy is not configurable except for the standard options.
   my $both = qq(has 'single' and "double" quotes); # qq() needed for both
                                                    # quote types
 
+=head1 METHODS
+
+=head2 violates
+
+The main entry point for policy violation checking. Uses a dispatch table to
+route different quote token types to their appropriate checking methods. This
+design allows for efficient handling of the six different PPI token types that
+represent quoted strings and quote-like operators.
+
+=head2 would_interpolate
+
+Determines whether a string would perform variable interpolation if placed in
+double quotes. This is critical for deciding between single and double quotes -
+strings that would interpolate variables should use single quotes to preserve
+literal content, while non-interpolating strings should use double quotes for
+consistency.
+
+Uses PPI's authoritative parsing to detect interpolation rather than regex
+patterns, ensuring accurate detection of complex cases like escaped variables.
+
+=head2 delimiter_preference_order
+
+Establishes the preference hierarchy for bracket delimiters when multiple
+options require the same number of escape characters. The policy prefers
+delimiters in this order: C<()> > C<[]> > C<< <> >> > C<{}>.
+
+This ordering balances readability and convention - parentheses are most
+familiar and commonly used, while braces are often reserved for hash
+references and blocks.
+
+=head2 parse_quote_token
+
+Extracts delimiter and content information from quote-like operators such as
+C<qw{}>, C<q{}>, C<qq{}>, and C<qx{}>. Handles both bracket pairs (where start
+and end delimiters differ) and symmetric delimiters (where they're the same).
+
+This parsing is essential for delimiter optimization, as it separates the
+operator, delimiters, and content for independent analysis.
+
+=head2 find_optimal_delimiter
+
+Determines the best delimiter choice for a quote-like operator by analyzing the
+content and counting required escape characters. Implements the core logic for
+Rules 2 and 5: minimize escapes and prefer bracket delimiters.
+
+Only considers bracket delimiters C<()>, C<[]>, C<< <> >>, C<{}> as valid
+options, rejecting exotic delimiters like C</>, C<|>, C<#> regardless of their
+escape count. When escape counts are tied, uses the preference order to break
+ties.
+
+=head2 check_delimiter_optimization
+
+Validates that quote-like operators use optimal delimiters according to Rules 2
+and 5. This method coordinates parsing the current token and finding the
+optimal alternative, issuing violations when the current choice is suboptimal.
+
+Acts as a bridge between the parsing and optimization logic, providing a
+clean interface for the quote-checking methods.
+
+=head2 check_single_quoted
+
+Enforces Rule 1 for single-quoted strings: prefer double quotes for simple
+strings unless the content contains literal C<$> or C<@> characters that
+shouldn't be interpolated, or the string contains double quotes that would
+require escaping.
+
+Also detects when C<q()> operators would be better than single quotes with
+escape characters, promoting cleaner alternatives.
+
+=head2 check_double_quoted
+
+Validates double-quoted strings to ensure they genuinely need interpolation.
+Suggests single quotes when the content contains only escaped C<$> or C<@>
+characters with no actual interpolation, as this indicates the developer
+intended literal content.
+
+This prevents unnecessary escaping and makes the code's intent clearer.
+
+=head2 check_q_literal
+
+Enforces Rules 2, 4, and 5 for C<q()> operators. First ensures optimal
+delimiter choice, then evaluates whether simpler quote forms would be more
+appropriate.
+
+Allows C<q()> when the content has both single and double quotes (making it
+the cleanest option), but suggests simpler alternatives for basic content that
+could use C<''> or C<"">.
+
+=head2 check_qq_interpolate
+
+Enforces Rules 2, 3, and 5 for C<qq()> operators. First ensures optimal
+delimiter choice, then determines whether simple double quotes would suffice.
+
+The policy prefers C<""> over C<qq()> when the content doesn't contain double
+quotes, as this reduces visual noise and follows common Perl conventions.
+
+=head2 check_quote_operators
+
+Handles C<qw()> and C<qx()> operators, focusing purely on delimiter
+optimization according to Rules 2 and 5. These operators don't have simpler
+alternatives, so the policy only ensures they use the most appropriate
+delimiters to minimize escape characters.
+
 =head1 AUTHOR
 
 Paul Johnson C<< <paul@pjcj.net> >>
