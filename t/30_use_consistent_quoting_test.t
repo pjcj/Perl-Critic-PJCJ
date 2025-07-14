@@ -272,7 +272,7 @@ subtest "Edge cases" => sub {
 };
 
 subtest "Priority rules" => sub {
-  # Rule 1: Always prefer interpolating quotes unless strings should not be interpolated
+  # Rule 1: Prefer interpolating quotes unless strings shouldn't interpolate
   bad q(my $x = 'simple'), "Simple string should use double quotes";
   good 'my $x = "simple"', "Simple string with double quotes";
   good q(my $x = 'literal$var'),
@@ -352,7 +352,7 @@ subtest "Priority rules" => sub {
   good 'my $text = "has(parens)/and/slashes/"',
     '"" optimal - avoids escaping slashes, allows parens';
 
-  # String literals vs quote operators - prefer simpler forms when no escapes needed
+  # String literals vs quote operators - prefer simpler forms
   bad 'my $text = q(simple)', 'q() should use "" for simple content';
   good 'my $text = "simple"', '"" preferred over q() for simple content';
 
@@ -445,6 +445,94 @@ subtest "Coverage edge cases" => sub {
   # Test edge case with whitespace variations
   bad 'my @x = qw     <simple words>',
     "qw<> with multiple spaces should use qw()";
+
+  # Test delimiter_preference_order method directly for coverage
+  is $policy->delimiter_preference_order("("), 0, "() has preference 0";
+  is $policy->delimiter_preference_order("["), 1, "[] has preference 1";
+  is $policy->delimiter_preference_order("<"), 2, "<> has preference 2";
+  is $policy->delimiter_preference_order("{"), 3, "{} has preference 3";
+  is $policy->delimiter_preference_order("x"), 99,
+    "invalid delimiter returns 99";
+
+  # Test would_interpolate method directly
+  ok !$policy->would_interpolate("simple"),
+    "Simple string doesn't interpolate";
+  ok $policy->would_interpolate('$var'),   "Variable interpolates";
+  ok $policy->would_interpolate('@array'), "Array interpolates";
+  ok !$policy->would_interpolate('\\$escaped'),
+    "Escaped variable doesn't interpolate";
+};
+
+subtest "Coverage for uncovered branches" => sub {
+  # Test case to cover "has both single and double quotes" condition
+  good q[my $x = q(has 'single' and "double")],
+    "q() justified when content has both quote types";
+
+  # Test string with double quotes but would interpolate
+  good q(my $text = "contains $var and \"quotes\""),
+    "Double quotes with interpolation and quotes";
+
+  # Test string with interpolation but no single quotes
+  bad 'my $x = q(interpolates $var)',
+    "q() should use single quotes when content would interpolate";
+
+  # Test coverage for policy methods
+  my $policy
+    = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+
+  # Test with simple alphanumeric content in q()
+  bad 'my $x = q(simple123)',
+    "q() with simple alphanumeric content should use double quotes";
+
+  # Test when content has only double quotes but no interpolation
+  good q[my $x = q(has "only" double quotes)],
+    "q() appropriate when content has double quotes but no interpolation";
+
+  # Test where all delimiters have same escape count for sort condition
+  # This tests the preference order when escape counts are equal
+  bad 'my @x = qw{no_special_chars}',
+    "qw{} should use qw() when escape counts are equal - preference order";
+  bad 'my @x = qw<no_special_chars>',
+    "qw<> should use qw() when escape counts are equal - preference order";
+  bad 'my @x = qw[no_special_chars]',
+    "qw[] should use qw() when escape counts are equal - preference order";
+  good 'my @x = qw(no_special_chars)',
+    "qw() is preferred when all delimiters have same escape count";
+
+  # Test find_optimal_delimiter with non-bracket current delimiter
+  # This covers the condition where current delimiter is not in bracket list
+  my ($optimal, $is_optimal)
+    = $policy->find_optimal_delimiter("content", "qw", "/", "/");
+  is $is_optimal, 0, "Non-bracket delimiter is never optimal";
+
+  # Test conditions with bracket vs non-bracket delimiters
+  my ($optimal2, $is_optimal2)
+    = $policy->find_optimal_delimiter("content", "qw", "(", ")");
+  is $is_optimal2, 1, "Bracket delimiter can be optimal";
+};
+
+subtest "Additional branch coverage tests" => sub {
+  # Test to cover the case where escape counts are different
+  bad 'my @x = qw{word(with)(many)parens}',
+    "qw{} with many parens should use qw[] - fewer escapes";
+
+  # Test where string has both quotes and would interpolate
+  good q(my $x = "string with $var and \"quotes\""),
+    "Double quotes appropriate when string interpolates and has quotes";
+
+  # Test where find_optimal_delimiter current_delim is matched
+  good 'my @x = qw(optimal_choice)',
+    "qw() is already optimal for simple content";
+};
+
+subtest "Complex edge cases for condition coverage" => sub {
+  # Test where string has content that would interpolate OR has quotes
+  bad 'my $x = q(would interpolate $var)',
+    "q() should use single quotes when content would interpolate";
+
+  # Test where string has single quotes but no double quotes
+  good q[my $x = q(has 'single' quotes)],
+    "q() appropriate when content has single quotes but no double quotes";
 };
 
 done_testing;
