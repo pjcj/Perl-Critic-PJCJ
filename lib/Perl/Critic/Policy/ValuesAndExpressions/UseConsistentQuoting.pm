@@ -166,10 +166,9 @@ sub check_delimiter_optimization ($self, $elem) {
     = $self->find_optimal_delimiter($content, $operator, $current_start,
       $current_end);
 
-  if (!$current_is_optimal) {
-    return $self->violation($Desc,
-      "$Expl_optimal (hint: use $optimal_delim->{display})", $elem);
-  }
+  return $self->violation($Desc,
+    "$Expl_optimal (hint: use $optimal_delim->{display})", $elem)
+    if !$current_is_optimal;
 }
 
 sub violates ($self, $elem, $) {
@@ -200,24 +199,22 @@ sub check_single_quoted ($self, $elem) {
   # 2. Strings that contain double quotes (to avoid escaping)
 
   # Check if string has double quotes - then single quotes are justified
-  if (index($string, '"') != -1) {
-    return;  # Single quotes justified to avoid escaping double quotes
-  }
+  return
+    if index($string, '"')
+    != -1;  # Single quotes justified to avoid escaping double quotes
 
   # Check if string has escaped single quotes - then q() would be better
-  if ($content =~ /\\'/) {
-    return $self->violation($Desc, "use q() to avoid escaping single quotes",
-      $elem);
-  }
+  return $self->violation($Desc, "use q() to avoid escaping single quotes",
+    $elem)
+    if $content =~ /\\'/;
 
   # Use PPI's interpolations() method to test if this content would interpolate
   # in double quotes
   my $would_interpolate = $self->would_interpolate($string);
 
   # If content would not interpolate in double quotes, suggest double quotes
-  if (!$would_interpolate && index($string, '"') == -1) {
-    return $self->violation($Desc, $Expl_double, $elem);
-  }
+  return $self->violation($Desc, $Expl_double, $elem)
+    if !$would_interpolate && index($string, '"') == -1;
 }
 
 sub check_double_quoted ($self, $elem) {
@@ -226,26 +223,19 @@ sub check_double_quoted ($self, $elem) {
   my $content = $elem->content;
 
   # Check for escaped dollar/at signs, but only suggest single quotes if no
-  # other interpolation
-  if ($content =~ /\\[\$\@]/) {
-    # Only suggest single quotes if no other interpolation exists
-    if (!$self->would_interpolate($string)) {
-      return $self->violation(
-        $Desc,
-        'Use single quotes for strings with escaped $ or @ to avoid escaping',
-        $elem
-      );
-    }
-  }
+  # other interpolation. Only suggest single quotes if no other interpolation exists
+  return $self->violation($Desc,
+    'Use single quotes for strings with escaped $ or @ to avoid escaping',
+    $elem)
+    if $content =~ /\\[\$\@]/ && !$self->would_interpolate($string);
 }
 
 sub check_q_literal ($self, $elem) {
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
-  if (my $violation = $self->check_delimiter_optimization($elem)) {
-    return $violation;
-  }
+  my $violation = $self->check_delimiter_optimization($elem);
+  return $violation if $violation;
 
   # Rule 4: Prefer simpler quotes to q() when content is simple
   # But q() is justified when content has special characteristics
@@ -255,52 +245,41 @@ sub check_q_literal ($self, $elem) {
   my $would_interpolate = $self->would_interpolate($string);
 
   # If content has both single and double quotes, q() is appropriate
-  if ($has_single_quotes && $has_double_quotes) {
-    return;  # q() is justified
-  }
+  return if $has_single_quotes && $has_double_quotes;  # q() is justified
 
   # Check if content has characters that might justify q() usage
   # We'll be more conservative - only flag truly simple alphanumeric content
   my $is_simple_content = $string =~ /^[a-zA-Z0-9\s]+$/;
-  # If simple content with no quotes and would not interpolate, use double
-  # quotes
-  if ( !$would_interpolate
+  # If simple content with no quotes and would not interpolate, use double quotes
+  # Simple content should use double quotes per Rule 1
+  return $self->violation($Desc, $Expl_double, $elem)
+    if !$would_interpolate
     && !$has_single_quotes
     && !$has_double_quotes
-    && $is_simple_content)
-  {
-    # Simple content should use double quotes per Rule 1
-    return $self->violation($Desc, $Expl_double, $elem);
-  }
+    && $is_simple_content;
   # If content only has double quotes but no single quotes and no
   # interpolation, could use single quotes
-  if (!$would_interpolate && !$has_single_quotes && $has_double_quotes) {
-    # Content with only double quotes - q() might not be justified, could use
-    # single quotes
-    # But we'll be conservative here and allow q() for now
-    return;
-  }
+  # Content with only double quotes - q() might not be justified, could use
+  # single quotes. But we'll be conservative here and allow q() for now
+  return if !$would_interpolate && !$has_single_quotes && $has_double_quotes;
 
   # If would interpolate but no single quotes, should use single quotes
-  if ($would_interpolate && !$has_single_quotes) {
-    return $self->violation($Desc, $Expl_no_q, $elem);
-  }
+  return $self->violation($Desc, $Expl_no_q, $elem)
+    if $would_interpolate && !$has_single_quotes;
 }
 
 sub check_qq_interpolate ($self, $elem) {
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
-  if (my $violation = $self->check_delimiter_optimization($elem)) {
-    return $violation;
-  }
+  my $violation = $self->check_delimiter_optimization($elem);
+  return $violation if $violation;
 
   # Rule 3: Prefer "" to qq() when possible
   # Check if content can be represented as a simple double-quoted string
-  if (index($string, '"') == -1) {
-    # No double quotes in content, so can use ""
-    return $self->violation($Desc, $Expl_no_qq, $elem);
-  }
+  # No double quotes in content, so can use ""
+  return $self->violation($Desc, $Expl_no_qq, $elem)
+    if index($string, '"') == -1;
 }
 
 sub check_quote_operators ($self, $elem) {
@@ -319,10 +298,9 @@ sub check_quote_operators ($self, $elem) {
       $current_end);
 
   # Check if current delimiter is suboptimal
-  if (!$current_is_optimal) {
-    return $self->violation($Desc,
-      "$Expl_optimal (hint: use $optimal_delim->{display})", $elem);
-  }
+  return $self->violation($Desc,
+    "$Expl_optimal (hint: use $optimal_delim->{display})", $elem)
+    if !$current_is_optimal;
 }
 
 1;
