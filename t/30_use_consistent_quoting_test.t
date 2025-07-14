@@ -109,7 +109,7 @@ subtest "Simple strings (prefer double quotes for interpolation)" => sub {
 };
 
 subtest "Quote operators" => sub {
-  # Minimize escapes first - content with parens should avoid () delimiters
+  # Minimise escapes first - content with parens should avoid () delimiters
   bad 'my @x = qw(word(with)parens)',
     "qw() with parens should use qw[] to avoid escapes";
   good 'my @x = qw[word(with)parens]', "qw[] with parens avoids escapes";
@@ -341,7 +341,7 @@ subtest "Priority rules" => sub {
   good 'my @words = qw(word|with|pipes)',
     "qw() optimal when words have pipes";
 
-  # Mixed content - choose delimiter that minimizes total escapes
+  # Mixed content - choose delimiter that minimises total escapes
   bad 'my $text = q/has\/slashes(and)parens/',
     "q// should use q[] - fewer total escapes";
   good 'my $text = q[has/slashes(and)parens]',

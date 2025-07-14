@@ -20,7 +20,7 @@ priority rules:
    most strings. Only use single quotes when the string contains literal `$`
    or `@` that should not be interpolated.
 
-2. **Minimize escape characters** - Choose delimiters that require the fewest
+2. **Minimise escape characters** - Choose delimiters that require the fewest
    backslash escapes.
 
 3. **Prefer "" over qq()** - Use simple double quotes instead of `qq()`
@@ -30,7 +30,7 @@ priority rules:
    literal strings.
 
 5. **Use only bracket delimiters** - Only use bracket delimiters `()`, `[]`,
-   `<>`, `{}` for quote-like operators. Choose the delimiter that minimizes
+   `<>`, `{}` for quote-like operators. Choose the delimiter that minimises
    escape characters. When escape counts are equal, prefer them in this
    order: `()`, `[]`, `<>`, `{}`.
 
@@ -38,7 +38,7 @@ priority rules:
 
 - Double quotes are preferred for consistency and to allow potential
   interpolation
-- Minimizing escape characters improves readability and reduces errors
+- Minimising escape characters improves readability and reduces errors
 - Simple quotes are preferred over their `q()` and `qq()` equivalents when
   possible
 - Only bracket delimiters should be used (no exotic delimiters like `/`,
@@ -140,9 +140,9 @@ dzil build
 
 Paul Johnson <paul@pjcj.net>
 
-## Copyright and License
+## Copyright and Licence
 
-Copyright (c) 2025 Paul Johnson.
+Copyright 2025 Paul Johnson.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

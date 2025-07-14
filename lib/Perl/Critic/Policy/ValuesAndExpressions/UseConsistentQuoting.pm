@@ -128,9 +128,9 @@ sub find_optimal_delimiter (
   my $min_count
     = (sort { $a <=> $b } map { $_->{escape_count} } @delimiters)[0];
 
-  # Find optimal delimiter: minimize escapes, then preference order
+  # Find optimal delimiter: minimise escapes, then preference order
   my ($optimal) = sort {
-    $a->{escape_count} <=> $b->{escape_count} ||  # Minimize escapes first
+    $a->{escape_count} <=> $b->{escape_count} ||  # Minimise escapes first
       $self->delimiter_preference_order($a->{start}) <=>  # Then prefer by order
       $self->delimiter_preference_order($b->{start})
   } @delimiters;
@@ -156,7 +156,7 @@ sub find_optimal_delimiter (
   ($optimal, $current_is_optimal)
 }
 
-sub check_delimiter_optimization ($self, $elem) {
+sub check_delimiter_optimisation ($self, $elem) {
   my ($current_start, $current_end, $content, $operator)
     = $self->parse_quote_token($elem);
 
@@ -234,7 +234,7 @@ sub check_q_literal ($self, $elem) {
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
-  my $violation = $self->check_delimiter_optimization($elem);
+  my $violation = $self->check_delimiter_optimisation($elem);
   return $violation if $violation;
 
   # Rule 4: Prefer simpler quotes to q() when content is simple
@@ -272,7 +272,7 @@ sub check_qq_interpolate ($self, $elem) {
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
-  my $violation = $self->check_delimiter_optimization($elem);
+  my $violation = $self->check_delimiter_optimisation($elem);
   return $violation if $violation;
 
   # Rule 3: Prefer "" to qq() when possible
@@ -347,7 +347,7 @@ interpolated.
   # Bad
   my $name = 'John';              # should use double quotes
 
-=head2 Rule 2: Minimize escape characters
+=head2 Rule 2: Minimise escape characters
 
 Choose delimiters that require the fewest backslash escapes.
 
@@ -382,7 +382,7 @@ Use simple single quotes instead of C<q()> for literal strings.
 =head2 Rule 5: Use only bracket delimiters
 
 Only use bracket delimiters C<()>, C<[]>, C<< <> >>, C<{}> for quote-like
-operators. Choose the delimiter that minimizes escape characters. When escape
+operators. Choose the delimiter that minimises escape characters. When escape
 counts are equal, prefer them in this order: C<()>, C<[]>, C<< <> >>, C<{}>.
 
   # Good
@@ -487,27 +487,27 @@ Extracts delimiter and content information from quote-like operators such as
 C<qw{}>, C<q{}>, C<qq{}>, and C<qx{}>. Handles both bracket pairs (where start
 and end delimiters differ) and symmetric delimiters (where they're the same).
 
-This parsing is essential for delimiter optimization, as it separates the
+This parsing is essential for delimiter optimisation, as it separates the
 operator, delimiters, and content for independent analysis.
 
 =head2 find_optimal_delimiter
 
-Determines the best delimiter choice for a quote-like operator by analyzing the
+Determines the best delimiter choice for a quote-like operator by analysing the
 content and counting required escape characters. Implements the core logic for
-Rules 2 and 5: minimize escapes and prefer bracket delimiters.
+Rules 2 and 5: minimise escapes and prefer bracket delimiters.
 
 Only considers bracket delimiters C<()>, C<[]>, C<< <> >>, C<{}> as valid
 options, rejecting exotic delimiters like C</>, C<|>, C<#> regardless of their
 escape count. When escape counts are tied, uses the preference order to break
 ties.
 
-=head2 check_delimiter_optimization
+=head2 check_delimiter_optimisation
 
 Validates that quote-like operators use optimal delimiters according to Rules 2
 and 5. This method coordinates parsing the current token and finding the
 optimal alternative, issuing violations when the current choice is suboptimal.
 
-Acts as a bridge between the parsing and optimization logic, providing a
+Acts as a bridge between the parsing and optimisation logic, providing a
 clean interface for the quote-checking methods.
 
 =head2 check_single_quoted
@@ -550,9 +550,9 @@ quotes, as this reduces visual noise and follows common Perl conventions.
 =head2 check_quote_operators
 
 Handles C<qw()> and C<qx()> operators, focusing purely on delimiter
-optimization according to Rules 2 and 5. These operators don't have simpler
+optimisation according to Rules 2 and 5. These operators don't have simpler
 alternatives, so the policy only ensures they use the most appropriate
-delimiters to minimize escape characters.
+delimiters to minimise escape characters.
 
 =head1 AUTHOR
 
@@ -560,9 +560,9 @@ Paul Johnson C<< <paul@pjcj.net> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2025 Paul Johnson.
+Copyright 2025 Paul Johnson.
 
-=head1 LICENSE
+=head1 LICENCE
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

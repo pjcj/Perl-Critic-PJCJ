@@ -37,7 +37,7 @@ string quoting practices in Perl code.
 
 Enforces consistent and optimal quoting practices. This policy combines two
 requirements: simple strings (containing no double quotes or @ symbols) should
-use double quotes, and quote-like operators should use delimiters that minimize
+use double quotes, and quote-like operators should use delimiters that minimise
 escape characters.
 
 =back
@@ -48,9 +48,9 @@ Paul Johnson C<< <paul@pjcj.net> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2025 Paul Johnson.
+Copyright 2025 Paul Johnson.
 
-=head1 LICENSE
+=head1 LICENCE
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
