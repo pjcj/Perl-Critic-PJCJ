@@ -173,38 +173,21 @@ sub _check_delimiter_optimization ($self, $elem) {
 }
 
 sub violates ($self, $elem, $) {
-  # Handle single-quoted strings
-  if ($elem->isa("PPI::Token::Quote::Single")) {
-    return $self->_check_single_quoted($elem);
-  }
+  state $dispatch = {
+    "PPI::Token::Quote::Single"      => "check_single_quoted",
+    "PPI::Token::Quote::Double"      => "check_double_quoted",
+    "PPI::Token::Quote::Literal"     => "check_q_literal",
+    "PPI::Token::Quote::Interpolate" => "check_qq_interpolate",
+    "PPI::Token::QuoteLike::Words"   => "check_quote_operators",
+    "PPI::Token::QuoteLike::Command" => "check_quote_operators",
+  };
 
-  # Handle double-quoted strings
-  if ($elem->isa("PPI::Token::Quote::Double")) {
-    return $self->_check_double_quoted($elem);
-  }
-
-  # Handle q() strings (PPI::Token::Quote::Literal)
-  if ($elem->isa("PPI::Token::Quote::Literal")) {
-    return $self->_check_q_literal($elem);
-  }
-
-  # Handle qq() strings (PPI::Token::Quote::Interpolate)
-  if ($elem->isa("PPI::Token::Quote::Interpolate")) {
-    return $self->_check_qq_interpolate($elem);
-  }
-
-  # Handle other quote-like operators (qw, qx)
-  if ( $elem->isa("PPI::Token::QuoteLike::Words")
-    || $elem->isa("PPI::Token::QuoteLike::Command"))
-  {
-    return $self->_check_quote_operators($elem);
-  }
-
-  # Return undef for non-quote tokens
-  return;
+  my $class  = ref $elem;
+  my $method = $dispatch->{$class};
+  $method ? $self->$method($elem) : undef
 }
 
-sub _check_single_quoted ($self, $elem) {
+sub check_single_quoted ($self, $elem) {
   # Get the string content without the surrounding quotes
   my $string  = $elem->string;
   my $content = $elem->content;
@@ -237,7 +220,7 @@ sub _check_single_quoted ($self, $elem) {
   }
 }
 
-sub _check_double_quoted ($self, $elem) {
+sub check_double_quoted ($self, $elem) {
   # Check if this double-quoted string actually needs interpolation
   my $string  = $elem->string;
   my $content = $elem->content;
@@ -256,7 +239,7 @@ sub _check_double_quoted ($self, $elem) {
   }
 }
 
-sub _check_q_literal ($self, $elem) {
+sub check_q_literal ($self, $elem) {
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
@@ -304,7 +287,7 @@ sub _check_q_literal ($self, $elem) {
   }
 }
 
-sub _check_qq_interpolate ($self, $elem) {
+sub check_qq_interpolate ($self, $elem) {
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
@@ -320,7 +303,7 @@ sub _check_qq_interpolate ($self, $elem) {
   }
 }
 
-sub _check_quote_operators ($self, $elem) {
+sub check_quote_operators ($self, $elem) {
   # Get current delimiters and content by parsing the token
   my ($current_start, $current_end, $content, $operator)
     = $self->_parse_quote_token($elem);
