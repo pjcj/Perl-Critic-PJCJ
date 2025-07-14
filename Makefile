@@ -40,7 +40,7 @@ install: build
 
 cover: build
 	cover --delete
-	HARNESS_PERL_SWITCHES=-MDevel::Cover make test
+	HARNESS_PERL_SWITCHES=-MDevel::Cover=+ignore,^t/ make test
 
 cover-html: cover
 	cover --report=html_basic --launch
