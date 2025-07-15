@@ -10,47 +10,15 @@ use Test2::V0;
 no warnings "experimental::signatures";
 
 # Test the policy directly without using Perl::Critic framework
-use lib qw( lib );
+use lib qw( lib t/lib );
 use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
+use ViolationFinder qw(find_violations);
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
-# Create a mock PPI document for testing
-use PPI;
-
-sub find_violations ($code) {
-  my $doc = PPI::Document->new(\$code);
-  my @violations;
-
-  # Find all elements the policy applies to
-  my @element_types = qw(
-    PPI::Token::Quote::Single
-    PPI::Token::Quote::Double
-    PPI::Token::Quote::Literal
-    PPI::Token::Quote::Interpolate
-    PPI::Token::QuoteLike::Words
-    PPI::Token::QuoteLike::Command
-  );
-
-  for my $type (@element_types) {
-    $doc->find(
-      sub ($top, $elem) {
-        return 0 unless $elem->isa($type);
-
-        my $violation = $Policy->violates($elem, $doc);
-        push @violations, $violation if $violation;
-
-        return 0;  # Don't descend further
-      }
-    );
-  }
-
-  return @violations;
-}
-
 sub test_violation ($code, $expected_desc, $expected_expl, $description) {
-  my @violations = find_violations($code);
+  my @violations = find_violations($Policy, $code);
 
   is @violations, 1, "$description - one violation";
 
@@ -184,7 +152,7 @@ subtest "Exotic delimiter messages" => sub {
 };
 
 subtest "Combined violation messages" => sub {
-  my @violations = find_violations(<<~'CODE');
+  my @violations = find_violations($Policy, <<~'CODE');
     my $simple = 'hello';
     my @words = qw{word(with)parens};
     my $ok = "world";

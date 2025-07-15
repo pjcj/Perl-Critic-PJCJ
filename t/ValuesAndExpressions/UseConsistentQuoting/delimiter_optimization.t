@@ -10,42 +10,15 @@ use Test2::V0;
 no warnings "experimental::signatures";
 
 # Test the policy directly without using Perl::Critic framework
-use lib qw( lib );
+use lib qw( lib t/lib );
 use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
+use ViolationFinder qw(find_violations);
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
-# Create a mock PPI document for testing
-use PPI;
-
 sub count_violations ($code, $expected_violations, $description) {
-  my $doc = PPI::Document->new(\$code);
-  my @violations;
-
-  # Find all elements the policy applies to
-  my @element_types = qw(
-    PPI::Token::Quote::Single
-    PPI::Token::Quote::Double
-    PPI::Token::Quote::Literal
-    PPI::Token::Quote::Interpolate
-    PPI::Token::QuoteLike::Words
-    PPI::Token::QuoteLike::Command
-  );
-
-  for my $type (@element_types) {
-    $doc->find(
-      sub ($top, $elem) {
-        return 0 unless $elem->isa($type);
-
-        my $violation = $Policy->violates($elem, $doc);
-        push @violations, $violation if $violation;
-
-        return 0;  # Don't descend further
-      }
-    );
-  }
-
+  my @violations = find_violations($Policy, $code);
   is @violations, $expected_violations, $description;
   return @violations;
 }
