@@ -17,7 +17,7 @@ sub find_violations ($policy, $code) {
   my @violations;
 
   # Find all elements the policy applies to
-  my @element_types = qw(
+  state @element_types = qw(
     PPI::Token::Quote::Single
     PPI::Token::Quote::Double
     PPI::Token::Quote::Literal
@@ -29,17 +29,13 @@ sub find_violations ($policy, $code) {
   for my $type (@element_types) {
     $doc->find(
       sub ($top, $elem) {
-        return 0 unless $elem->isa($type);
-
-        my $violation = $policy->violates($elem, $doc);
-        push @violations, $violation if $violation;
-
-        return 0;  # Don't descend further
+        push @violations, $policy->violates($elem, $doc) if $elem->isa($type);
+        0  # Don't descend further
       }
     );
   }
 
-  return @violations;
+  @violations
 }
 
 1;

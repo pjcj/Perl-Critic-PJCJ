@@ -183,9 +183,10 @@ sub violates ($self, $elem, $) {
     "PPI::Token::QuoteLike::Command" => "check_quote_operators",
   };
 
-  my $class  = ref $elem;
-  my $method = $dispatch->{$class};
-  $method ? $self->$method($elem) : undef
+  my $class      = ref $elem;
+  my $method     = $dispatch->{$class} or return;
+  my @violations = $self->$method($elem);
+  @violations
 }
 
 sub check_single_quoted ($self, $elem) {
@@ -218,7 +219,7 @@ sub check_single_quoted ($self, $elem) {
   return $self->violation($Desc, $Expl_double, $elem)
     if !$would_interpolate && index($string, '"') == -1;
 
-  undef
+  return
 }
 
 sub check_double_quoted ($self, $elem) {
@@ -233,7 +234,7 @@ sub check_double_quoted ($self, $elem) {
     $elem)
     if $content =~ /\\[\$\@]/ && !$self->would_interpolate($string);
 
-  undef
+  return
 }
 
 sub check_q_literal ($self, $elem) {
@@ -273,7 +274,7 @@ sub check_q_literal ($self, $elem) {
   return $self->violation($Desc, $Expl_no_q, $elem)
     if $would_interpolate && !$has_single_quotes;
 
-  undef
+  return
 }
 
 sub check_qq_interpolate ($self, $elem) {
@@ -289,7 +290,7 @@ sub check_qq_interpolate ($self, $elem) {
   return $self->violation($Desc, $Expl_no_qq, $elem)
     if index($string, '"') == -1;
 
-  undef
+  return
 }
 
 sub check_quote_operators ($self, $elem) {
@@ -312,7 +313,7 @@ sub check_quote_operators ($self, $elem) {
     "$Expl_optimal (hint: use $optimal_delim->{display})", $elem)
     if !$current_is_optimal;
 
-  undef
+  return
 }
 
 1;
