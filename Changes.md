@@ -1,4 +1,4 @@
-# Revision history for Perl::Critic::Strings
+# Revision history for Perl::Critic::PJCJ
 
 ## {{$NEXT}}
 

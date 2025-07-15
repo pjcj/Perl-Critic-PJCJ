@@ -1,4 +1,4 @@
-package Perl::Critic::Strings;
+package Perl::Critic::PJCJ;
 
 use v5.20.0;
 use strict;
@@ -14,15 +14,15 @@ __END__
 
 =head1 NAME
 
-Perl::Critic::Strings - Perl::Critic policies for string handling
+Perl::Critic::PJCJ - Perl::Critic policies for string handling
 
 =head1 SYNOPSIS
 
   # In your .perlcriticrc file:
-  include = Perl::Critic::Strings
+  include = Perl::Critic::PJCJ
 
   # Or from the command line:
-  perlcritic --include Perl::Critic::Strings lib/
+  perlcritic --include Perl::Critic::PJCJ lib/
 
 =head1 DESCRIPTION
 

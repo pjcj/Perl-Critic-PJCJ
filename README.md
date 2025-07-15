@@ -1,4 +1,4 @@
-# Perl::Critic::Strings
+# Perl::Critic::PJCJ
 
 A Perl::Critic policy distribution for enforcing consistent string quoting
 practices in Perl code.
@@ -91,7 +91,7 @@ my $path = "some/path";           # "" instead of q|some|path|
 To install this module, run the following commands:
 
 ```bash
-cpan Perl::Critic::Strings
+cpan Perl::Critic::PJCJ
 ```
 
 Or manually:
@@ -114,7 +114,7 @@ Add the policy to your `.perlcriticrc` file:
 Or include the entire distribution:
 
 ```ini
-include = Perl::Critic::Strings
+include = Perl::Critic::PJCJ
 ```
 
 Then run perlcritic on your code:
@@ -124,7 +124,7 @@ perlcritic --single-policy \
   ValuesAndExpressions::UseConsistentQuoting MyScript.pl
 
 # Or run all policies from the distribution
-perlcritic --include Perl::Critic::Strings MyScript.pl
+perlcritic --include Perl::Critic::PJCJ MyScript.pl
 ```
 
 ## Development

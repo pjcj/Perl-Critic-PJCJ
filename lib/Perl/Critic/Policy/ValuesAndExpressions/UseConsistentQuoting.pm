@@ -398,7 +398,7 @@ counts are equal, prefer them in this order: C<()>, C<[]>, C<< <> >>, C<{}>.
 
 =head1 AFFILIATION
 
-This Policy is part of the Perl::Critic::Strings distribution.
+This Policy is part of the Perl::Critic::PJCJ distribution.
 
 =head1 CONFIGURATION
 

@@ -1,6 +1,6 @@
 # Dist::Zilla build artefacts
 .build/
-Perl-Critic-Strings-*/
+Perl-Critic-PJCJ-*/
 *.tar.gz
 
 # Development files
