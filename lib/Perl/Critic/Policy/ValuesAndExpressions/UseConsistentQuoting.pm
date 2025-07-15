@@ -7,7 +7,7 @@ use feature "signatures";
 no warnings "experimental::signatures";
 
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
-use base "Perl::Critic::Policy";
+use parent "Perl::Critic::Policy";
 
 # VERSION
 

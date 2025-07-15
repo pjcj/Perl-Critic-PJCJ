@@ -1600,5 +1600,4 @@ allow = %ENV %SIG $> $0
 
 
 [ValuesAndExpressions::ProhibitSingleArgArraySlice]
-
 [ValuesAndExpressions::UseConsistentQuoting]
