@@ -46,7 +46,7 @@ sub count_violations ($code, $expected_violations, $description) {
     );
   }
 
-  is scalar @violations, $expected_violations, $description;
+  is @violations, $expected_violations, $description;
   return @violations;
 }
 

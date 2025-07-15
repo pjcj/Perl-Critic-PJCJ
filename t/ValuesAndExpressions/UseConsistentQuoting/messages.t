@@ -52,13 +52,19 @@ sub find_violations ($code) {
 sub test_violation ($code, $expected_desc, $expected_expl, $description) {
   my @violations = find_violations($code);
 
-  is scalar @violations, 1, "$description - one violation";
+  is @violations, 1, "$description - one violation";
 
   if (@violations) {
     my $v = $violations[0];
     is $v->description, $expected_desc, "$description - description matches";
     is $v->explanation, $expected_expl, "$description - explanation matches";
   }
+}
+
+sub delimiter_msg ($hint) {
+  state $msg = "choose (), [], <> or {} delimiters that require the fewest "
+    . "escape characters";
+  return "$msg (hint: use $hint)";
 }
 
 subtest "Single quote violation messages" => sub {
@@ -115,50 +121,43 @@ subtest "Delimiter optimization messages with hints" => sub {
   test_violation(
     'my @x = qw(word(with)parens)',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use qw[])",
-    "qw() with parens - hint to use qw[]"
+    delimiter_msg("qw[]"), "qw() with parens - hint to use qw[]"
   );
 
   test_violation(
     'my @x = qw[word[with]brackets]',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use qw())",
-    "qw[] with brackets - hint to use qw()"
+    delimiter_msg("qw()"), "qw[] with brackets - hint to use qw()"
   );
 
   test_violation(
     'my @x = qw{word{with}braces}',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use qw())",
-    "qw{} with braces - hint to use qw()"
+    delimiter_msg("qw()"), "qw{} with braces - hint to use qw()"
   );
 
   test_violation(
     'my @x = qw<word<with>angles>',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use qw())",
-    "qw<> with angles - hint to use qw()"
+    delimiter_msg("qw()"), "qw<> with angles - hint to use qw()"
   );
 
   test_violation(
     'my @x = qw{simple words}',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use qw())",
-    "qw{} simple - hint to use qw()"
+    delimiter_msg("qw()"), "qw{} simple - hint to use qw()"
   );
 
   test_violation(
     'my $x = q(text(with)parens)',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use q[])",
-    "q() with parens - hint to use q[]"
+    delimiter_msg("q[]"), "q() with parens - hint to use q[]"
   );
 
   test_violation(
     'my $x = qq[text[with]brackets]',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use qq())",
-    "qq[] with brackets - hint to use qq()"
+    delimiter_msg("qq()"), "qq[] with brackets - hint to use qq()"
   );
 };
 
@@ -166,21 +165,20 @@ subtest "Exotic delimiter messages" => sub {
   test_violation(
     'my $text = q/path\/to\/file/',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use q())",
+    delimiter_msg("q()"),
     "q// with slashes - hint to use q()"
   );
 
   test_violation(
     'my $text = q|option\|value|',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use q())",
-    "q|| with pipes - hint to use q()"
+    delimiter_msg("q()"), "q|| with pipes - hint to use q()"
   );
 
   test_violation(
     'my @x = qw/word\/with\/slashes/',
     "Use consistent and optimal quoting",
-    "choose (), [], <> or {} delimiters that require the fewest escape characters (hint: use qw())",
+    delimiter_msg("qw()"),
     "qw// with slashes - hint to use qw()"
   );
 };

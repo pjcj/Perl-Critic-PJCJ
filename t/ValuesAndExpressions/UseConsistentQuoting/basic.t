@@ -46,7 +46,7 @@ sub count_violations ($code, $expected_violations, $description) {
     );
   }
 
-  is scalar @violations, $expected_violations, $description;
+  is @violations, $expected_violations, $description;
   return @violations;
 }
 
@@ -61,12 +61,12 @@ sub bad ($code, $description) {
 subtest "Policy methods" => sub {
   # Test default_themes
   my @themes = $Policy->default_themes;
-  is scalar @themes, 1,          "default_themes returns one theme";
-  is $themes[0],     "cosmetic", "default theme is cosmetic";
+  is @themes,    1,          "default_themes returns one theme";
+  is $themes[0], "cosmetic", "default theme is cosmetic";
 
   # Test applies_to
   my @types = $Policy->applies_to;
-  is scalar @types, 6, "applies_to returns 6 token types";
+  is @types, 6, "applies_to returns 6 token types";
   like $types[0], qr/Quote/, "applies_to returns quote token types";
 
   # Test delimiter_preference_order method directly
