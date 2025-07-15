@@ -88,9 +88,10 @@ subtest "Policy methods" => sub {
 
 subtest "Basic functionality" => sub {
   # Simple tests to verify policy is working
-  bad q(my $x = 'hello'), "Single quoted simple string should use double quotes";
+  bad q(my $x = 'hello'),
+    "Single quoted simple string should use double quotes";
   good 'my $x = "hello"', "Double quoted simple string";
-  
+
   # Multiple violations
   count_violations q(
     my $x = 'hello';

@@ -65,7 +65,7 @@ subtest "Double quoted strings" => sub {
     "String with single quote needs double quotes";
   good 'my $x = "Hello $name"',
     "String with interpolation needs double quotes";
-  
+
   # Mixed escaped and real interpolation
   good 'my $mixed = "\$a $b"',
     "Mixed escaped and real interpolation should stay double quotes";
@@ -84,7 +84,7 @@ subtest "Interpolation with quotes" => sub {
     "Double quotes with interpolation and quotes";
   good q(my $x = "string with $var and \"quotes\""),
     "Double quotes appropriate when string interpolates and has quotes";
-  
+
   # Contains both single and double quotes
   good q(my $text = "contains 'single' quotes"),
     '"" appropriate when content has single quotes';

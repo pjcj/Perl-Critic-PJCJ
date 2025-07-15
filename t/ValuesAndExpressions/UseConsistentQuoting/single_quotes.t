@@ -81,7 +81,7 @@ subtest "Escaped characters in single quotes" => sub {
   # Escaped single quotes should recommend q()
   bad q(my $x = 'I\'m happy'),
     "Escaped single quotes should use q() to avoid escapes";
-  
+
   # Literal special characters
   good q(my $text = 'A $ here'), 'Literal $ should use single quotes';
   good q(my $x = 'user@domain.com'),
@@ -95,7 +95,7 @@ subtest "Mixed quote content" => sub {
     "q() is justified when content has both quote types";
   good q[my $x = q(has 'single' and "double")],
     "q() justified when content has both quote types";
-  
+
   # When content has only single quotes
   good q[my $x = q(has 'single' quotes)],
     "q() appropriate when content has single quotes but no double quotes";

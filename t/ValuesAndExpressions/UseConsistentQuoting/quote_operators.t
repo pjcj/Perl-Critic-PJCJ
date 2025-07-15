@@ -64,7 +64,7 @@ subtest "q() operator" => sub {
   bad 'my $x = q(simple123)',
     "q() with simple alphanumeric content should use double quotes";
   bad 'my $x = q(literal)', 'q() should use "" for literal content';
-  
+
   # When q() would interpolate, should use single quotes
   bad 'my $x = q(literal $var here)',
     'q() with literal $ should use single quotes';
@@ -74,13 +74,13 @@ subtest "q() operator" => sub {
     "q() should use single quotes when content would interpolate";
   bad 'my $x = q(user@domain.com)',
     'q() with only literal @ should use double quotes';
-  
+
   # When q() is justified
   good q[my $x = q(has 'single' and "double" quotes)],
     "q() is justified when content has both quote types";
   good q[my $x = q(has "only" double quotes)],
     "q() appropriate when content has double quotes but no interpolation";
-  
+
   # Different q() delimiters
   bad q(my $x = q'simple'), "q'' should use double quotes for simple content";
   bad 'my $x = q/simple/',  "q// should use double quotes for simple content";
@@ -100,7 +100,7 @@ subtest "qq() operator" => sub {
     "qq// should use double quotes for simple content";
   bad 'my $x = qq(simple)',
     "qq() should use double quotes for simple content";
-  
+
   # When qq() is appropriate (has double quotes)
   good q[my $x = qq(has "double" quotes)],
     "qq() appropriate when content has double quotes";

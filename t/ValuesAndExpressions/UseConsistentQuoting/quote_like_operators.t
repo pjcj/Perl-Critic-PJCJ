@@ -64,29 +64,29 @@ subtest "qw() operator" => sub {
   bad 'my @x = qw[simple words]', "qw[] with no delimiters should use qw()";
   bad 'my @x = qw<simple words>', "qw<> with no delimiters should use qw()";
   good 'my @x = qw(simple words)', "qw() is preferred for simple content";
-  
+
   # Empty quotes should prefer ()
   bad 'my @x = qw{}', "Empty qw{} should use qw()";
   bad 'my @x = qw[]', "Empty qw[] should use qw()";
   good 'my @x = qw()', "Empty qw() is preferred";
-  
+
   # Non-bracket delimiters
   bad 'my @x = qw/word word/', "qw// should use qw() - brackets preferred";
   bad 'my @x = qw|word word|', "qw|| should use qw() - brackets preferred";
   bad 'my @x = qw#word word#', "qw## should use qw() - brackets preferred";
   good 'my @x = qw(word word)', "qw() uses preferred bracket delimiters";
-  
+
   # With slashes and pipes
   bad 'my @words = qw/word\/with\/slashes/',
     "qw// with slashes should use qw() to avoid escapes";
   good 'my @words = qw(word/with/slashes)',
     "qw() optimal when words have slashes";
-  
+
   bad 'my @words = qw|word\|with\|pipes|',
     "qw|| with pipes should use qw() to avoid escapes";
   good 'my @words = qw(word|with|pipes)',
     "qw() optimal when words have pipes";
-  
+
   # Whitespace variations
   bad 'my @x = qw  {word(with)parens}', "qw with whitespace before delimiter";
   bad 'my @x = qw\t{word(with)parens}', "qw with tab before delimiter";
@@ -100,16 +100,16 @@ subtest "qx() operator" => sub {
   bad 'my $output = qx{ls}', "qx{} for simple command should use qx()";
   bad 'my $output = qx<ls>', "qx<> for simple command should use qx()";
   good 'my $output = qx(ls)', "qx() is preferred for simple commands";
-  
+
   # Commands with special characters
   bad 'my $output = qx/ls \/tmp/',
     "qx// with slashes should use qx() to avoid escapes";
   good 'my $output = qx(ls /tmp)', "qx() optimal when content has slashes";
-  
+
   bad 'my $output = qx|echo \|pipe|',
     "qx|| with pipes should use qx() to avoid escapes";
   good 'my $output = qx(echo |pipe)', "qx() optimal when content has pipes";
-  
+
   # With single quotes
   bad q(my $output = qx'echo \'hello\''),
     "qx'' with single quotes should use qx() to avoid escapes";
