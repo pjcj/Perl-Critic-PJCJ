@@ -9,7 +9,7 @@ no warnings "experimental::signatures";
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 use base "Perl::Critic::Policy";
 
-our $VERSION = "0.001";
+# VERSION
 
 my $Desc         = "Use consistent and optimal quoting";
 my $Expl_double  = "simple strings should use double quotes for consistency";
