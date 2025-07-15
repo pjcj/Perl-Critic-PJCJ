@@ -184,14 +184,14 @@ subtest "Exotic delimiter messages" => sub {
 };
 
 subtest "Combined violation messages" => sub {
-  my @violations = find_violations(<<'CODE');
-my $simple = 'hello';
-my @words = qw{word(with)parens};
-my $ok = "world";
-my @ok_words = qw[more(parens)];
-CODE
+  my @violations = find_violations(<<~'CODE');
+    my $simple = 'hello';
+    my @words = qw{word(with)parens};
+    my $ok = "world";
+    my @ok_words = qw[more(parens)];
+    CODE
 
-  is scalar @violations, 2, "Two violations in combined code";
+  is @violations, 2, "Two violations in combined code";
 
   # Check that descriptions mention consistency
   like $violations[0]->description, qr(consistent),
