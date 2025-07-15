@@ -79,7 +79,7 @@ sub parse_quote_token ($self, $elem) {
     # Remove the ending delimiter from the content
     $rest =~ s/\Q$end_delim\E\z//;
 
-    return ($start_delim, $end_delim, $rest, $op);
+    ($start_delim, $end_delim, $rest, $op)
   }
 }
 
@@ -169,6 +169,8 @@ sub check_delimiter_optimisation ($self, $elem) {
   return $self->violation($Desc,
     "$Expl_optimal (hint: use $optimal_delim->{display})", $elem)
     if !$current_is_optimal;
+
+  undef
 }
 
 sub violates ($self, $elem, $) {
@@ -215,6 +217,8 @@ sub check_single_quoted ($self, $elem) {
   # If content would not interpolate in double quotes, suggest double quotes
   return $self->violation($Desc, $Expl_double, $elem)
     if !$would_interpolate && index($string, '"') == -1;
+
+  undef
 }
 
 sub check_double_quoted ($self, $elem) {
@@ -228,6 +232,8 @@ sub check_double_quoted ($self, $elem) {
     'Use single quotes for strings with escaped $ or @ to avoid escaping',
     $elem)
     if $content =~ /\\[\$\@]/ && !$self->would_interpolate($string);
+
+  undef
 }
 
 sub check_q_literal ($self, $elem) {
@@ -266,6 +272,8 @@ sub check_q_literal ($self, $elem) {
   # If would interpolate but no single quotes, should use single quotes
   return $self->violation($Desc, $Expl_no_q, $elem)
     if $would_interpolate && !$has_single_quotes;
+
+  undef
 }
 
 sub check_qq_interpolate ($self, $elem) {
@@ -280,6 +288,8 @@ sub check_qq_interpolate ($self, $elem) {
   # No double quotes in content, so can use ""
   return $self->violation($Desc, $Expl_no_qq, $elem)
     if index($string, '"') == -1;
+
+  undef
 }
 
 sub check_quote_operators ($self, $elem) {
@@ -301,6 +311,8 @@ sub check_quote_operators ($self, $elem) {
   return $self->violation($Desc,
     "$Expl_optimal (hint: use $optimal_delim->{display})", $elem)
     if !$current_is_optimal;
+
+  undef
 }
 
 1;
