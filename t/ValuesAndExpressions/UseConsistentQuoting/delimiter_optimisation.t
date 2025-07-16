@@ -31,7 +31,7 @@ sub bad ($code, $description) {
   count_violations($code, 1, $description);
 }
 
-subtest "Delimiter optimization - minimizing escapes" => sub {
+subtest "Delimiter optimisation - minimizing escapes" => sub {
   # Content with parens should avoid () delimiters
   bad 'my @x = qw(word(with)parens)',
     "qw() with parens should use qw[] to avoid escapes";
@@ -149,7 +149,7 @@ subtest "Equal escape counts" => sub {
     "qw() is preferred when all delimiters have same escape count";
 };
 
-subtest "Exotic delimiters to minimize escapes" => sub {
+subtest "Exotic delimiters to minimise escapes" => sub {
   bad 'my $text = qq/path\/to\/file/',
     "qq// with slashes should use qq() to avoid escapes";
   good 'my $text = qq(path"to"file)',

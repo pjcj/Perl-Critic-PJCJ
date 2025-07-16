@@ -85,7 +85,7 @@ subtest "qq() operator violation messages" => sub {
   );
 };
 
-subtest "Delimiter optimization messages with hints" => sub {
+subtest "Delimiter optimisation messages with hints" => sub {
   test_violation(
     'my @x = qw(word(with)parens)',
     "Use consistent and optimal quoting",
