@@ -29,7 +29,7 @@ sub bad ($policy, $code, $description) {
 }
 
 subtest "Custom max_line_length = 40" => sub {
-  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new();
+  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
   $policy->{_max_line_length} = 40;
 
   # Test lines within 40 char limit
@@ -46,11 +46,11 @@ subtest "Custom max_line_length = 40" => sub {
   bad $policy, $over_40, "Line over 40 characters violates with custom limit";
 
   # Test getter method
-  is $policy->_get_max_line_length(), 40, "Custom max_line_length is 40";
+  is $policy->{_max_line_length}, 40, "Custom max_line_length is 40";
 };
 
 subtest "Custom max_line_length = 120" => sub {
-  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new();
+  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
   $policy->{_max_line_length} = 120;
 
   # Test line that would violate default 80 but is OK with 120
@@ -64,11 +64,11 @@ subtest "Custom max_line_length = 120" => sub {
   bad $policy, $over_120, "Line over 120 characters violates";
 
   # Test getter method
-  is $policy->_get_max_line_length(), 120, "Custom max_line_length is 120";
+  is $policy->{_max_line_length}, 120, "Custom max_line_length is 120";
 };
 
 subtest "Very short custom limit" => sub {
-  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new();
+  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
   $policy->{_max_line_length} = 10;
 
   # Even short lines violate with very short limit
@@ -78,14 +78,14 @@ subtest "Very short custom limit" => sub {
   good $policy, 'my $x=1', "Compact line within 10 chars";
 
   # Test getter method
-  is $policy->_get_max_line_length(), 10, "Custom max_line_length is 10";
+  is $policy->{_max_line_length}, 10, "Custom max_line_length is 10";
 };
 
 subtest "Default behavior when no configuration set" => sub {
-  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new();
+  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
 
   # Should use default of 80
-  is $policy->_get_max_line_length(), 80, "Default max_line_length is 80";
+  is $policy->{_max_line_length}, 80, "Default max_line_length is 80";
 
   # Test with 80-char line
   my $exactly_80 = 'my $var = "' . ("x" x 67) . '";';

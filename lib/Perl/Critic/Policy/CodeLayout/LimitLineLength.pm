@@ -15,40 +15,30 @@ use PPI;
 my $Desc = "Line exceeds maximum length";
 my $Expl = "Keep lines under the configured maximum for readability";
 
-sub supported_parameters {
-  return ({
-    name            => "max_line_length",
-    description     => "Maximum allowed line length in characters",
-    default_string  => "80",
-    behavior        => "integer",
-    integer_minimum => 1,
-  });
-}
+sub supported_parameters { {
+  name            => "max_line_length",
+  description     => "Maximum allowed line length in characters",
+  default_string  => "80",
+  behavior        => "integer",
+  integer_minimum => 1,
+} }
 
 sub default_severity { $SEVERITY_MEDIUM }
 sub default_themes   { qw( cosmetic formatting ) }
 
 sub applies_to { "PPI::Document" }
 
-sub initialize_if_enabled ($self, $config) {
-  $self->{_max_line_length}
-    = $self->__get_config_value($config, "max_line_length", 80);
-  return $self->SUPER::initialize_if_enabled($config);
-}
-
 sub violates ($self, $elem, $doc) {
-  my $max_length = $self->_get_max_line_length();
-  my $source     = $doc->serialize();
+  my $max_length = $self->{_max_line_length};
+  my $source     = $doc->serialize;
   my @lines      = split /\n/, $source;
 
   my @violations;
   for my $line_num (0 .. $#lines) {
-    my $line   = $lines[$line_num];
-    my $length = length $line;
-
+    my $length   = length $lines[$line_num];
     if ($length > $max_length) {
-      my $violation_desc = sprintf "Line is %d characters long (exceeds %d)",
-        $length, $max_length;
+      my $violation_desc
+        = "Line is $length characters long (exceeds $max_length)";
 
       # Find a token on this line for accurate line number reporting
       my $line_token = $self->_find_token_on_line($doc, $line_num + 1);
@@ -58,11 +48,7 @@ sub violates ($self, $elem, $doc) {
     }
   }
 
-  return @violations;
-}
-
-sub _get_max_line_length ($self) {
-  return $self->{_max_line_length};
+  @violations
 }
 
 sub _find_token_on_line ($self, $doc, $target_line) {
@@ -72,7 +58,7 @@ sub _find_token_on_line ($self, $doc, $target_line) {
     sub ($top, $elem) {
       return 0 unless $elem->isa("PPI::Token");
 
-      my $line = $elem->line_number();
+      my $line = $elem->line_number;
       if (defined $line && $line == $target_line) {
         $found_token = $elem;
         return 1;  # Stop searching
@@ -81,7 +67,7 @@ sub _find_token_on_line ($self, $doc, $target_line) {
     }
   );
 
-  return $found_token;
+  $found_token
 }
 
 1;

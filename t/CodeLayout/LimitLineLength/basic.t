@@ -43,7 +43,7 @@ subtest "Policy methods" => sub {
   is $types[0], "PPI::Document", "applies_to returns PPI::Document";
 
   # Test default configuration
-  is $Policy->_get_max_line_length(), 80, "default max_line_length is 80";
+  is $Policy->{_max_line_length}, 80, "default max_line_length is 80";
 };
 
 subtest "Basic functionality" => sub {
@@ -105,7 +105,7 @@ subtest "Edge cases" => sub {
 
 subtest "Configuration parameter handling" => sub {
   # Test supported_parameters method
-  my @params = $Policy->supported_parameters();
+  my @params = $Policy->supported_parameters;
   is @params, 1, "One supported parameter";
 
   my $param = $params[0];
