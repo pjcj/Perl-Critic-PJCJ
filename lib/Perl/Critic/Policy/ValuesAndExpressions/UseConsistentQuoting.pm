@@ -228,7 +228,8 @@ sub check_double_quoted ($self, $elem) {
   my $content = $elem->content;
 
   # Check for escaped dollar/at signs, but only suggest single quotes if no
-  # other interpolation. Only suggest single quotes if no other interpolation exists
+  # other interpolation. Only suggest single quotes if no other interpolation
+  # exists
   return $self->violation($Desc,
     'Use single quotes for strings with escaped $ or @ to avoid escaping',
     $elem)
@@ -257,7 +258,8 @@ sub check_q_literal ($self, $elem) {
   # Check if content has characters that might justify q() usage
   # We'll be more conservative - only flag truly simple alphanumeric content
   my $is_simple_content = $string =~ /^[a-zA-Z0-9\s]+$/;
-  # If simple content with no quotes and would not interpolate, use double quotes
+  # If simple content with no quotes and would not interpolate, use double
+  # quotes
   # Simple content should use double quotes per Rule 1
   return $self->violation($Desc, $Expl_double, $elem)
     if !$would_interpolate

@@ -70,12 +70,18 @@ subtest "Multiple lines" => sub {
 
   # Multiple long lines - all bad
   my $code
-    = qq(my \$very_long_variable_name = "this is a very long string that exceeds eighty chars";\nmy \$another_long_variable = "this is another very long string that also exceeds eighty chars";);
+    = 'my $very_long_variable_name = '
+    . '"this is a very long string that exceeds eighty chars";' . "\n"
+    . 'my $another_long_variable = '
+    . '"this is another very long string that also exceeds eighty chars";';
   count_violations($code, 2, "Multiple long lines both violate");
 
   # Mixed lines - only long ones violate
   my $mixed
-    = qq(my \$short = 1;\nmy \$very_long_variable_name = "this is a very long string that exceeds eighty chars";\nmy \$also_short = 2;);
+    = 'my $short = 1;' . "\n"
+    . 'my $very_long_variable_name = '
+    . '"this is a very long string that exceeds eighty chars";' . "\n"
+    . 'my $also_short = 2;';
   count_violations($mixed, 1, "Only long line in mixed content violates");
 };
 
@@ -88,7 +94,7 @@ subtest "Edge cases" => sub {
   good "\t\t", "Tabs only";
 
   # Very long line
-  my $very_long = 'my $x = ' . ('"' . "a" x 200 . '"') . ';';
+  my $very_long = 'my $x = ' . ("\"" . ("a" x 200) . "\"") . ";";
   bad $very_long, "Very long line (200+ chars) violates";
 
   # Line with exactly 81 characters (one over limit)

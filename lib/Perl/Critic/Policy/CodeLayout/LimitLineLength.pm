@@ -91,7 +91,9 @@ Perl::Critic::Policy::CodeLayout::LimitLineLength - Limit the length of lines
 =head1 SYNOPSIS
 
   # Bad - line exceeds configured maximum
-  my $very_long_variable_name = "this is a very long string that exceeds the maximum line length configured for this policy";
+  my $very_long_variable_name =
+    "this is a very long string that exceeds the maximum line " .
+    "length configured for this policy";
 
   # Good - line within limit
   my $very_long_variable_name =
@@ -121,7 +123,8 @@ The maximum allowed line length in characters. Defaults to 80.
 =head2 Long Variable Assignments
 
   # Bad - exceeds 80 characters
-  my $configuration_manager = SomeVeryLongModuleName::ConfigurationManager->new();
+  my $configuration_manager =
+    SomeVeryLongModuleName::ConfigurationManager->new();
 
   # Good - broken into multiple lines
   my $configuration_manager =
@@ -130,7 +133,9 @@ The maximum allowed line length in characters. Defaults to 80.
 =head2 Long Method Calls
 
   # Bad - exceeds 80 characters
-  $object->some_very_long_method_name($param1, $param2, $param3, $param4);
+  $object->some_very_long_method_name(
+    $param1, $param2, $param3, $param4
+  );
 
   # Good - parameters on separate lines
   $object->some_very_long_method_name(
@@ -140,7 +145,8 @@ The maximum allowed line length in characters. Defaults to 80.
 =head2 Long String Literals
 
   # Bad - exceeds 80 characters
-  my $error_message = "This is a very long error message that exceeds the configured maximum";
+  my $error_message =
+    "This is a very long error message that exceeds the configured maximum";
 
   # Good - use concatenation or heredoc
   my $error_message = "This is a very long error message that " .
