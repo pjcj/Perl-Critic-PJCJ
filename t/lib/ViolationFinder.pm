@@ -16,17 +16,17 @@ sub find_violations ($policy, $code) {
   my $doc = PPI::Document->new(\$code);
   my @violations;
 
-  # Find all elements the policy applies to
-  state @element_types = qw(
-    PPI::Token::Quote::Single
-    PPI::Token::Quote::Double
-    PPI::Token::Quote::Literal
-    PPI::Token::Quote::Interpolate
-    PPI::Token::QuoteLike::Words
-    PPI::Token::QuoteLike::Command
-  );
+  # Get the types this policy applies to
+  my @applies_to = $policy->applies_to();
 
-  for my $type (@element_types) {
+  # Handle policies that apply to PPI::Document directly
+  if (@applies_to == 1 && $applies_to[0] eq "PPI::Document") {
+    push @violations, $policy->violates($doc, $doc);
+    return @violations;
+  }
+
+  # Handle policies that apply to specific element types
+  for my $type (@applies_to) {
     $doc->find(
       sub ($top, $elem) {
         push @violations, $policy->violates($elem, $doc) if $elem->isa($type);
