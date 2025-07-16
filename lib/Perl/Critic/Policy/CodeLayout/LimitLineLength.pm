@@ -30,6 +30,12 @@ sub default_themes   { qw( cosmetic formatting ) }
 
 sub applies_to { "PPI::Document" }
 
+sub initialize_if_enabled ($self, $config) {
+  $self->{_max_line_length}
+    = $self->__get_config_value($config, "max_line_length", 80);
+  return $self->SUPER::initialize_if_enabled($config);
+}
+
 sub violates ($self, $elem, $doc) {
   my $max_length = $self->_get_max_line_length();
   my $source     = $doc->serialize();
@@ -56,7 +62,7 @@ sub violates ($self, $elem, $doc) {
 }
 
 sub _get_max_line_length ($self) {
-  return $self->{_max_line_length} // 80;
+  return $self->{_max_line_length};
 }
 
 sub _find_token_on_line ($self, $doc, $target_line) {
