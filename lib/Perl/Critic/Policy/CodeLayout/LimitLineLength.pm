@@ -90,14 +90,15 @@ Perl::Critic::Policy::CodeLayout::LimitLineLength - Limit the length of lines
 
 =head1 SYNOPSIS
 
+  [CodeLayout::LimitLineLength]
+  max_line_length = 72
+
   # Bad - line exceeds configured maximum
-  my $very_long_variable_name =
-    "this is a very long string that exceeds the maximum line " .
-    "length configured for this policy";
+  my $very_long_variable_name = "long string that exceeds maximum length";
 
   # Good - line within limit
   my $very_long_variable_name =
-    "this is a very long string broken across multiple lines";
+    "long string that exceeds maximum length";
 
 =head1 DESCRIPTION
 
@@ -109,6 +110,9 @@ The default maximum line length is 80 characters, which provides good
 readability across various display contexts while still allowing reasonable
 code density.
 
+You can configure C<perltidy> to keep lines within the specified limit.  Only
+when it is unable to do that will you need to manually make changes.
+
 =head1 CONFIGURATION
 
 =head2 max_line_length
@@ -116,41 +120,38 @@ code density.
 The maximum allowed line length in characters. Defaults to 80.
 
   [CodeLayout::LimitLineLength]
-  max_line_length = 120
+  max_line_length = 72
 
 =head1 EXAMPLES
 
 =head2 Long Variable Assignments
 
-  # Bad - exceeds 80 characters
-  my $configuration_manager =
-    SomeVeryLongModuleName::ConfigurationManager->new();
+  # Bad - exceeds 72 characters
+  my $configuration_manager = VeryLongModuleName::ConfigurationManager->new;
 
   # Good - broken into multiple lines
   my $configuration_manager =
-    SomeVeryLongModuleName::ConfigurationManager->new();
+    VeryLongModuleName::ConfigurationManager->new;
 
 =head2 Long Method Calls
 
-  # Bad - exceeds 80 characters
-  $object->some_very_long_method_name(
-    $param1, $param2, $param3, $param4
-  );
+  # Bad - exceeds 72 characters
+  $object->some_very_very_long_method_name($param1, $param2, $param3, $param4);
 
   # Good - parameters on separate lines
-  $object->some_very_long_method_name(
+  $object->some_very_very_long_method_name(
     $param1, $param2, $param3, $param4
   );
 
 =head2 Long String Literals
 
-  # Bad - exceeds 80 characters
+  # Bad - exceeds 72 characters
   my $error_message =
     "This is a very long error message that exceeds the configured maximum";
 
   # Good - use concatenation or heredoc
   my $error_message = "This is a very long error message that " .
-                     "exceeds the configured maximum";
+    "exceeds the configured maximum";
 
 =head1 AFFILIATION
 

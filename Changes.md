@@ -4,3 +4,4 @@
 
 - Initial release
 - Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting policy
+- Perl::Critic::Policy::CodeLayout::LimitLineLength policy

@@ -1,15 +1,15 @@
 # Perl::Critic::PJCJ
 
-A Perl::Critic policy distribution for enforcing consistent string quoting
-practices in Perl code.
+A Perl::Critic policy distribution for enforcing code style consistency
+in Perl code.
 
 ## Description
 
-This distribution provides a Perl::Critic policy that enforces consistent
-quoting to improve code readability and maintainability. It applies five
-priority rules to ensure optimal string and quote operator usage.
+This distribution provides Perl::Critic policies that enforce consistent
+coding practices to improve code readability and maintainability. It includes
+policies for string quoting consistency and line length limits.
 
-## Policy
+## Policies
 
 ### Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting
 
@@ -86,6 +86,78 @@ my @list = qw(one two);           # bracket delimiters only
 my $path = "some/path";           # "" instead of q|some|path|
 ```
 
+### Perl::Critic::Policy::CodeLayout::LimitLineLength
+
+This policy enforces a configurable maximum line length to improve code
+readability, especially in narrow terminal windows or when viewing code
+side-by-side with diffs or other files.
+
+The default maximum line length is 80 characters, which provides good
+readability across various display contexts while still allowing reasonable
+code density.
+
+You can configure `perltidy` to keep lines within the specified limit. Only
+when it is unable to do that will you need to manually make changes.
+
+#### Configuration
+
+- **max_line_length** - Maximum allowed line length in characters (default: 80)
+
+#### Examples
+
+**Bad examples (exceeds 72 characters):**
+
+```perl
+# Line exceeds configured maximum
+my $very_long_variable_name = "long string that exceeds maximum length";
+
+# Long variable assignment
+my $configuration_manager = VeryLongModuleName::ConfigurationManager->new;
+
+# Long method call
+$object->some_very_very_long_method_name($param1, $param2, $param3, $param4);
+
+# Long string literal
+my $error_message =
+  "This is a very long error message that exceeds the configured maximum";
+```
+
+**Good examples:**
+
+```perl
+# Line within limit
+my $very_long_variable_name =
+  "long string that exceeds maximum length";
+
+# Broken into multiple lines
+my $configuration_manager =
+  VeryLongModuleName::ConfigurationManager->new;
+
+# Parameters on separate lines
+$object->some_very_very_long_method_name(
+  $param1, $param2, $param3, $param4
+);
+
+# Use concatenation
+my $error_message = "This is a very long error message that " .
+  "exceeds the configured maximum";
+```
+
+#### Usage
+
+Add to your `.perlcriticrc` file:
+
+```ini
+[CodeLayout::LimitLineLength]
+max_line_length = 72
+```
+
+Or use the default 80 character limit:
+
+```ini
+[CodeLayout::LimitLineLength]
+```
+
 ## Installation
 
 To install this module, run the following commands:
@@ -105,10 +177,13 @@ make install
 
 ## Usage
 
-Add the policy to your `.perlcriticrc` file:
+Add individual policies to your `.perlcriticrc` file:
 
 ```ini
 [ValuesAndExpressions::UseConsistentQuoting]
+
+[CodeLayout::LimitLineLength]
+max_line_length = 72
 ```
 
 Or include the entire distribution:
@@ -120,8 +195,12 @@ include = Perl::Critic::PJCJ
 Then run perlcritic on your code:
 
 ```bash
+# Run individual policies
 perlcritic --single-policy \
   ValuesAndExpressions::UseConsistentQuoting MyScript.pl
+
+perlcritic --single-policy \
+  CodeLayout::LimitLineLength MyScript.pl
 
 # Or run all policies from the distribution
 perlcritic --include Perl::Critic::PJCJ MyScript.pl
