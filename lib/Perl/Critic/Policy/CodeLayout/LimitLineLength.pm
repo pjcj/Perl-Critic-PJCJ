@@ -35,7 +35,7 @@ sub violates ($self, $elem, $doc) {
 
   my @violations;
   for my $line_num (0 .. $#lines) {
-    my $length   = length $lines[$line_num];
+    my $length = length $lines[$line_num];
     if ($length > $max_length) {
       my $violation_desc
         = "Line is $length characters long (exceeds $max_length)";

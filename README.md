@@ -46,7 +46,7 @@ priority rules:
 - Optimal delimiter selection reduces visual noise in code
 - Many years ago, Tom Christiansen wrote a lengthy article on how perl's default
   quoting system is interpolation, and not interpolating means something
-  extraordinary is happening.  I can't find the original article, but you can
+  extraordinary is happening. I can't find the original article, but you can
   see that double quotes are used by default in The Perl Cookbook, for example.
 
 #### Examples
