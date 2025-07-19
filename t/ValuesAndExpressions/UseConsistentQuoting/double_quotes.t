@@ -12,56 +12,53 @@ no warnings "experimental::signatures";
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
 use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
-use ViolationFinder qw(find_violations);
+use ViolationFinder
+  qw(find_violations count_violations good bad check_violation_message);
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
-sub count_violations ($code, $expected_violations, $description) {
-  my @violations = find_violations($Policy, $code);
-  is @violations, $expected_violations, $description;
-  return @violations;
+# Helper subs that use the common policy
+sub good_code ($code, $description) {
+  ViolationFinder::good($Policy, $code, $description);
 }
 
-sub good ($code, $description) {
-  count_violations($code, 0, $description);
-}
-
-sub bad ($code, $description) {
-  count_violations($code, 1, $description);
+sub check_message ($code, $expected_message, $description) {
+  check_violation_message($Policy, $code, $expected_message, $description);
 }
 
 subtest "Double quoted strings" => sub {
   # Should NOT violate - appropriate use of double quotes
-  good 'my $x = "hello"', "Double quoted simple string";
-  good 'my $x = "It\'s a nice day"',
+  good_code 'my $x = "hello"', "Double quoted simple string";
+  good_code 'my $x = "It\'s a nice day"',
     "String with single quote needs double quotes";
-  good 'my $x = "Hello $name"',
+  good_code 'my $x = "Hello $name"',
     "String with interpolation needs double quotes";
 
   # Mixed escaped and real interpolation
-  good 'my $mixed = "\$a $b"',
+  good_code 'my $mixed = "\$a $b"',
     "Mixed escaped and real interpolation should stay double quotes";
 };
 
 subtest "Escaped special characters" => sub {
   # Should violate - escaped characters that should use single quotes
-  bad 'my $output = "Price: \$10"',
+  check_message 'my $output = "Price: \$10"', "use ''",
     "Escaped dollar signs should use single quotes";
-  bad 'my $email = "\@domain"', "Escaped at-signs should use single quotes";
+  check_message 'my $email = "\@domain"', "use ''",
+    "Escaped at-signs should use single quotes";
 };
 
 subtest "Interpolation with quotes" => sub {
   # Strings that interpolate and have quotes
-  good q(my $text = "contains $var and \"quotes\""),
+  good_code q(my $text = "contains $var and \"quotes\""),
     "Double quotes with interpolation and quotes";
-  good q(my $x = "string with $var and \"quotes\""),
+  good_code q(my $x = "string with $var and \"quotes\""),
     "Double quotes appropriate when string interpolates and has quotes";
 
   # Contains both single and double quotes
-  good q(my $text = "contains 'single' quotes"),
+  good_code q(my $text = "contains 'single' quotes"),
     '"" appropriate when content has single quotes';
-  good q[my $text = qq(contains 'both' and "quotes")],
+  good_code q[my $text = qq(contains 'both' and "quotes")],
     "qq() appropriate when content has both quote types";
 };
 

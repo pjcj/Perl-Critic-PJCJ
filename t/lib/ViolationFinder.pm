@@ -7,10 +7,12 @@ use feature "signatures";
 
 use Exporter qw(import);
 use PPI;
+use Test2::V0;
 
 no warnings "experimental::signatures";
 
-our @EXPORT_OK = qw(find_violations);
+our @EXPORT_OK
+  = qw(find_violations count_violations good bad check_violation_message);
 
 sub find_violations ($policy, $code) {
   my $doc = PPI::Document->new(\$code);
@@ -36,6 +38,27 @@ sub find_violations ($policy, $code) {
   }
 
   @violations
+}
+
+sub count_violations ($policy, $code, $expected_violations, $description) {
+  my @violations = find_violations($policy, $code);
+  Test2::V0::is @violations, $expected_violations, $description;
+  return @violations;
+}
+
+sub good ($policy, $code, $description) {
+  count_violations($policy, $code, 0, $description);
+}
+
+sub bad ($policy, $code, $description) {
+  count_violations($policy, $code, 1, $description);
+}
+
+sub check_violation_message ($policy, $code, $expected_message, $description) {
+  my @violations = find_violations($policy, $code);
+  Test2::V0::is @violations, 1, "$description - should have one violation";
+  Test2::V0::like $violations[0]->explanation, qr/\Q$expected_message\E/,
+    "$description - should suggest $expected_message";
 }
 
 1;

@@ -12,15 +12,23 @@ no warnings "experimental::signatures";
 # Test cases to make "branch never false" conditions evaluate to false
 use lib qw( lib t/lib );
 use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
-use ViolationFinder qw(find_violations);
+use ViolationFinder
+  qw(find_violations count_violations good bad check_violation_message);
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
-sub count_violations ($code, $expected_violations, $description) {
-  my @violations = find_violations($Policy, $code);
-  is @violations, $expected_violations, $description;
-  return @violations;
+# Helper subs that use the common policy
+sub good_code ($code, $description) {
+  ViolationFinder::good($Policy, $code, $description);
+}
+
+sub bad_code ($code, $description) {
+  count_violations($Policy, $code, 1, $description);
+}
+
+sub check_message ($code, $expected_message, $description) {
+  check_violation_message($Policy, $code, $expected_message, $description);
 }
 
 subtest "Try to trigger false branches" => sub {
@@ -34,23 +42,22 @@ subtest "Try to trigger false branches" => sub {
   # This needs a delimiter that doesn't match the current one
 
   # For now, test normal cases to ensure tests are working
-  count_violations q{my $x = "normal";}, 0, "normal double quote case";
-  count_violations q{my $x = 'normal';}, 1,
-    "normal single quote case should violate";
+  good_code q{my $x = "normal";}, "normal double quote case";
+  bad_code q{my $x = 'normal';}, "normal single quote case should violate";
 
   # Test qw with different delimiters to try to hit different code paths
-  count_violations q{my @x = qw/word1 word2/;}, 1,
+  check_message q{my @x = qw/word1 word2/;}, 'use qw()',
     "qw with / delimiter should suggest ()";
-  count_violations q{my @x = qw{word1 word2};}, 1,
+  check_message q{my @x = qw{word1 word2};}, 'use qw()',
     "qw with {} delimiter should suggest ()";
-  count_violations q{my @x = qw[word1 word2];}, 1,
+  check_message q{my @x = qw[word1 word2];}, 'use qw()',
     "qw with [] delimiter should suggest ()";
-  count_violations q{my @x = qw<word1 word2>;}, 1,
+  check_message q{my @x = qw<word1 word2>;}, 'use qw()',
     "qw with <> delimiter should suggest ()";
 
   # Test cases that might trigger different sorting/comparison results
-  count_violations q{my $x = qq{content with (parens) and [brackets]};}, 1,
-    "qq with {} containing multiple bracket types";
+  check_message q{my $x = qq{content with (parens) and [brackets]};},
+    'use qq<>', "qq with {} containing multiple bracket types";
 };
 
 done_testing;

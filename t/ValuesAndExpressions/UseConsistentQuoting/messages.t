@@ -12,141 +12,106 @@ no warnings "experimental::signatures";
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
 use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
-use ViolationFinder qw(find_violations);
+use ViolationFinder
+  qw(find_violations count_violations good bad check_violation_message);
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
-sub test_violation ($code, $expected_desc, $expected_expl, $description) {
-  my @violations = find_violations($Policy, $code);
-
-  is @violations, 1, "$description - one violation";
-
-  if (@violations) {
-    my $v = $violations[0];
-    is $v->description, $expected_desc, "$description - description matches";
-    is $v->explanation, $expected_expl, "$description - explanation matches";
-  }
+# Helper subs that use the common policy
+sub good_code ($code, $description) {
+  ViolationFinder::good($Policy, $code, $description);
 }
 
-sub delimiter_msg ($hint) {
-  state $msg = "choose (), [], <> or {} delimiters that require the fewest "
-    . "escape characters";
-  return "$msg (hint: use $hint)";
+sub check_message ($code, $expected_message, $description) {
+  check_violation_message($Policy, $code, $expected_message, $description);
 }
 
 subtest "Single quote violation messages" => sub {
-  test_violation(
-    q(my $x = 'hello'),
-    "Use consistent and optimal quoting",
-    'use ""',
-    "Simple single-quoted string"
-  );
+  check_message(q(my $x = 'hello'), 'use ""', "Simple single-quoted string");
 
-  test_violation(
+  check_message(
     q(my $x = 'I\'m happy'),
-    "Use consistent and optimal quoting",
     'use ""',
     "Single quotes with escaped apostrophe"
   );
 };
 
 subtest "Double quote violation messages" => sub {
-  test_violation(
+  check_message(
     'my $output = "Price: \$10"',
-    "Use consistent and optimal quoting",
-    'Use single quotes for strings with escaped $ or @ to avoid escaping',
+    "use ''",
     "Double quotes with escaped dollar"
   );
 };
 
 subtest "q() operator violation messages" => sub {
-  test_violation(
-    'my $x = q(simple)',
-    "Use consistent and optimal quoting",
-    'use ""',
-    "q() with simple content"
-  );
+  check_message('my $x = q(simple)', 'use ""', "q() with simple content");
 
-  test_violation(
-    'my $x = q(literal$x)',
-    "Use consistent and optimal quoting",
-    "use '' instead of q()",
-    "q() with literal dollar"
-  );
+  check_message('my $x = q(literal$x)', "use ''", "q() with literal dollar");
 };
 
 subtest "qq() operator violation messages" => sub {
-  test_violation(
-    'my $x = qq(simple)',
-    "Use consistent and optimal quoting",
-    'use "" instead of qq()',
-    "qq() with simple content"
-  );
+  check_message('my $x = qq(simple)', 'use ""', "qq() with simple content");
 };
 
 subtest "Delimiter optimisation messages with hints" => sub {
-  test_violation(
+  check_message(
     'my @x = qw(word(with)parens)',
-    "Use consistent and optimal quoting",
-    delimiter_msg("qw[]"), "qw() with parens - hint to use qw[]"
+    "use qw[]",
+    "qw() with parens - hint to use qw[]"
   );
 
-  test_violation(
+  check_message(
     'my @x = qw[word[with]brackets]',
-    "Use consistent and optimal quoting",
-    delimiter_msg("qw()"), "qw[] with brackets - hint to use qw()"
+    "use qw()",
+    "qw[] with brackets - hint to use qw()"
   );
 
-  test_violation(
+  check_message(
     'my @x = qw{word{with}braces}',
-    "Use consistent and optimal quoting",
-    delimiter_msg("qw()"), "qw{} with braces - hint to use qw()"
+    "use qw()",
+    "qw{} with braces - hint to use qw()"
   );
 
-  test_violation(
+  check_message(
     'my @x = qw<word<with>angles>',
-    "Use consistent and optimal quoting",
-    delimiter_msg("qw()"), "qw<> with angles - hint to use qw()"
+    "use qw()",
+    "qw<> with angles - hint to use qw()"
   );
 
-  test_violation(
+  check_message(
     'my @x = qw{simple words}',
-    "Use consistent and optimal quoting",
-    delimiter_msg("qw()"), "qw{} simple - hint to use qw()"
+    "use qw()",
+    "qw{} simple - hint to use qw()"
   );
 
-  test_violation(
+  check_message(
     'my $x = q(text(with)parens)',
-    "Use consistent and optimal quoting",
-    delimiter_msg("q[]"), "q() with parens - hint to use q[]"
+    "use q[]",
+    "q() with parens - hint to use q[]"
   );
 
-  test_violation(
+  check_message(
     'my $x = qq[text[with]brackets]',
-    "Use consistent and optimal quoting",
-    delimiter_msg("qq()"), "qq[] with brackets - hint to use qq()"
+    "use qq()",
+    "qq[] with brackets - hint to use qq()"
   );
 };
 
 subtest "Exotic delimiter messages" => sub {
-  test_violation(
-    'my $text = q/path\/to\/file/',
-    "Use consistent and optimal quoting",
-    delimiter_msg("q()"),
-    "q// with slashes - hint to use q()"
-  );
+  check_message('my $text = q/path\/to\/file/',
+    'use q()', "q// with slashes - should use q() to avoid escapes");
 
-  test_violation(
+  check_message(
     'my $text = q|option\|value|',
-    "Use consistent and optimal quoting",
-    delimiter_msg("q()"), "q|| with pipes - hint to use q()"
+    'use q()',
+    "q|| with pipes - should use q() to avoid escapes"
   );
 
-  test_violation(
+  check_message(
     'my @x = qw/word\/with\/slashes/',
-    "Use consistent and optimal quoting",
-    delimiter_msg("qw()"),
+    "use qw()",
     "qw// with slashes - hint to use qw()"
   );
 };
