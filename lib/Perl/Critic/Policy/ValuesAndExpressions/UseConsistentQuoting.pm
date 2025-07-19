@@ -281,16 +281,10 @@ sub check_q_literal ($self, $elem) {
     return $self->violation($Desc, $Expl_single, $elem);
   }
 
-  # For simple content without quotes, prefer simpler quotes unless justified
+  # For simple content without quotes, prefer simpler quotes
   if (!$has_single_quotes && !$has_double_quotes) {
     return $self->violation($Desc, $Expl_single, $elem) if $would_interpolate;
-    # For single bracket characters, prefer single quotes
-    return $self->violation($Desc, $Expl_single, $elem)
-      if length($string) == 1 && $string =~ /^[()[\]<>{}]$/;
-    # For simple content without delimiter conflicts, prefer double quotes
-    my $has_delimiter_chars = $string =~ /[\/\|\#\!\%\&\~\<\>\[\]\{\}\(\)]/;
-    return $self->violation($Desc, $Expl_double, $elem)
-      if !$has_delimiter_chars;
+    return $self->violation($Desc, $Expl_double, $elem);
   }
 
   # Rule 2: If q() is justified, optimize delimiter

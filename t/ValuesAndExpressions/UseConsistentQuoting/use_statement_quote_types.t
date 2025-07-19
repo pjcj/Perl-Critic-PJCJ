@@ -36,32 +36,32 @@ subtest "Exercise _is_in_use_statement branches" => sub {
 
   # Test q() quotes inside use statements - should be skipped by regular q()
   # checking
-  good_code q{use Foo q(simple)},
+  good_code "use Foo q(simple)",
     "q() in use statements bypasses regular q() rules";
-  good_code q{use Foo q{simple}},
+  good_code "use Foo q{simple}",
     "q{} in use statements bypasses regular q() rules";
-  good_code q{use Foo q[simple]},
+  good_code "use Foo q[simple]",
     "q[] in use statements bypasses regular q() rules";
-  good_code q{use Foo q<simple>},
+  good_code "use Foo q<simple>",
     "q<> in use statements bypasses regular q() rules";
 
   # Test qq() quotes inside use statements - should be skipped by regular qq()
   # checking
-  good_code q{use Foo qq(simple)},
+  good_code "use Foo qq(simple)",
     "qq() in use statements bypasses regular qq() rules";
-  good_code q{use Foo qq{simple}},
+  good_code "use Foo qq{simple}",
     "qq{} in use statements bypasses regular qq() rules";
-  good_code q{use Foo qq[simple]},
+  good_code "use Foo qq[simple]",
     "qq[] in use statements bypasses regular qq() rules";
-  good_code q{use Foo qq<simple>},
+  good_code "use Foo qq<simple>",
     "qq<> in use statements bypasses regular qq() rules";
 };
 
 subtest "Use statements with multiple quote types" => sub {
   # Test multiple arguments to trigger the use statement multiple argument rule
-  check_message q{use Foo q(arg1), q(arg2)}, "use qw()",
+  check_message "use Foo q(arg1), q(arg2)", "use qw()",
     "multiple q() arguments trigger use statement rule";
-  check_message q{use Foo qq(arg1), qq(arg2)}, "use qw()",
+  check_message "use Foo qq(arg1), qq(arg2)", "use qw()",
     "multiple qq() arguments trigger use statement rule";
 
   # Mixed quote types
@@ -79,9 +79,9 @@ subtest "Edge cases for coverage" => sub {
 
   # Test require and no statements to ensure they don't trigger use statement
   # logic
-  check_message q{require q(file.pl)}, 'use ""',
+  check_message "require q(file.pl)", 'use ""',
     "require with q() is not processed by use statement logic";
-  check_message q{no warnings qq(experimental)}, 'use ""',
+  check_message "no warnings qq(experimental)", 'use ""',
     "no statement qq() is processed by regular quote logic";
 };
 

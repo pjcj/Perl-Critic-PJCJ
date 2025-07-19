@@ -87,8 +87,8 @@ subtest "Delimiter optimisation messages with hints" => sub {
 
   check_message(
     'my $x = q(text(with)parens)',
-    "use q[]",
-    "q() with parens - hint to use q[]"
+    'use ""',
+    "q() with parens should use double quotes"
   );
 
   check_message(
@@ -100,12 +100,12 @@ subtest "Delimiter optimisation messages with hints" => sub {
 
 subtest "Exotic delimiter messages" => sub {
   check_message('my $text = q/path\/to\/file/',
-    "use q()", "q// with slashes - should use q() to avoid escapes");
+    'use ""', "q// with slashes should use double quotes");
 
   check_message(
     'my $text = q|option\|value|',
-    "use q()",
-    "q|| with pipes - should use q() to avoid escapes"
+    'use ""',
+    "q|| with pipes should use double quotes"
   );
 
   check_message(

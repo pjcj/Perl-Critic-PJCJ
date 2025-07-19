@@ -202,16 +202,16 @@ subtest "Different brackets" => sub {
   # Mixed content - choose preferred delimiter
   check_message(
     'my $text = q/has\/slashes(and)parens/',
-    "use q[]",
-    "q// should use q[]"
+    'use ""',
+    "q// should use double quotes"
   );
-  good_code 'my $text = q[has/slashes(and)parens]',
-    "q[] optimal - avoids escaping parens, allows slashes";
+  good_code 'my $text = "has/slashes(and)parens"',
+    '"" optimal - no escaping needed';
 
   check_message('my $text = q(has(parens)\/and\/slashes)',
-    "use q[]", "q() should use q[]");
-  good_code 'my $text = "has(parens)/and/slashes/"',
-    '"" optimal - avoids escaping slashes, allows parens';
+    'use ""', "q() should use double quotes");
+  good_code 'my $text = "has(parens)/and/slashes"',
+    '"" optimal - no escaping needed';
 };
 
 subtest "Equal bracket counts" => sub {
@@ -240,11 +240,11 @@ subtest "Exotic delimiters" => sub {
     "qq() optimal when content has double quotes";
   check_message(
     'my $text = q|option\|value|',
-    "use q()",
-    "q|| with pipes should use q()"
+    'use ""',
+    "q|| with pipes should use double quotes"
   );
-  good_code 'my $text = q(option|value)',
-    "q() optimal when content has pipes";
+  good_code 'my $text = "option|value"',
+    '"" optimal when content has pipes';
   check_message(
     'my $text = q"say \"hello\""',
     "use ''",
@@ -254,46 +254,46 @@ subtest "Exotic delimiters" => sub {
     "use ''", "q() with double quotes should use single quotes");
   check_message(
     'my $text = q#path\#to\#file#',
-    "use q()",
-    "q## with hashes should use q()"
+    'use ""',
+    "q## with hashes should use double quotes"
   );
-  good_code 'my $text = q(path#to#file)',
-    "q() optimal when content has hashes";
+  good_code 'my $text = "path#to#file"',
+    '"" optimal when content has hashes';
   check_message(
     'my $text = q!wow\!amazing!',
-    "use q()",
-    "q!! with exclamation marks should use q()"
+    'use ""',
+    "q!! with exclamation marks should use double quotes"
   );
-  good_code 'my $text = q(wow!amazing)',
-    "q() optimal when content has exclamation marks";
+  good_code 'my $text = "wow!amazing"',
+    '"" optimal when content has exclamation marks';
   check_message(
     'my $text = q%100\%complete%',
-    "use q()",
-    "q%% with percent signs should use q()"
+    'use ""',
+    "q%% with percent signs should use double quotes"
   );
-  good_code 'my $text = q(100%complete)',
-    "q() optimal when content has percent signs";
+  good_code 'my $text = "100%complete"',
+    '"" optimal when content has percent signs';
   check_message(
     'my $text = q&fish\&chips&',
-    "use q()",
-    "q&& with ampersands should use q()"
+    'use ""',
+    "q&& with ampersands should use double quotes"
   );
-  good_code 'my $text = q(fish&chips)',
-    "q() optimal when content has ampersands";
+  good_code 'my $text = "fish&chips"',
+    '"" optimal when content has ampersands';
   check_message(
     'my $text = q~home\~user~',
-    "use q()",
-    "q~~ with tildes should use q()"
+    'use ""',
+    "q~~ with tildes should use double quotes"
   );
-  good_code 'my $text = q(home~user)', "q() optimal when content has tildes";
+  good_code 'my $text = "home~user"', '"" optimal when content has tildes';
 };
 
 subtest "Priority: fewer escapes" => sub {
   # Rule 2: Always prefer fewer escaped characters
   check_message(
     'my $text = q/path\/to\/file/',
-    "use q()",
-    "q// with slashes should use q()"
+    'use ""',
+    "q// with slashes should use double quotes"
   );
   good_code 'my $text = "path/to/file"',
     '"" optimal when content has slashes';
@@ -301,44 +301,44 @@ subtest "Priority: fewer escapes" => sub {
   # Various quote operators with escaped characters
   check_message(
     'my $text = q|option\|value|',
-    "use q()",
-    "q|| with pipes should use q()"
+    'use ""',
+    "q|| with pipes should use double quotes"
   );
   good_code 'my $text = "option|value"', '"" optimal when content has pipes';
 
   check_message(
     'my $text = q#path\#to\#file#',
-    "use q()",
-    "q## with hashes should use q()"
+    'use ""',
+    "q## with hashes should use double quotes"
   );
   good_code 'my $text = "path#to#file"', '"" optimal when content has hashes';
 
   check_message(
     'my $text = q!wow\!amazing!',
-    "use q()",
-    "q!! with exclamation should use q()"
+    'use ""',
+    "q!! with exclamation should use double quotes"
   );
   good_code 'my $text = "wow!amazing"',
     '"" optimal when content has exclamation';
 
   check_message(
     'my $text = q%100\%complete%',
-    "use q()",
-    "q%% with percent should use q()"
+    'use ""',
+    "q%% with percent should use double quotes"
   );
   good_code 'my $text = "100%complete"',
     '"" optimal when content has percent';
 
   check_message(
     'my $text = q&fish\&chips&',
-    "use q()",
-    "q&& with ampersand should use q()"
+    'use ""',
+    "q&& with ampersand should use double quotes"
   );
   good_code 'my $text = "fish&chips"',
     '"" optimal when content has ampersand';
 
   check_message('my $text = q~home\~user~',
-    "use q()", "q~~ with tilde should use q()");
+    'use ""', "q~~ with tilde should use double quotes");
   good_code 'my $text = "home~user"', '"" optimal when content has tilde';
 
   # qq operators with escaped characters
@@ -362,10 +362,10 @@ subtest "Priority: fewer escapes" => sub {
 subtest "q() with other delimiter operators" => sub {
   check_message(
     'my $x = q(text(with)parens)',
-    "use q[]",
-    "q() with parens should use q[]"
+    'use ""',
+    "q() with parens should use double quotes"
   );
-  good_code 'my $x = q[text(with)parens]', "q[] with parens";
+  good_code 'my $x = "text(with)parens"', "double quotes with parens";
 
   check_message(
     'my $x = qq[text[with]brackets]',

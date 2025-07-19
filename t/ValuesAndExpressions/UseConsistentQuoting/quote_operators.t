@@ -61,15 +61,29 @@ subtest "q() operator" => sub {
   check_message 'my $x = q/literal$x/', "use ''",
     "q// should use single quotes";
 
-  # Single bracket characters should suggest single quotes
-  check_message 'my $x = q{(}', "use ''",
-    "q{} with single open paren should use single quotes";
-  check_message 'my $x = q<[>', "use ''",
-    "q<> with single open bracket should use single quotes";
+  # Single bracket characters should suggest double quotes (simple content)
+  check_message 'my $x = q{(}', 'use ""',
+    "q{} with single open paren should use double quotes";
+  check_message 'my $x = q<[>', 'use ""',
+    "q<> with single open bracket should use double quotes";
   check_message 'my $x = q{@x(}', "use ''",
     "q{} with @ and open paren should use single quotes";
   check_message 'my $x = q{$x(}', "use ''",
     'q{} with $ and open paren should use single quotes';
+
+  # Pairs of delimiters should suggest double quotes (simple content)
+  check_message 'my $x = q{()}', 'use ""',
+    "q{} with empty parens should use double quotes";
+  check_message 'my $x = q{[]}', 'use ""',
+    "q{} with empty brackets should use double quotes";
+  check_message 'my $x = q{<>}', 'use ""',
+    "q{} with empty angles should use double quotes";
+  check_message 'my $x = q{{}}', 'use ""',
+    "q{} with empty braces should use double quotes";
+  check_message 'my $x = q{()()}', 'use ""',
+    "q{} with double parens should use double quotes";
+  check_message 'my $x = q{[][]}', 'use ""',
+    "q{} with double brackets should use double quotes";
 };
 
 subtest "qq() operator" => sub {
