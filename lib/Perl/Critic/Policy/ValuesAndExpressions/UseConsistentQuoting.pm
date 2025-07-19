@@ -17,6 +17,11 @@ my $Expl_no_qq   = 'use "" instead of qq()';
 my $Expl_no_q    = "use '' instead of q()";
 my $Expl_optimal = "choose (), [], <> or {} delimiters that require the "
   . "fewest escape characters";
+my $Expl_use_single
+  = "use statements with one argument should use double " . "quotes or qw()";
+my $Expl_use_multiple
+  = "use statements with multiple arguments must use " . "qw()";
+my $Expl_use_qw_parens = "use statements must use qw() with parentheses only";
 
 sub supported_parameters { }
 sub default_severity     { $SEVERITY_MEDIUM }
@@ -29,6 +34,7 @@ sub applies_to { qw(
   PPI::Token::Quote::Interpolate
   PPI::Token::QuoteLike::Words
   PPI::Token::QuoteLike::Command
+  PPI::Statement::Include
 ) }
 
 sub would_interpolate ($self, $string) {
@@ -181,6 +187,7 @@ sub violates ($self, $elem, $) {
     "PPI::Token::Quote::Interpolate" => "check_qq_interpolate",
     "PPI::Token::QuoteLike::Words"   => "check_quote_operators",
     "PPI::Token::QuoteLike::Command" => "check_quote_operators",
+    "PPI::Statement::Include"        => "check_use_statement",
   };
 
   my $class      = ref $elem;
@@ -190,6 +197,9 @@ sub violates ($self, $elem, $) {
 }
 
 sub check_single_quoted ($self, $elem) {
+  # Skip if this quote is part of a use statement argument
+  return if $self->_is_in_use_statement($elem);
+
   # Get the string content without the surrounding quotes
   my $string  = $elem->string;
   my $content = $elem->content;
@@ -223,6 +233,9 @@ sub check_single_quoted ($self, $elem) {
 }
 
 sub check_double_quoted ($self, $elem) {
+  # Skip if this quote is part of a use statement argument
+  return if $self->_is_in_use_statement($elem);
+
   # Check if this double-quoted string actually needs interpolation
   my $string  = $elem->string;
   my $content = $elem->content;
@@ -239,6 +252,9 @@ sub check_double_quoted ($self, $elem) {
 }
 
 sub check_q_literal ($self, $elem) {
+  # Skip if this quote is part of a use statement argument
+  return if $self->_is_in_use_statement($elem);
+
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
@@ -280,6 +296,9 @@ sub check_q_literal ($self, $elem) {
 }
 
 sub check_qq_interpolate ($self, $elem) {
+  # Skip if this quote is part of a use statement argument
+  return if $self->_is_in_use_statement($elem);
+
   my $string = $elem->string;
 
   # First check if delimiter is optimal (Rule 2 & 5)
@@ -296,6 +315,9 @@ sub check_qq_interpolate ($self, $elem) {
 }
 
 sub check_quote_operators ($self, $elem) {
+  # Skip if this quote is part of a use statement argument
+  return if $self->_is_in_use_statement($elem);
+
   # Get current delimiters and content by parsing the token
   my ($current_start, $current_end, $content, $operator)
     = $self->parse_quote_token($elem);
@@ -316,6 +338,129 @@ sub check_quote_operators ($self, $elem) {
     if !$current_is_optimal;
 
   return
+}
+
+sub check_use_statement ($self, $elem) {
+  # Only check 'use' statements, not 'require' or 'no'
+  return unless $elem->type eq "use";
+
+  my @args = $self->_extract_use_arguments($elem);
+  return unless @args;
+
+  my ($string_count, $has_qw, $qw_uses_parens)
+    = $self->_analyze_use_arguments(@args);
+  return $self->_check_use_violations($elem, $string_count, $has_qw,
+    $qw_uses_parens, @args);
+}
+
+sub _extract_use_arguments ($self, $elem) {
+  my @children     = $elem->children;
+  my $found_module = 0;
+  my @args;
+
+  for my $child (@children) {
+    if ($child->isa("PPI::Token::Word") && !$found_module) {
+      # Skip the 'use' keyword
+      next if $child->content eq "use";
+      # This is the module name
+      $found_module = 1;
+      next;
+    }
+
+    # Collect arguments after the module name
+    if ($found_module) {
+      next if $child->isa("PPI::Token::Whitespace");
+      next if $child->isa("PPI::Token::Structure") && $child->content eq ";";
+      push @args, $child;
+    }
+  }
+
+  return @args;
+}
+
+sub _analyze_use_arguments ($self, @args) {
+  my $string_count   = 0;
+  my $has_qw         = 0;
+  my $qw_uses_parens = 1;
+
+  for my $arg (@args) {
+    $self->_count_use_arguments($arg, \$string_count, \$has_qw,
+      \$qw_uses_parens);
+  }
+
+  return ($string_count, $has_qw, $qw_uses_parens);
+}
+
+sub _check_use_violations ($self, $elem, $string_count, $has_qw,
+  $qw_uses_parens, @args,)
+{
+  my @violations;
+
+  # Check for single quotes in single arguments
+  if ($string_count == 1 && !$has_qw) {
+    for my $arg (@args) {
+      if ($arg->isa("PPI::Token::Quote::Single")) {
+        push @violations, $self->violation($Desc, $Expl_use_single, $elem);
+        last;
+      }
+    }
+  }
+
+  # Check for multiple arguments without qw()
+  if ($string_count > 1 && !$has_qw) {
+    push @violations, $self->violation($Desc, $Expl_use_multiple, $elem);
+  }
+
+  # Check for mixed usage (both strings and qw())
+  if ($string_count > 0 && $has_qw) {
+    push @violations, $self->violation($Desc, $Expl_use_multiple, $elem);
+  }
+
+  # Check for qw() not using parentheses
+  if ($has_qw && !$qw_uses_parens) {
+    push @violations, $self->violation($Desc, $Expl_use_qw_parens, $elem);
+  }
+
+  return @violations;
+}
+
+sub _count_use_arguments ($self, $elem, $string_count_ref, $has_qw_ref,
+  $qw_uses_parens_ref,)
+{
+
+  if ( $elem->isa("PPI::Token::Quote::Single")
+    || $elem->isa("PPI::Token::Quote::Double"))
+  {
+    $$string_count_ref++;
+  }
+
+  if ($elem->isa("PPI::Token::QuoteLike::Words")) {
+    $$has_qw_ref = 1;
+    # Check if qw uses parentheses
+    my $content = $elem->content;
+    if ($content !~ /\Aqw\s*\(/) {
+      $$qw_uses_parens_ref = 0;
+    }
+  }
+
+  # Recursively check children (for structures like lists)
+  if ($elem->can("children")) {
+    for my $child ($elem->children) {
+      $self->_count_use_arguments($child, $string_count_ref, $has_qw_ref,
+        $qw_uses_parens_ref);
+    }
+  }
+}
+
+sub _is_in_use_statement ($self, $elem) {
+  # Walk up the parent tree to see if this element is inside a use statement
+  my $current = $elem;
+  while ($current) {
+    return 1
+      if $current->isa("PPI::Statement::Include") && $current->type eq "use";
+    $current = $current->parent;
+  }
+  return 0;
 }
 
 1;
@@ -411,6 +556,33 @@ counts are equal, prefer them in this order: C<()>, C<[]>, C<< <> >>, C<{}>.
   my $path = q|some|path|;         # should use ""
   my $text = qq#some#text#;        # should use ""
 
+=head2 Special Case: Use statements
+
+Use statements have special quoting requirements for their import lists:
+
+=over 4
+
+=item * Modules with no arguments or empty parentheses are acceptable
+
+=item * Modules with one argument may use double quotes C<""> or C<qw( )>
+
+=item * Modules with multiple arguments must use C<qw( )> with parentheses only
+
+=back
+
+  # Good
+  use Foo;                         # no arguments
+  use Bar ();                      # empty parentheses
+  use Baz "single_arg";            # one argument with double quotes
+  use Qux qw( single_arg );        # one argument with qw()
+  use Quux qw( arg1 arg2 arg3 );   # multiple arguments with qw()
+
+  # Bad
+  use Foo 'single_arg';            # single quotes not allowed
+  use Bar "arg1", "arg2";          # multiple arguments need qw()
+  use Baz qw[ arg1 arg2 ];         # qw() must use parentheses only
+  use Qux qw{ arg1 arg2 };         # qw() must use parentheses only
+
 =head1 AFFILIATION
 
 This Policy is part of the Perl::Critic::PJCJ distribution.
@@ -465,6 +637,21 @@ This Policy is not configurable except for the standard options.
   # fewest escapes
   my $both = qq(has 'single' and "double" quotes); # qq() needed for both
                                                    # quote types
+
+=head2 Use Statement Examples
+
+  # Bad
+  use Foo 'single_arg';            # single quotes not allowed
+  use Bar "arg1", "arg2";          # multiple args need qw()
+  use Baz qw[ arg1 arg2 ];         # qw() must use parentheses
+  use Qux qw{ arg1 arg2 arg3 };    # qw() must use parentheses
+
+  # Good
+  use Foo;                         # no arguments allowed
+  use Bar ();                      # empty parentheses allowed
+  use Baz "single_arg";            # one argument with double quotes
+  use Qux qw( single_arg );        # one argument with qw()
+  use Quux qw( arg1 arg2 arg3 );   # multiple arguments with qw() only
 
 =head1 METHODS
 

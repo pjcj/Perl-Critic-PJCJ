@@ -39,7 +39,7 @@ subtest "Policy methods" => sub {
 
   # Test applies_to
   my @types = $Policy->applies_to;
-  is @types, 6, "applies_to returns 6 token types";
+  is @types, 7, "applies_to returns 7 token types";
   like $types[0], qr/Quote/, "applies_to returns quote token types";
 
   # Test delimiter_preference_order method directly
@@ -93,6 +93,43 @@ subtest "Invalid token types" => sub {
       0
     }
   );
+};
+
+subtest "Use statement argument rules" => sub {
+  # Module with no arguments - OK
+  good "use Foo",    "use with no arguments is fine";
+  good "use Foo ()", "use with empty parens is fine";
+
+  # Module with one argument - can use "" or qw()
+  good 'use Foo "arg1"', "use with one double-quoted argument is fine";
+  bad "use Foo 'arg1'",
+    "use with one single-quoted argument should use double quotes or qw()";
+  good "use Foo qw(arg1)", "use with one qw() argument is fine";
+
+  # Module with multiple arguments - must use qw()
+  bad 'use Foo "arg1", "arg2"',
+    "use with multiple quoted arguments should use qw()";
+  bad "use Foo 'arg1', 'arg2'",
+    "use with multiple single-quoted arguments should use qw()";
+  bad q[use Foo ('arg1', 'arg2')],
+    "use with multiple arguments in parens should use qw()";
+  bad 'use Foo "arg1", "arg2", "arg3"',
+    "use with three quoted arguments should use qw()";
+
+  # Mixed arguments - should use qw()
+  bad q[use Foo qw(arg1), 'arg2'],
+    "mixed qw() and quotes should use qw() for all";
+  bad q[use Foo 'arg1', qw(arg2)],
+    "mixed quotes and qw() should use qw() for all";
+
+  # Good cases with multiple arguments
+  good "use Foo qw(arg1 arg2)",      "multiple arguments with qw() is correct";
+  good "use Foo qw(arg1 arg2 arg3)", "three arguments with qw() is correct";
+  bad "use Foo qw[arg1 arg2]", "qw[] should use qw() with parentheses only";
+
+  # Other statement types should not be checked
+  good "require Foo", "require statements are not checked";
+  good "no warnings", "no statements are not checked";
 };
 
 subtest "Find optimal delimiter coverage" => sub {
