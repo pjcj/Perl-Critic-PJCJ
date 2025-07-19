@@ -1,0 +1,70 @@
+#!/usr/bin/env perl
+
+use v5.20.0;
+use strict;
+use warnings;
+use feature "signatures";
+
+use Test2::V0;
+
+no warnings "experimental::signatures";
+
+# Test edge conditions to improve coverage
+use lib qw( lib t/lib );
+use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
+use ViolationFinder qw(find_violations);
+
+my $Policy
+  = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+
+sub count_violations ($code, $expected_violations, $description) {
+  my @violations = find_violations($Policy, $code);
+  is @violations, $expected_violations, $description;
+  return @violations;
+}
+
+subtest "Condition coverage tests" => sub {
+  # Test to hit the uncovered condition in single quote checking (line 229)
+  # This should exercise: not $would_interpolate and index($string, "\"") == -1
+  count_violations q{my $x = 'simple';}, 1,
+    "simple single quoted string without double quotes";
+
+  # Test single quoted string that contains double quotes (should not violate)
+  count_violations q{my $x = 'has "quotes" inside';}, 0,
+    "single quotes justified by double quotes inside";
+
+  # Test to hit the condition in double quote checking (line 292)
+  # This should exercise: $would_interpolate and not $has_single_quotes
+  count_violations q{my $x = "simple";}, 0,
+    "simple double quoted string is acceptable";
+};
+
+subtest "Use statement structure parsing" => sub {
+  # Test to hit the semicolon condition (line 373)
+  # $child->isa("PPI::Token::Structure") and $child->content eq ";"
+  count_violations q{use Foo "arg1", "arg2";}, 1,
+    "use statement with semicolon and multiple args";
+
+  # Test to hit condition line 410: $string_count > 1 and not $has_qw
+  # This should be triggered by multiple string arguments without qw
+  count_violations q{use Foo "arg1", "arg2", "arg3"}, 1,
+    "three string arguments without qw should violate";
+};
+
+subtest "Quote parsing edge cases" => sub {
+  # Test cases to exercise various parsing branches
+
+  # Test with single quotes that have escaped characters
+  count_violations q{my $x = 'don\\'t';}, 1,
+    "single quotes with escaped single quote should use q()";
+
+  # Test interpolation cases to exercise would_interpolate branches
+  count_violations q{my $x = "variable: $var";}, 0,
+    "double quotes justified by interpolation";
+  count_violations q{my $x = "array: @arr";}, 0,
+    "double quotes justified by array interpolation";
+  count_violations q{my $x = "escaped: \\$var";}, 1,
+    "escaped variables suggest single quotes";
+};
+
+done_testing;

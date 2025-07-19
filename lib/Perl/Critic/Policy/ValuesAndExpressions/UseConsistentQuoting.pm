@@ -12,15 +12,14 @@ use parent "Perl::Critic::Policy";
 # VERSION
 
 my $Desc         = "Use consistent and optimal quoting";
-my $Expl_double  = "simple strings should use double quotes for consistency";
+my $Expl_double  = 'use ""';
 my $Expl_no_qq   = 'use "" instead of qq()';
 my $Expl_no_q    = "use '' instead of q()";
 my $Expl_optimal = "choose (), [], <> or {} delimiters that require the "
   . "fewest escape characters";
 my $Expl_use_single
-  = "use statements with one argument should use double " . "quotes or qw()";
-my $Expl_use_multiple
-  = "use statements with multiple arguments must use " . "qw()";
+  = "use statements with one argument should use double quotes or qw()";
+my $Expl_use_multiple  = "use statements with multiple arguments must use qw()";
 my $Expl_use_qw_parens = "use statements must use qw() with parentheses only";
 
 sub supported_parameters { }
@@ -216,10 +215,13 @@ sub check_single_quoted ($self, $elem) {
     if index($string, '"')
     != -1;  # Single quotes justified to avoid escaping double quotes
 
-  # Check if string has escaped single quotes - then q() would be better
-  return $self->violation($Desc, "use q() to avoid escaping single quotes",
-    $elem)
+  # Check if string has escaped single quotes - then double quotes are better
+  return $self->violation($Desc, $Expl_double, $elem)
     if $content =~ /\\'/;
+
+  # Check if this content has literal $ or @ that shouldn't be interpolated
+  # Single quotes are justified when content has sigils that should be literal
+  return if $string =~ /[\$\@]/;  # Contains literal $ or @ - justified
 
   # Use PPI's interpolations() method to test if this content would interpolate
   # in double quotes
@@ -257,42 +259,60 @@ sub check_q_literal ($self, $elem) {
 
   my $string = $elem->string;
 
-  # First check if delimiter is optimal (Rule 2 & 5)
-  my $violation = $self->check_delimiter_optimisation($elem);
-  return $violation if $violation;
-
-  # Rule 4: Prefer simpler quotes to q() when content is simple
-  # But q() is justified when content has special characteristics
-
+  # Check what's the best quoting style for this content
   my $has_single_quotes = index($string, "'") != -1;
   my $has_double_quotes = index($string, '"') != -1;
   my $would_interpolate = $self->would_interpolate($string);
 
-  # If content has both single and double quotes, q() is appropriate
-  return if $has_single_quotes && $has_double_quotes;  # q() is justified
+  # If has both quote types, q() is justified - check delimiter optimization
+  if ($has_single_quotes && $has_double_quotes) {
+    my $delimiter_violation = $self->check_delimiter_optimisation($elem);
+    return $delimiter_violation if $delimiter_violation;
+    return;  # q() is appropriate for mixed quotes and delimiter is optimal
+  }
 
-  # Check if content has characters that might justify q() usage
-  # We'll be more conservative - only flag truly simple alphanumeric content
-  my $is_simple_content = $string =~ /^[a-zA-Z0-9\s]+$/;
-  # If simple content with no quotes and would not interpolate, use double
-  # quotes
-  # Simple content should use double quotes per Rule 1
-  return $self->violation($Desc, $Expl_double, $elem)
-    if !$would_interpolate
-    && !$has_single_quotes
-    && !$has_double_quotes
-    && $is_simple_content;
-  # If content only has double quotes but no single quotes and no
-  # interpolation, could use single quotes
-  # Content with only double quotes - q() might not be justified, could use
-  # single quotes. But we'll be conservative here and allow q() for now
-  return if !$would_interpolate && !$has_single_quotes && $has_double_quotes;
+  # If only has single quotes and no interpolation, double quotes are better
+  if ($has_single_quotes && !$has_double_quotes && !$would_interpolate) {
+    return $self->violation($Desc, $Expl_double, $elem);
+  }
 
-  # If would interpolate but no single quotes, should use single quotes
-  return $self->violation($Desc, $Expl_no_q, $elem)
-    if $would_interpolate && !$has_single_quotes;
+  # If only has double quotes, single quotes would be better (no interpolation)
+  if ($has_double_quotes && !$has_single_quotes) {
+    if (!$would_interpolate) {
+      return $self->violation($Desc, $Expl_no_q, $elem);
+    }
+    # If would interpolate, q() is justified - check delimiter
+    my $delimiter_violation = $self->check_delimiter_optimisation($elem);
+    return $delimiter_violation if $delimiter_violation;
+    return;  # q() is acceptable for strings with double quotes that interpolate
+  }
 
-  return
+  # If would interpolate (has $ variables), single quotes are best
+  if ($would_interpolate && $string =~ /\$/) {
+    return $self->violation($Desc, $Expl_no_q, $elem);
+  }
+
+  # For simple strings with no quotes, check if double quotes are better first
+  if (!$has_single_quotes && !$has_double_quotes) {
+    # For truly simple content, suggest double quotes regardless of delimiter
+    my $has_delimiter_chars = $string =~ /[\/\|\#\!\%\&\~\<\>\[\]\{\}\(\)]/;
+    if (!$has_delimiter_chars) {
+      # For strings with only @ or no special chars, use double quotes
+      return $self->violation($Desc, $Expl_double, $elem);
+    }
+    # If has delimiter chars, check delimiter optimization
+    my $delimiter_violation = $self->check_delimiter_optimisation($elem);
+    return $delimiter_violation if $delimiter_violation;
+    # If delimiter is optimal, q() is acceptable
+    return;
+  }
+
+  # Check delimiter optimization for other cases
+  my $delimiter_violation = $self->check_delimiter_optimisation($elem);
+  return $delimiter_violation if $delimiter_violation;
+
+  # Fallback - should not reach here normally
+  return;
 }
 
 sub check_qq_interpolate ($self, $elem) {
@@ -301,15 +321,50 @@ sub check_qq_interpolate ($self, $elem) {
 
   my $string = $elem->string;
 
-  # First check if delimiter is optimal (Rule 2 & 5)
-  my $violation = $self->check_delimiter_optimisation($elem);
-  return $violation if $violation;
+  # New logic: What would double quotes suggest for this content?
+  my $double_quote_suggestion
+    = $self->_what_would_double_quotes_suggest($string);
 
-  # Rule 3: Prefer "" to qq() when possible
-  # Check if content can be represented as a simple double-quoted string
-  # No double quotes in content, so can use ""
-  return $self->violation($Desc, $Expl_no_qq, $elem)
-    if index($string, '"') == -1;
+  if ($double_quote_suggestion) {
+    if ($double_quote_suggestion eq "''") {
+      # Check if qq() is justified because it avoids escaping
+      # If string has double quotes and delimiter doesn't require escaping,
+      # then qq() is acceptable
+      if (index($string, '"') != -1) {
+        # qq() with non-quote delimiters is acceptable for strings with quotes
+        return;
+      }
+      return $self->violation($Desc, "use '' instead of qq()", $elem);
+    } elsif ($double_quote_suggestion eq "qq()") {
+      # Double quotes would suggest qq(), so qq() is appropriate
+      # Check delimiter optimization since qq() is justified
+      my $delimiter_violation = $self->check_delimiter_optimisation($elem);
+      return $delimiter_violation if $delimiter_violation;
+      return;  # qq() is justified and delimiter is optimal
+    }
+  } else {
+    # Double quotes would be acceptable, so check if content is simple first
+    my $has_special_chars = index($string, '"') != -1
+      || index($string, "'") != -1 || $self->would_interpolate($string);
+    if (!$has_special_chars) {
+      # For simple content, suggest double quotes unless delimiter special
+      my $has_delimiter_chars = $string =~ /[\/\|\#\!\%\&\~\<\>\[\]\{\}\(\)]/;
+      if (!$has_delimiter_chars) {
+        return $self->violation($Desc, $Expl_no_qq, $elem);
+      }
+      # If has delimiter chars, check delimiter optimization
+      my $delimiter_violation = $self->check_delimiter_optimisation($elem);
+      return $delimiter_violation if $delimiter_violation;
+      # If delimiter is optimal, qq() is acceptable
+      return;
+    }
+
+    # For complex content, check delimiter optimization first
+    my $delimiter_violation = $self->check_delimiter_optimisation($elem);
+    return $delimiter_violation if $delimiter_violation;
+
+    return $self->violation($Desc, $Expl_no_qq, $elem);
+  }
 
   return
 }
@@ -429,7 +484,9 @@ sub _count_use_arguments ($self, $elem, $string_count_ref, $has_qw_ref,
 {
 
   if ( $elem->isa("PPI::Token::Quote::Single")
-    || $elem->isa("PPI::Token::Quote::Double"))
+    || $elem->isa("PPI::Token::Quote::Double")
+    || $elem->isa("PPI::Token::Quote::Literal")
+    || $elem->isa("PPI::Token::Quote::Interpolate"))
   {
     $$string_count_ref++;
   }
@@ -461,6 +518,25 @@ sub _is_in_use_statement ($self, $elem) {
     $current = $current->parent;
   }
   return 0;
+}
+
+sub _what_would_double_quotes_suggest ($self, $string) {
+  # Simulate what would happen if this content were in double quotes
+  my $has_single_quotes = index($string, "'") != -1;
+  my $would_interpolate = $self->would_interpolate($string);
+
+  # If has escaped variables but no interpolation, suggest single quotes
+  return "''" if !$would_interpolate && ($string =~ /\\[\$\@]/);
+
+  # If has double quotes, check if qq() is needed
+  if (index($string, '"') != -1) {
+    # If interpolates OR also has single quotes, need qq()
+    return "qq()" if $would_interpolate || $has_single_quotes;
+    # If only has double quotes and no interpolation, could use single quotes
+    return "''" if !$has_single_quotes;
+  }
+
+  return undef;  # Double quotes would be acceptable
 }
 
 1;

@@ -31,47 +31,63 @@ sub bad ($code, $description) {
   count_violations($code, 1, $description);
 }
 
+sub check_violation_message ($code, $expected_message, $description) {
+  my @violations = find_violations($Policy, $code);
+  is @violations, 1, "$description - should have one violation";
+  like $violations[0]->explanation, qr/$expected_message/,
+    "$description - should suggest $expected_message";
+}
+
 subtest "q() operator" => sub {
   # Simple content should use double quotes instead of q()
-  bad 'my $x = q(simple)', "q() simple string should use double quotes";
-  bad 'my $x = q(simple123)',
+  check_violation_message 'my $x = q(simple)', 'use ""',
+    "q() simple string should use double quotes";
+  check_violation_message 'my $x = q(simple123)', 'use ""',
     "q() with simple alphanumeric content should use double quotes";
-  bad 'my $x = q(literal)', 'q() should use "" for literal content';
+  check_violation_message 'my $x = q(literal)', 'use ""',
+    'q() should use "" for literal content';
 
   # When q() would interpolate, should use single quotes
-  bad 'my $x = q(literal $var here)',
-    'q() with literal $ should use single quotes';
-  bad 'my $x = q(would interpolate $var)',
+  check_violation_message 'my $x = q(literal $var here)',
+    "use '' instead of q()", 'q() with literal $ should use single quotes';
+  check_violation_message 'my $x = q(would interpolate $var)',
+    "use '' instead of q()",
     "q() should use single quotes when content would interpolate";
-  bad 'my $x = q(interpolates $var)',
+  check_violation_message 'my $x = q(interpolates $var)',
+    "use '' instead of q()",
     "q() should use single quotes when content would interpolate";
-  bad 'my $x = q(user@domain.com)',
+  check_violation_message 'my $x = q(user@domain.com)', 'use ""',
     'q() with only literal @ should use double quotes';
 
   # When q() is justified
   good q[my $x = q(has 'single' and "double" quotes)],
     "q() is justified when content has both quote types";
-  good q[my $x = q(has "only" double quotes)],
-    "q() appropriate when content has double quotes but no interpolation";
+  check_violation_message q[my $x = q(has "only" double quotes)],
+    "use '' instead of q()",
+    "q() with only double quotes should recommend single quotes";
 
   # Different q() delimiters
-  bad q(my $x = q'simple'), "q'' should use double quotes for simple content";
-  bad 'my $x = q/simple/',  "q// should use double quotes for simple content";
-  bad 'my $x = q(literal$x)',
+  check_violation_message q(my $x = q'simple'), 'use ""',
+    "q'' should use double quotes for simple content";
+  check_violation_message 'my $x = q/simple/', 'use ""',
+    "q// should use double quotes for simple content";
+  check_violation_message 'my $x = q(literal$x)', "use '' instead of q()",
     "q() should use single quotes for literal content";
-  bad 'my $x = q/literal$x/', "q// should use single quotes";
+  check_violation_message 'my $x = q/literal$x/', "use '' instead of q()",
+    "q// should use single quotes";
 };
 
 subtest "qq() operator" => sub {
   # Should use double quotes instead of qq()
-  bad 'my $x = qq(simple)',
+  check_violation_message 'my $x = qq(simple)', 'use "" instead of qq()',
     "qq() should use double quotes for simple content";
-  bad 'my $x = qq/hello/', "qq// should use double quotes";
-  bad q(my $x = qq'simple'),
+  check_violation_message 'my $x = qq/hello/', 'use "" instead of qq()',
+    "qq// should use double quotes";
+  check_violation_message q(my $x = qq'simple'), 'use "" instead of qq()',
     "qq'' should use double quotes for simple content";
-  bad 'my $x = qq/simple/',
+  check_violation_message 'my $x = qq/simple/', 'use "" instead of qq()',
     "qq// should use double quotes for simple content";
-  bad 'my $x = qq(simple)',
+  check_violation_message 'my $x = qq(simple)', 'use "" instead of qq()',
     "qq() should use double quotes for simple content";
 
   # When qq() is appropriate (has double quotes)
@@ -81,7 +97,8 @@ subtest "qq() operator" => sub {
 
 subtest "Priority rules" => sub {
   # Rule 1: Prefer interpolating quotes unless strings shouldn't interpolate
-  bad q(my $x = 'simple'), "Simple string should use double quotes";
+  check_violation_message q(my $x = 'simple'), 'use ""',
+    "Simple string should use double quotes";
   good 'my $x = "simple"', "Simple string with double quotes";
   good q(my $x = 'literal$var'),
     'String with literal $ should use single quotes';
@@ -89,12 +106,12 @@ subtest "Priority rules" => sub {
     'String with literal @ should use single quotes';
 
   # Rule 3: Prefer "" to qq
-  bad 'my $x = qq(simple)',
+  check_violation_message 'my $x = qq(simple)', 'use "" instead of qq()',
     "qq() should use double quotes for simple content";
   good 'my $x = "simple"', "Double quotes preferred over qq()";
 
   # Rule 4: Prefer '' to q
-  bad 'my $x = q(literal$x)',
+  check_violation_message 'my $x = q(literal$x)', "use '' instead of q()",
     "q() should use single quotes for literal content";
   good q(my $x = 'literal$x'), "Single quotes preferred over q()";
 };

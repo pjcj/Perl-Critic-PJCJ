@@ -159,7 +159,8 @@ subtest "Exotic delimiters to minimise escapes" => sub {
   good 'my $text = q(option|value)', "q() optimal when content has pipes";
   bad 'my $text = q"say \"hello\""',
     'q"" with quotes should use q() to avoid escapes';
-  good 'my $text = q(say "hello")', "q() optimal when content has quotes";
+  bad 'my $text = q(say "hello")',
+    "q() with double quotes should use single quotes";
   bad 'my $text = q#path\#to\#file#',
     "q## with hashes should use q() to avoid escapes";
   good 'my $text = q(path#to#file)', "q() optimal when content has hashes";

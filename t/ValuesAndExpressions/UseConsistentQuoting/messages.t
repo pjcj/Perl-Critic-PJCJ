@@ -39,14 +39,14 @@ subtest "Single quote violation messages" => sub {
   test_violation(
     q(my $x = 'hello'),
     "Use consistent and optimal quoting",
-    "simple strings should use double quotes for consistency",
+    'use ""',
     "Simple single-quoted string"
   );
 
   test_violation(
     q(my $x = 'I\'m happy'),
     "Use consistent and optimal quoting",
-    "use q() to avoid escaping single quotes",
+    'use ""',
     "Single quotes with escaped apostrophe"
   );
 };
@@ -64,7 +64,7 @@ subtest "q() operator violation messages" => sub {
   test_violation(
     'my $x = q(simple)',
     "Use consistent and optimal quoting",
-    "simple strings should use double quotes for consistency",
+    'use ""',
     "q() with simple content"
   );
 
