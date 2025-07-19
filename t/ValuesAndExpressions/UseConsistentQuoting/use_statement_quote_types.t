@@ -34,7 +34,8 @@ subtest "Exercise _is_in_use_statement branches" => sub {
   # These test cases are designed to exercise the _is_in_use_statement method
   # by having quote tokens inside use statements that would normally be flagged
 
-  # Test q() quotes inside use statements - should be skipped by regular q() checking
+  # Test q() quotes inside use statements - should be skipped by regular q()
+  # checking
   good_code q{use Foo q(simple)},
     "q() in use statements bypasses regular q() rules";
   good_code q{use Foo q{simple}},
@@ -44,7 +45,8 @@ subtest "Exercise _is_in_use_statement branches" => sub {
   good_code q{use Foo q<simple>},
     "q<> in use statements bypasses regular q() rules";
 
-  # Test qq() quotes inside use statements - should be skipped by regular qq() checking
+  # Test qq() quotes inside use statements - should be skipped by regular qq()
+  # checking
   good_code q{use Foo qq(simple)},
     "qq() in use statements bypasses regular qq() rules";
   good_code q{use Foo qq{simple}},
@@ -63,18 +65,20 @@ subtest "Use statements with multiple quote types" => sub {
     "multiple qq() arguments trigger use statement rule";
 
   # Mixed quote types
-  check_message q{use Foo q(arg1), "arg2"}, "use qw()",
+  check_message 'use Foo q(arg1), "arg2"', "use qw()",
     "mixed q() and double quotes trigger use statement rule";
-  check_message q{use Foo qq(arg1), "arg2"}, "use qw()",
+  check_message 'use Foo qq(arg1), "arg2"', "use qw()",
     "mixed qq() and single quotes trigger use statement rule";
 };
 
 subtest "Edge cases for coverage" => sub {
-  # Test semicolon handling - covers the semicolon branch in _extract_use_arguments
-  good_code q{use Foo "arg"; # with semicolon},
+  # Test semicolon handling - covers the semicolon branch in
+  # _extract_use_arguments
+  good_code 'use Foo "arg"; # with semicolon',
     "use statement with semicolon works";
 
-  # Test require and no statements to ensure they don't trigger use statement logic
+  # Test require and no statements to ensure they don't trigger use statement
+  # logic
   check_message q{require q(file.pl)}, 'use ""',
     "require with q() is not processed by use statement logic";
   check_message q{no warnings qq(experimental)}, 'use ""',

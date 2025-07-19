@@ -94,7 +94,7 @@ subtest "Edge cases" => sub {
   good "\t\t", "Tabs only";
 
   # Very long line
-  my $very_long = 'my $x = ' . ("\"" . ("a" x 200) . "\"") . ";";
+  my $very_long = 'my $x = ' . ('"' . ("a" x 200) . '"') . ";";
   bad $very_long, "Very long line (200+ chars) violates";
 
   # Line with exactly 81 characters (one over limit)

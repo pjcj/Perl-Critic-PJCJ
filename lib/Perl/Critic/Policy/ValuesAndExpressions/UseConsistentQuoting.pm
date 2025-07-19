@@ -12,7 +12,7 @@ use parent "Perl::Critic::Policy";
 # VERSION
 
 my $Desc         = "Quoting";
-my $Expl_double  = "use \"\"";
+my $Expl_double  = 'use ""';
 my $Expl_single  = "use ''";
 my $Expl_optimal = "use %s";
 my $Expl_use_qw  = "use qw()";
@@ -236,11 +236,10 @@ sub check_double_quoted ($self, $elem) {
   my $string  = $elem->string;
   my $content = $elem->content;
 
-  # Check for escaped dollar/at signs, but only suggest single quotes if no
-  # other interpolation. Only suggest single quotes if no other interpolation
-  # exists
+  # Check for escaped dollar/at signs or double quotes, but only suggest single
+  # quotes if no other interpolation exists
   return $self->violation($Desc, $Expl_single, $elem)
-    if $content =~ /\\[\$\@]/ && !$self->would_interpolate($string);
+    if $content =~ /\\[\$\@\"]/ && !$self->would_interpolate($string);
 
   return
 }
@@ -282,9 +281,13 @@ sub check_q_literal ($self, $elem) {
     return $self->violation($Desc, $Expl_single, $elem);
   }
 
-  # For simple content without quotes, prefer double quotes unless
-  # delimiter chars
+  # For simple content without quotes, prefer simpler quotes unless justified
   if (!$has_single_quotes && !$has_double_quotes) {
+    return $self->violation($Desc, $Expl_single, $elem) if $would_interpolate;
+    # For single bracket characters, prefer single quotes
+    return $self->violation($Desc, $Expl_single, $elem)
+      if length($string) == 1 && $string =~ /^[()[\]<>{}]$/;
+    # For simple content without delimiter conflicts, prefer double quotes
     my $has_delimiter_chars = $string =~ /[\/\|\#\!\%\&\~\<\>\[\]\{\}\(\)]/;
     return $self->violation($Desc, $Expl_double, $elem)
       if !$has_delimiter_chars;

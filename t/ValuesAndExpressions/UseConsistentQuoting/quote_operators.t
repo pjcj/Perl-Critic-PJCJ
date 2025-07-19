@@ -42,8 +42,8 @@ subtest "q() operator" => sub {
     "q() should use single quotes when content would interpolate";
   check_message 'my $x = q(interpolates $var)', "use ''",
     "q() should use single quotes when content would interpolate";
-  check_message 'my $x = q(user@domain.com)', 'use ""',
-    'q() with only literal @ should use double quotes';
+  check_message 'my $x = q(user@domain.com)', "use ''",
+    'q() with @ variable should use single quotes';
 
   # When q() is justified
   good_code q[my $x = q(has 'single' and "double" quotes)],
@@ -60,6 +60,16 @@ subtest "q() operator" => sub {
     "q() should use single quotes for literal content";
   check_message 'my $x = q/literal$x/', "use ''",
     "q// should use single quotes";
+
+  # Single bracket characters should suggest single quotes
+  check_message 'my $x = q{(}', "use ''",
+    "q{} with single open paren should use single quotes";
+  check_message 'my $x = q<[>', "use ''",
+    "q<> with single open bracket should use single quotes";
+  check_message 'my $x = q{@x(}', "use ''",
+    "q{} with @ and open paren should use single quotes";
+  check_message 'my $x = q{$x(}', "use ''",
+    'q{} with $ and open paren should use single quotes';
 };
 
 subtest "qq() operator" => sub {

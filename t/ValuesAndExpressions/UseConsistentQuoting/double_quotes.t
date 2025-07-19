@@ -45,11 +45,12 @@ subtest "Escaped special characters" => sub {
     "Escaped dollar signs should use single quotes";
   check_message 'my $email = "\@domain"', "use ''",
     "Escaped at-signs should use single quotes";
+  check_message 'my $quote = "\""', "use ''",
+    "Escaped double quotes should use single quotes";
 };
 
 subtest "Interpolation with quotes" => sub {
   # Strings that interpolate and have quotes
-  my $x = "\"";
   good_code 'my $text = "contains $var and \"quotes\""',
     "Double quotes with interpolation and quotes";
   good_code 'my $x = "string with $var and \"quotes\""',

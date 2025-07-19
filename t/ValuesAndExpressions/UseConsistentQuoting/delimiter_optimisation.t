@@ -50,8 +50,7 @@ subtest "Delimiter optimisation" => sub {
     "use qw()",
     "qw[] with brackets should use qw()"
   );
-  good_code 'my @x = qw(word[with]brackets)',
-    "qw() with brackets";
+  good_code 'my @x = qw(word[with]brackets)', "qw() with brackets";
   check_message(
     'my @x = qw{word[with]brackets}',
     "use qw()",
@@ -209,11 +208,8 @@ subtest "Different brackets" => sub {
   good_code 'my $text = q[has/slashes(and)parens]',
     "q[] optimal - avoids escaping parens, allows slashes";
 
-  check_message(
-    'my $text = q(has(parens)\/and\/slashes)',
-    "use q[]",
-    "q() should use q[]"
-  );
+  check_message('my $text = q(has(parens)\/and\/slashes)',
+    "use q[]", "q() should use q[]");
   good_code 'my $text = "has(parens)/and/slashes/"',
     '"" optimal - avoids escaping slashes, allows parens';
 };
@@ -263,20 +259,32 @@ subtest "Exotic delimiters" => sub {
   );
   good_code 'my $text = q(path#to#file)',
     "q() optimal when content has hashes";
-  check_message('my $text = q!wow\!amazing!',
-    "use q()", "q!! with exclamation marks should use q()");
+  check_message(
+    'my $text = q!wow\!amazing!',
+    "use q()",
+    "q!! with exclamation marks should use q()"
+  );
   good_code 'my $text = q(wow!amazing)',
     "q() optimal when content has exclamation marks";
-  check_message('my $text = q%100\%complete%',
-    "use q()", "q%% with percent signs should use q()");
+  check_message(
+    'my $text = q%100\%complete%',
+    "use q()",
+    "q%% with percent signs should use q()"
+  );
   good_code 'my $text = q(100%complete)',
     "q() optimal when content has percent signs";
-  check_message('my $text = q&fish\&chips&',
-    "use q()", "q&& with ampersands should use q()");
+  check_message(
+    'my $text = q&fish\&chips&',
+    "use q()",
+    "q&& with ampersands should use q()"
+  );
   good_code 'my $text = q(fish&chips)',
     "q() optimal when content has ampersands";
-  check_message('my $text = q~home\~user~',
-    "use q()", "q~~ with tildes should use q()");
+  check_message(
+    'my $text = q~home\~user~',
+    "use q()",
+    "q~~ with tildes should use q()"
+  );
   good_code 'my $text = q(home~user)', "q() optimal when content has tildes";
 };
 
@@ -305,8 +313,11 @@ subtest "Priority: fewer escapes" => sub {
   );
   good_code 'my $text = "path#to#file"', '"" optimal when content has hashes';
 
-  check_message('my $text = q!wow\!amazing!',
-    "use q()", "q!! with exclamation should use q()");
+  check_message(
+    'my $text = q!wow\!amazing!',
+    "use q()",
+    "q!! with exclamation should use q()"
+  );
   good_code 'my $text = "wow!amazing"',
     '"" optimal when content has exclamation';
 
@@ -318,8 +329,11 @@ subtest "Priority: fewer escapes" => sub {
   good_code 'my $text = "100%complete"',
     '"" optimal when content has percent';
 
-  check_message('my $text = q&fish\&chips&',
-    "use q()", "q&& with ampersand should use q()");
+  check_message(
+    'my $text = q&fish\&chips&',
+    "use q()",
+    "q&& with ampersand should use q()"
+  );
   good_code 'my $text = "fish&chips"',
     '"" optimal when content has ampersand';
 
@@ -358,16 +372,14 @@ subtest "q() with other delimiter operators" => sub {
     "use qq()",
     "qq[] with brackets should use qq()"
   );
-  good_code 'my $x = "text[with]brackets"',
-    "qq() with brackets";
+  good_code 'my $x = "text[with]brackets"', "qq() with brackets";
 
   check_message(
     'my $x = qx[command[with]brackets]',
     "use qx()",
     "qx[] with brackets should use qx()"
   );
-  good_code 'my $x = qx(command[with]brackets)',
-    "qx() with brackets";
+  good_code 'my $x = qx(command[with]brackets)', "qx() with brackets";
 };
 
 done_testing;

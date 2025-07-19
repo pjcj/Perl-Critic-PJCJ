@@ -92,7 +92,7 @@ subtest "Consistency verification" => sub {
 
   # These should not violate when changed to suggested form
   good_code q(my $x = 'has "quotes"';),
-    "suggested form for q(has \"quotes\") should not violate";
+    'suggested form for q(has "quotes") should not violate';
   good_code q(my $x = "don't";),
     "suggested form for q(don't) should not violate";
   good_code q(my $x = 'price: \\$5.00';),

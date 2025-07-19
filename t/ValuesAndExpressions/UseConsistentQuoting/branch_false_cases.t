@@ -47,11 +47,11 @@ subtest "Try to trigger false branches" => sub {
   # Test qw with different delimiters to try to hit different code paths
   check_message 'my @x = qw/word1 word2/;', "use qw()",
     "qw with / delimiter should suggest ()";
-  check_message q{my @x = qw{word1 word2};}, "use qw()",
+  check_message 'my @x = qw{word1 word2};', "use qw()",
     "qw with {} delimiter should suggest ()";
-  check_message q{my @x = qw[word1 word2];}, "use qw()",
+  check_message 'my @x = qw[word1 word2];', "use qw()",
     "qw with [] delimiter should suggest ()";
-  check_message q{my @x = qw<word1 word2>;}, "use qw()",
+  check_message 'my @x = qw<word1 word2>;', "use qw()",
     "qw with <> delimiter should suggest ()";
 
   # Test cases that might trigger different sorting/comparison results
