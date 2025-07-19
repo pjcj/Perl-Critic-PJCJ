@@ -12,8 +12,7 @@ no warnings "experimental::signatures";
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
 use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
-use ViolationFinder
-  qw(find_violations count_violations good bad check_violation_message);
+use ViolationFinder qw(find_violations count_violations good bad);
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
@@ -28,7 +27,7 @@ sub good_code ($code, $description) {
 }
 
 sub bad_code ($code, $description) {
-  check_violation_message($Policy, $code, 'use ""', $description);
+  bad($Policy, $code, 'use ""', $description);
 }
 
 subtest "Policy methods" => sub {
@@ -102,24 +101,24 @@ subtest "Use statement argument rules" => sub {
 
   # Module with one argument - can use "" or qw()
   good_code 'use Foo "arg1"', "use with one double-quoted argument is fine";
-  check_violation_message($Policy, "use Foo 'arg1'",
+  bad($Policy, "use Foo 'arg1'",
     'use qw()', "use with one single-quoted argument should use qw()");
   good_code "use Foo qw(arg1)", "use with one qw() argument is fine";
 
   # Module with multiple arguments - must use qw()
-  check_violation_message($Policy, 'use Foo "arg1", "arg2"',
+  bad($Policy, 'use Foo "arg1", "arg2"',
     'use qw()', "use with multiple quoted arguments should use qw()");
-  check_violation_message($Policy, "use Foo 'arg1', 'arg2'",
+  bad($Policy, "use Foo 'arg1', 'arg2'",
     'use qw()', "use with multiple single-quoted arguments should use qw()");
-  check_violation_message($Policy, q[use Foo ('arg1', 'arg2')],
+  bad($Policy, q[use Foo ('arg1', 'arg2')],
     'use qw()', "use with multiple arguments in parens should use qw()");
-  check_violation_message($Policy, 'use Foo "arg1", "arg2", "arg3"',
+  bad($Policy, 'use Foo "arg1", "arg2", "arg3"',
     'use qw()', "use with three quoted arguments should use qw()");
 
   # Mixed arguments - should use qw()
-  check_violation_message($Policy, q[use Foo qw(arg1), 'arg2'],
+  bad($Policy, q[use Foo qw(arg1), 'arg2'],
     'use qw()', "mixed qw() and quotes should use qw() for all");
-  check_violation_message($Policy, q[use Foo 'arg1', qw(arg2)],
+  bad($Policy, q[use Foo 'arg1', qw(arg2)],
     'use qw()', "mixed quotes and qw() should use qw() for all");
 
   # Good cases with multiple arguments
@@ -127,7 +126,7 @@ subtest "Use statement argument rules" => sub {
     "multiple arguments with qw() is correct";
   good_code "use Foo qw(arg1 arg2 arg3)",
     "three arguments with qw() is correct";
-  check_violation_message($Policy, "use Foo qw[arg1 arg2]",
+  bad($Policy, "use Foo qw[arg1 arg2]",
     'use qw()', "qw[] should use qw() with parentheses only");
 
   # Other statement types should not be checked

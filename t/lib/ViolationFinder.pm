@@ -11,8 +11,7 @@ use Test2::V0;
 
 no warnings "experimental::signatures";
 
-our @EXPORT_OK
-  = qw(find_violations count_violations good bad check_violation_message);
+our @EXPORT_OK = qw(find_violations count_violations good bad);
 
 sub find_violations ($policy, $code) {
   my $doc = PPI::Document->new(\$code);
@@ -50,11 +49,7 @@ sub good ($policy, $code, $description) {
   count_violations($policy, $code, 0, $description);
 }
 
-sub bad ($policy, $code, $description) {
-  count_violations($policy, $code, 1, $description);
-}
-
-sub check_violation_message ($policy, $code, $expected_message, $description) {
+sub bad ($policy, $code, $expected_message, $description) {
   my @violations = find_violations($policy, $code);
   Test2::V0::is @violations, 1, "$description - should have one violation";
   Test2::V0::like $violations[0]->explanation, qr/\Q$expected_message\E/,

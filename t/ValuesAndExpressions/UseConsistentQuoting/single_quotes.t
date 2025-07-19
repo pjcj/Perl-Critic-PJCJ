@@ -12,8 +12,7 @@ no warnings "experimental::signatures";
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
 use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
-use ViolationFinder
-  qw(find_violations count_violations good bad check_violation_message);
+use ViolationFinder qw(find_violations count_violations good bad);
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
@@ -24,7 +23,7 @@ sub good_code ($code, $description) {
 }
 
 sub check_message ($code, $expected_message, $description) {
-  check_violation_message($Policy, $code, $expected_message, $description);
+  bad($Policy, $code, $expected_message, $description);
 }
 
 subtest "Single quoted strings" => sub {
