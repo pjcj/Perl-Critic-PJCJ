@@ -100,11 +100,11 @@ subtest "Delimiter optimisation messages with hints" => sub {
 
 subtest "Exotic delimiter messages" => sub {
   check_message('my $text = q/path\/to\/file/',
-    'use q()', "q// with slashes - should use q() to avoid escapes");
+    "use q()", "q// with slashes - should use q() to avoid escapes");
 
   check_message(
     'my $text = q|option\|value|',
-    'use q()',
+    "use q()",
     "q|| with pipes - should use q() to avoid escapes"
   );
 

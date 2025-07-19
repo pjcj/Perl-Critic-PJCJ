@@ -30,63 +30,63 @@ sub check_message ($code, $expected_message, $description) {
   bad($Policy, $code, $expected_message, $description);
 }
 
-subtest "Delimiter optimisation - minimizing escapes" => sub {
+subtest "Delimiter optimisation" => sub {
   # Content with parens should avoid () delimiters
   check_message(
     'my @x = qw(word(with)parens)',
-    'use qw[]',
-    "qw() with parens should use qw[] to avoid escapes"
+    "use qw[]",
+    "qw() with parens should use qw[]"
   );
-  good_code 'my @x = qw[word(with)parens]', "qw[] with parens avoids escapes";
+  good_code 'my @x = qw[word(with)parens]', "qw[] with parens";
   check_message(
     'my @x = qw{word(with)parens}',
-    'use qw[]',
-    "qw{} with parens should use qw[] to avoid escapes"
+    "use qw[]",
+    "qw{} with parens should use qw[]"
   );
 
   # Content with brackets should avoid [] delimiters
   check_message(
     'my @x = qw[word[with]brackets]',
-    'use qw()',
-    "qw[] with brackets should use qw() to avoid escapes"
+    "use qw()",
+    "qw[] with brackets should use qw()"
   );
   good_code 'my @x = qw(word[with]brackets)',
-    "qw() with brackets avoids escapes";
+    "qw() with brackets";
   check_message(
     'my @x = qw{word[with]brackets}',
-    'use qw()',
-    "qw{} with brackets should use qw() to avoid escapes"
+    "use qw()",
+    "qw{} with brackets should use qw()"
   );
 
   # Content with braces should avoid {} delimiters
   check_message(
     'my @x = qw{word{with}braces}',
-    'use qw()',
-    "qw{} with braces should use qw() to avoid escapes"
+    "use qw()",
+    "qw{} with braces should use qw()"
   );
-  good_code 'my @x = qw(word{with}braces)', "qw() with braces avoids escapes";
+  good_code 'my @x = qw(word{with}braces)', "qw() with braces";
   check_message(
     'my @x = qw[word{with}braces]',
-    'use qw()',
-    "qw[] with braces should use qw() to avoid escapes"
+    "use qw()",
+    "qw[] with braces should use qw()"
   );
 
   # Content with angles should avoid <> delimiters
   check_message(
     'my @x = qw<word<with>angles>',
-    'use qw()',
-    "qw<> with angles should use qw() to avoid escapes"
+    "use qw()",
+    "qw<> with angles should use qw()"
   );
-  good_code 'my @x = qw(word<with>angles)', "qw() with angles avoids escapes";
+  good_code 'my @x = qw(word<with>angles)', "qw() with angles";
   check_message(
     'my @x = qw[word<with>angles]',
-    'use qw()',
-    "qw[] with angles should use qw() to avoid escapes"
+    "use qw()",
+    "qw[] with angles should use qw()"
   );
   check_message(
     'my @x = qw{word<with>angles}',
-    'use qw()',
-    "qw{} with angles should use qw() to avoid escapes"
+    "use qw()",
+    "qw{} with angles should use qw()"
   );
 };
 
@@ -94,50 +94,50 @@ subtest "Delimiter preference order" => sub {
   # Bracket priority: () > [] > <> > {}
   check_message(
     'my @x = qw{simple words}',
-    'use qw()',
+    "use qw()",
     "qw{} should use qw() - () preferred over {}"
   );
   check_message(
     'my @x = qw<simple words>',
-    'use qw()',
+    "use qw()",
     "qw<> should use qw() - () preferred over <>"
   );
   check_message(
     'my @x = qw[simple words]',
-    'use qw()',
+    "use qw()",
     "qw[] should use qw() - () preferred over []"
   );
   good_code 'my @x = qw(simple words)',
     "qw() is most preferred bracket delimiter";
 
-  # Tie-breaking: when escape counts equal, prefer () over [] over <> over {}
+  # Tie-breaking: when counts equal, prefer () over [] over <> over {}
   check_message(
     'my @x = qw{one[bracket}',
-    'use qw()',
+    "use qw()",
     "When tied, () is preferred over {}"
   );
   check_message(
     'my @x = qw<one[bracket>',
-    'use qw()',
+    "use qw()",
     "When tied, () is preferred over <>"
   );
   check_message(
     'my @x = qw[one[bracket]',
-    'use qw()',
+    "use qw()",
     "When tied, () is preferred over []"
   );
   good_code 'my @x = qw(one[bracket])',
-    "() is preferred when escape counts are tied";
+    "() is preferred when all else is equal";
 
   # Test [] vs <> vs {} preference order
   check_message(
     'my @x = qw{one(paren}',
-    'use qw[]',
+    "use qw[]",
     "When tied, [] is preferred over {}"
   );
   check_message(
     'my @x = qw<one(paren>',
-    'use qw[]',
+    "use qw[]",
     "When tied, [] is preferred over <>"
   );
   good_code 'my @x = qw[one(paren)]', "[] is preferred over <> and {}";
@@ -145,25 +145,25 @@ subtest "Delimiter preference order" => sub {
   # Test <> vs {} preference order
   check_message(
     'my @x = qw{one(paren)[bracket}',
-    'use qw<>',
+    "use qw<>",
     "When tied, <> is preferred over {}"
   );
   good_code 'my @x = qw<one(paren)[bracket>', "<> is preferred over {}";
 
-  # When all delimiters appear in content, prefer () (least escapes needed)
+  # When all delimiters appear in content, prefer ()
   check_message(
     'my @x = qw{has(parens)[and]<angles>{braces}}',
-    'use qw()',
+    "use qw()",
     "All delimiters present - should use qw()"
   );
   check_message(
     'my @x = qw[has(parens)[and]<angles>{braces}]',
-    'use qw()',
+    "use qw()",
     "All delimiters present - should use qw()"
   );
   check_message(
     'my @x = qw<has(parens)[and]<angles>{braces}>',
-    'use qw()',
+    "use qw()",
     "All delimiters present - should use qw()"
   );
   good_code 'my @x = qw(has(parens)[and]<angles>{braces})',
@@ -178,8 +178,8 @@ subtest "Already optimal delimiters" => sub {
     "() optimal when content has only brackets";
   check_message(
     'my @x = qw<text<only>angles>',
-    'use qw()',
-    "qw<> with angles should use qw() - fewer escapes"
+    "use qw()",
+    "qw<> with angles should use qw()"
   );
   good_code 'my @x = qw(text<only>angles)',
     "() optimal when content has angles";
@@ -193,60 +193,59 @@ subtest "Already optimal delimiters" => sub {
   good_code 'my @x = qw[has(only)parens]',   "qw[] with only parens";
 };
 
-subtest "Different escape counts" => sub {
-  # Test to cover the case where escape counts are different
+subtest "Different brackets" => sub {
   check_message(
     'my @x = qw{word(with)(many)parens}',
-    'use qw[]',
-    "qw{} with many parens should use qw[] - fewer escapes"
+    "use qw[]",
+    "qw{} with many parens should use qw[]"
   );
 
-  # Mixed content - choose delimiter that minimises total escapes
+  # Mixed content - choose preferred delimiter
   check_message(
     'my $text = q/has\/slashes(and)parens/',
-    'use q[]',
-    "q// should use q[] - fewer total escapes"
+    "use q[]",
+    "q// should use q[]"
   );
   good_code 'my $text = q[has/slashes(and)parens]',
     "q[] optimal - avoids escaping parens, allows slashes";
 
   check_message(
     'my $text = q(has(parens)\/and\/slashes)',
-    'use q[]',
-    'q() should use q[] - fewer total escapes'
+    "use q[]",
+    "q() should use q[]"
   );
   good_code 'my $text = "has(parens)/and/slashes/"',
     '"" optimal - avoids escaping slashes, allows parens';
 };
 
-subtest "Equal escape counts" => sub {
-  # Tests where all delimiters have same escape count for sort condition
-  # This tests the preference order when escape counts are equal
+subtest "Equal bracket counts" => sub {
+  # Tests where all delimiters have same count for sort condition
+  # This tests the preference order when counts are equal
   check_message('my @x = qw{no_special_chars}',
-    'use qw()',
-    "qw{} should use qw() when escape counts are equal - preference order");
+    "use qw()",
+    "qw{} should use qw() when counts are equal - preference order");
   check_message('my @x = qw<no_special_chars>',
-    'use qw()',
-    "qw<> should use qw() when escape counts are equal - preference order");
+    "use qw()",
+    "qw<> should use qw() when counts are equal - preference order");
   check_message('my @x = qw[no_special_chars]',
-    'use qw()',
-    "qw[] should use qw() when escape counts are equal - preference order");
+    "use qw()",
+    "qw[] should use qw() when counts are equal - preference order");
   good_code 'my @x = qw(no_special_chars)',
-    "qw() is preferred when all delimiters have same escape count";
+    "qw() is preferred when all delimiters have same count";
 };
 
-subtest "Exotic delimiters to minimise escapes" => sub {
+subtest "Exotic delimiters" => sub {
   check_message(
     'my $text = qq/path\/to\/file/',
-    'use qq()',
-    "qq// with slashes should use qq() to avoid escapes"
+    "use qq()",
+    "qq// with slashes should use qq()"
   );
   good_code 'my $text = qq(path"to"file)',
     "qq() optimal when content has double quotes";
   check_message(
     'my $text = q|option\|value|',
-    'use q()',
-    "q|| with pipes should use q() to avoid escapes"
+    "use q()",
+    "q|| with pipes should use q()"
   );
   good_code 'my $text = q(option|value)',
     "q() optimal when content has pipes";
@@ -259,25 +258,25 @@ subtest "Exotic delimiters to minimise escapes" => sub {
     "use ''", "q() with double quotes should use single quotes");
   check_message(
     'my $text = q#path\#to\#file#',
-    'use q()',
-    "q## with hashes should use q() to avoid escapes"
+    "use q()",
+    "q## with hashes should use q()"
   );
   good_code 'my $text = q(path#to#file)',
     "q() optimal when content has hashes";
   check_message('my $text = q!wow\!amazing!',
-    'use q()', "q!! with exclamation marks should use q() to avoid escapes");
+    "use q()", "q!! with exclamation marks should use q()");
   good_code 'my $text = q(wow!amazing)',
     "q() optimal when content has exclamation marks";
   check_message('my $text = q%100\%complete%',
-    'use q()', "q%% with percent signs should use q() to avoid escapes");
+    "use q()", "q%% with percent signs should use q()");
   good_code 'my $text = q(100%complete)',
     "q() optimal when content has percent signs";
   check_message('my $text = q&fish\&chips&',
-    'use q()', "q&& with ampersands should use q() to avoid escapes");
+    "use q()", "q&& with ampersands should use q()");
   good_code 'my $text = q(fish&chips)',
     "q() optimal when content has ampersands";
   check_message('my $text = q~home\~user~',
-    'use q()', "q~~ with tildes should use q() to avoid escapes");
+    "use q()", "q~~ with tildes should use q()");
   good_code 'my $text = q(home~user)', "q() optimal when content has tildes";
 };
 
@@ -285,8 +284,8 @@ subtest "Priority: fewer escapes" => sub {
   # Rule 2: Always prefer fewer escaped characters
   check_message(
     'my $text = q/path\/to\/file/',
-    'use q()',
-    'q// with slashes should use q() to avoid escapes'
+    "use q()",
+    "q// with slashes should use q()"
   );
   good_code 'my $text = "path/to/file"',
     '"" optimal when content has slashes';
@@ -294,53 +293,53 @@ subtest "Priority: fewer escapes" => sub {
   # Various quote operators with escaped characters
   check_message(
     'my $text = q|option\|value|',
-    'use q()',
-    'q|| with pipes should use q() to avoid escapes'
+    "use q()",
+    "q|| with pipes should use q()"
   );
   good_code 'my $text = "option|value"', '"" optimal when content has pipes';
 
   check_message(
     'my $text = q#path\#to\#file#',
-    'use q()',
-    'q## with hashes should use q() to avoid escapes'
+    "use q()",
+    "q## with hashes should use q()"
   );
   good_code 'my $text = "path#to#file"', '"" optimal when content has hashes';
 
   check_message('my $text = q!wow\!amazing!',
-    'use q()', 'q!! with exclamation should use q() to avoid escapes');
+    "use q()", "q!! with exclamation should use q()");
   good_code 'my $text = "wow!amazing"',
     '"" optimal when content has exclamation';
 
   check_message(
     'my $text = q%100\%complete%',
-    'use q()',
-    'q%% with percent should use q() to avoid escapes'
+    "use q()",
+    "q%% with percent should use q()"
   );
   good_code 'my $text = "100%complete"',
     '"" optimal when content has percent';
 
   check_message('my $text = q&fish\&chips&',
-    'use q()', 'q&& with ampersand should use q() to avoid escapes');
+    "use q()", "q&& with ampersand should use q()");
   good_code 'my $text = "fish&chips"',
     '"" optimal when content has ampersand';
 
   check_message('my $text = q~home\~user~',
-    'use q()', 'q~~ with tilde should use q() to avoid escapes');
+    "use q()", "q~~ with tilde should use q()");
   good_code 'my $text = "home~user"', '"" optimal when content has tilde';
 
   # qq operators with escaped characters
   check_message(
     'my $text = qq/path\/to\/file/',
-    'use qq()',
-    'qq// with slashes should use qq() to avoid escapes'
+    "use qq()",
+    "qq// with slashes should use qq()"
   );
   good_code 'my $text = "path/to/file"',
     '"" optimal for interpolated strings with slashes';
 
   check_message(
     'my $text = qq|option\|value|',
-    'use qq()',
-    'qq|| with pipes should use qq() to avoid escapes'
+    "use qq()",
+    "qq|| with pipes should use qq()"
   );
   good_code 'my $text = "option|value"',
     '"" optimal for interpolated strings with pipes';
@@ -349,26 +348,26 @@ subtest "Priority: fewer escapes" => sub {
 subtest "q() with other delimiter operators" => sub {
   check_message(
     'my $x = q(text(with)parens)',
-    'use q[]',
-    "q() with parens should use q[] to avoid escapes"
+    "use q[]",
+    "q() with parens should use q[]"
   );
-  good_code 'my $x = q[text(with)parens]', "q[] with parens avoids escapes";
+  good_code 'my $x = q[text(with)parens]', "q[] with parens";
 
   check_message(
     'my $x = qq[text[with]brackets]',
-    'use qq()',
-    'qq[] with brackets should use qq() to avoid escapes'
+    "use qq()",
+    "qq[] with brackets should use qq()"
   );
   good_code 'my $x = "text[with]brackets"',
-    "qq() with brackets avoids escapes";
+    "qq() with brackets";
 
   check_message(
     'my $x = qx[command[with]brackets]',
-    'use qx()',
-    "qx[] with brackets should use qx() to avoid escapes"
+    "use qx()",
+    "qx[] with brackets should use qx()"
   );
   good_code 'my $x = qx(command[with]brackets)',
-    "qx() with brackets avoids escapes";
+    "qx() with brackets";
 };
 
 done_testing;

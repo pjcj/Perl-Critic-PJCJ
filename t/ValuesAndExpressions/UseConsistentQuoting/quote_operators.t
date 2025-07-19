@@ -48,7 +48,7 @@ subtest "q() operator" => sub {
   # When q() is justified
   good_code q[my $x = q(has 'single' and "double" quotes)],
     "q() is justified when content has both quote types";
-  check_message q[my $x = q(has "only" double quotes)], "use ''",
+  check_message 'my $x = q(has "only" double quotes)', "use ''",
     "q() with only double quotes should recommend single quotes";
 
   # Different q() delimiters
@@ -76,7 +76,7 @@ subtest "qq() operator" => sub {
     "qq() should use double quotes for simple content";
 
   # When qq() is appropriate (has double quotes)
-  good_code q[my $x = qq(has "double" quotes)],
+  good_code 'my $x = qq(has "double" quotes)',
     "qq() appropriate when content has double quotes";
 };
 

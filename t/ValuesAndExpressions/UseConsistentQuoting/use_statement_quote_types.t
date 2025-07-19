@@ -57,15 +57,15 @@ subtest "Exercise _is_in_use_statement branches" => sub {
 
 subtest "Use statements with multiple quote types" => sub {
   # Test multiple arguments to trigger the use statement multiple argument rule
-  check_message q{use Foo q(arg1), q(arg2)}, 'use qw()',
+  check_message q{use Foo q(arg1), q(arg2)}, "use qw()",
     "multiple q() arguments trigger use statement rule";
-  check_message q{use Foo qq(arg1), qq(arg2)}, 'use qw()',
+  check_message q{use Foo qq(arg1), qq(arg2)}, "use qw()",
     "multiple qq() arguments trigger use statement rule";
 
   # Mixed quote types
-  check_message q{use Foo q(arg1), "arg2"}, 'use qw()',
+  check_message q{use Foo q(arg1), "arg2"}, "use qw()",
     "mixed q() and double quotes trigger use statement rule";
-  check_message q{use Foo qq(arg1), 'arg2'}, 'use qw()',
+  check_message q{use Foo qq(arg1), "arg2"}, "use qw()",
     "mixed qq() and single quotes trigger use statement rule";
 };
 

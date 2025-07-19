@@ -41,22 +41,22 @@ subtest "Try to trigger false branches" => sub {
   # This needs a delimiter that doesn't match the current one
 
   # For now, test normal cases to ensure tests are working
-  good_code q{my $x = "normal";}, "normal double quote case";
-  bad_code q{my $x = 'normal';}, "normal single quote case should violate";
+  good_code 'my $x = "normal";', "normal double quote case";
+  bad_code q(my $x = 'normal';), "normal single quote case should violate";
 
   # Test qw with different delimiters to try to hit different code paths
-  check_message q{my @x = qw/word1 word2/;}, 'use qw()',
+  check_message 'my @x = qw/word1 word2/;', "use qw()",
     "qw with / delimiter should suggest ()";
-  check_message q{my @x = qw{word1 word2};}, 'use qw()',
+  check_message q{my @x = qw{word1 word2};}, "use qw()",
     "qw with {} delimiter should suggest ()";
-  check_message q{my @x = qw[word1 word2];}, 'use qw()',
+  check_message q{my @x = qw[word1 word2];}, "use qw()",
     "qw with [] delimiter should suggest ()";
-  check_message q{my @x = qw<word1 word2>;}, 'use qw()',
+  check_message q{my @x = qw<word1 word2>;}, "use qw()",
     "qw with <> delimiter should suggest ()";
 
   # Test cases that might trigger different sorting/comparison results
-  check_message q{my $x = qq{content with (parens) and [brackets]};},
-    'use qq<>', "qq with {} containing multiple bracket types";
+  check_message 'my $x = qq{content with (parens) and [brackets]};',
+    "use qq<>", "qq with {} containing multiple bracket types";
 };
 
 done_testing;

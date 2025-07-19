@@ -263,6 +263,12 @@ sub check_q_literal ($self, $elem) {
     return $self->check_delimiter_optimisation($elem);
   }
 
+  if ($has_single_quotes && $would_interpolate) {
+    # q() justified when has single quotes AND would interpolate
+    # (single quotes would need escaping, double quotes would interpolate)
+    return $self->check_delimiter_optimisation($elem);
+  }
+
   if ($has_single_quotes && !$would_interpolate) {
     return $self->violation($Desc, $Expl_double, $elem);
   }
@@ -271,7 +277,8 @@ sub check_q_literal ($self, $elem) {
     return $self->violation($Desc, $Expl_single, $elem);
   }
 
-  if ($would_interpolate && $string =~ /\$/) {
+  if ($would_interpolate && $string =~ /\$/ && !$has_single_quotes) {
+    # Only suggest single quotes if there are no single quotes to escape
     return $self->violation($Desc, $Expl_single, $elem);
   }
 

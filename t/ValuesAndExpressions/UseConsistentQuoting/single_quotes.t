@@ -70,12 +70,18 @@ subtest "Mixed quote content" => sub {
 
   # When content has both types with suboptimal delimiter - should suggest
   # better delimiter
-  check_message q[my $x = q[has 'single' and "double" quotes]], 'use q()',
+  check_message q(my $x = q[has 'single' and "double" quotes]), "use q()",
     "q[] with both quote types should recommend q() for optimal delimiter";
 
   # When content has only single quotes - should recommend double quotes
   check_message q[my $x = q(has 'single' quotes)], 'use ""',
     "q() with only single quotes should recommend double quotes";
+
+  # Bug case: content with both $ and ' should keep q()
+  # (single quotes would require escaping: '$x \''', double quotes would
+  # interpolate)
+  good_code q[my $x = q($x ')],
+    'q() is justified when content has both $ and single quote';
 };
 
 done_testing;

@@ -49,9 +49,10 @@ subtest "Escaped special characters" => sub {
 
 subtest "Interpolation with quotes" => sub {
   # Strings that interpolate and have quotes
-  good_code q(my $text = "contains $var and \"quotes\""),
+  my $x = "\"";
+  good_code 'my $text = "contains $var and \"quotes\""',
     "Double quotes with interpolation and quotes";
-  good_code q(my $x = "string with $var and \"quotes\""),
+  good_code 'my $x = "string with $var and \"quotes\""',
     "Double quotes appropriate when string interpolates and has quotes";
 
   # Contains both single and double quotes

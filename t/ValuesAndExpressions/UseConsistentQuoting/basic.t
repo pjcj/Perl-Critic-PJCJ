@@ -102,24 +102,24 @@ subtest "Use statement argument rules" => sub {
   # Module with one argument - can use "" or qw()
   good_code 'use Foo "arg1"', "use with one double-quoted argument is fine";
   bad($Policy, "use Foo 'arg1'",
-    'use qw()', "use with one single-quoted argument should use qw()");
+    "use qw()", "use with one single-quoted argument should use qw()");
   good_code "use Foo qw(arg1)", "use with one qw() argument is fine";
 
   # Module with multiple arguments - must use qw()
   bad($Policy, 'use Foo "arg1", "arg2"',
-    'use qw()', "use with multiple quoted arguments should use qw()");
+    "use qw()", "use with multiple quoted arguments should use qw()");
   bad($Policy, "use Foo 'arg1', 'arg2'",
-    'use qw()', "use with multiple single-quoted arguments should use qw()");
-  bad($Policy, q[use Foo ('arg1', 'arg2')],
-    'use qw()', "use with multiple arguments in parens should use qw()");
+    "use qw()", "use with multiple single-quoted arguments should use qw()");
+  bad($Policy, "use Foo ('arg1', 'arg2')",
+    "use qw()", "use with multiple arguments in parens should use qw()");
   bad($Policy, 'use Foo "arg1", "arg2", "arg3"',
-    'use qw()', "use with three quoted arguments should use qw()");
+    "use qw()", "use with three quoted arguments should use qw()");
 
   # Mixed arguments - should use qw()
-  bad($Policy, q[use Foo qw(arg1), 'arg2'],
-    'use qw()', "mixed qw() and quotes should use qw() for all");
-  bad($Policy, q[use Foo 'arg1', qw(arg2)],
-    'use qw()', "mixed quotes and qw() should use qw() for all");
+  bad($Policy, "use Foo qw(arg1), 'arg2'",
+    "use qw()", "mixed qw() and quotes should use qw() for all");
+  bad($Policy, "use Foo 'arg1', qw(arg2)",
+    "use qw()", "mixed quotes and qw() should use qw() for all");
 
   # Good cases with multiple arguments
   good_code "use Foo qw(arg1 arg2)",
@@ -127,7 +127,7 @@ subtest "Use statement argument rules" => sub {
   good_code "use Foo qw(arg1 arg2 arg3)",
     "three arguments with qw() is correct";
   bad($Policy, "use Foo qw[arg1 arg2]",
-    'use qw()', "qw[] should use qw() with parentheses only");
+    "use qw()", "qw[] should use qw() with parentheses only");
 
   # Other statement types should not be checked
   good_code "require Foo", "require statements are not checked";
