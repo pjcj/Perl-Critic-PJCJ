@@ -126,11 +126,11 @@ subtest "Combined violation messages" => sub {
 
   is @violations, 2, "Two violations in combined code";
 
-  # Check that descriptions mention consistency
-  like $violations[0]->description, qr(consistent),
-    "First violation mentions consistency";
-  like $violations[1]->description, qr(consistent),
-    "Second violation mentions consistency";
+  # Check that descriptions are about quoting
+  like $violations[0]->description, qr(Quoting),
+    "First violation is about quoting";
+  like $violations[1]->description, qr(Quoting),
+    "Second violation is about quoting";
 };
 
 done_testing;

@@ -11,7 +11,7 @@ use parent "Perl::Critic::Policy";
 
 # VERSION
 
-my $Desc         = "Use consistent and optimal quoting";
+my $Desc         = "Quoting";
 my $Expl_double  = "use \"\"";
 my $Expl_single  = "use ''";
 my $Expl_optimal = "use %s";
