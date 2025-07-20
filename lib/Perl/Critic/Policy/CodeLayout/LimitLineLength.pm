@@ -9,6 +9,7 @@ no warnings "experimental::signatures";
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 use parent "Perl::Critic::Policy";
 use PPI;
+use Perl::Critic::Utils::SourceLocation;
 
 # VERSION
 
@@ -43,8 +44,17 @@ sub violates ($self, $elem, $doc) {
       # Find a token on this line for accurate line number reporting
       my $line_token = $self->_find_token_on_line($doc, $line_num + 1);
 
-      push @violations,
-        $self->violation($violation_desc, $Expl, $line_token || $elem);
+      # If no token found, create synthetic element with correct line number
+      if (!$line_token) {
+        $line_token = Perl::Critic::Utils::SourceLocation->new(
+          line_number   => $line_num + 1,
+          column_number => 1,
+          content       => $lines[$line_num],
+          filename      => $doc->filename
+        );
+      }
+
+      push @violations, $self->violation($violation_desc, $Expl, $line_token);
     }
   }
 

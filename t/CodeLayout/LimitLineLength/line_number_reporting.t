@@ -1,0 +1,155 @@
+#!/usr/bin/env perl
+
+use v5.20.0;
+use strict;
+use warnings;
+use feature "signatures";
+
+use Test2::V0;
+
+no warnings "experimental::signatures";
+
+# Test line number reporting accuracy for LimitLineLength policy
+use lib qw( lib t/lib );
+use Perl::Critic::Policy::CodeLayout::LimitLineLength;
+use ViolationFinder qw( find_violations );
+
+my $Policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new(
+  max_line_length => 72);
+
+sub line_numbers ($code, $expected_lines, $description) {
+  my @violations   = find_violations($Policy, $code);
+  my @actual_lines = map { $_->line_number } @violations;
+
+  is \@actual_lines, $expected_lines, $description;
+  @violations
+}
+
+subtest "POD line number reporting" => sub {
+  # Test case where long line is within POD block
+  my $code_with_pod = <<'END_CODE';
+#!/usr/bin/env perl
+
+my $var = 1;
+
+=pod
+
+This is a short POD line
+This long POD line exceeds the seventy two character limit and triggers a
+Another short line
+
+=cut
+
+my $other = 2;
+END_CODE
+
+  # The long POD line is on line 8
+  # Currently this will FAIL because it reports line 1 instead of line 8
+  line_numbers($code_with_pod, [8],
+    "POD long line should report correct line number");
+};
+
+subtest "Mixed POD and code violations" => sub {
+  my $mixed_code = <<'END_CODE';
+my $short = 1;
+my $very_long_variable_name_that_exceeds_seventy_two_char_limit = "value";
+
+=pod
+
+Short POD line
+This long POD line exceeds the seventy two character limit and triggers a
+
+=cut
+
+my $another_very_long_variable_name_that_exceeds_seventy_two_char_limit = "end";
+END_CODE
+
+  # Should report violations at lines 2, 7, and 11
+  # Currently this will FAIL because POD line reports as line 1
+  line_numbers(
+    $mixed_code,
+    [ 2, 7, 11 ],
+    "Mixed code and POD violations should report correct line numbers"
+  );
+};
+
+subtest "Multiple POD sections" => sub {
+  my $multi_pod_code = <<'END_CODE';
+my $var = 1;
+
+=pod
+
+This is a long POD line in the first section that exceeds seventy two char
+
+=cut
+
+my $middle = 2;
+
+=head1 SECTION
+
+Another long POD line in the second section that exceeds seventy two char
+
+=cut
+
+my $end = 3;
+END_CODE
+
+  # Should report violations at lines 5 and 13
+  # Currently this will FAIL because POD lines report as line 1
+  line_numbers(
+    $multi_pod_code,
+    [ 5, 13 ],
+    "Multiple POD sections should report correct line numbers"
+  );
+};
+
+subtest "POD with code snippets" => sub {
+  my $pod_with_code = <<'END_CODE';
+=pod
+
+=head1 EXAMPLES
+
+  # This code example within POD is long and exceeds seventy two char!!!!
+  my $example_variable_with_very_long_name = "this makes line too long!";
+
+=cut
+END_CODE
+
+  # Should report violations at lines 5 and 6
+  # Currently this will FAIL because POD lines report as line 1
+  line_numbers(
+    $pod_with_code,
+    [ 5, 6 ],
+    "Long lines within POD code examples should report correct line numbers"
+  );
+};
+
+subtest "Comment line number reporting edge cases" => sub {
+  my $comment_code = <<'END_CODE';
+my $var = 1;
+# This is a long comment that exceeds the seventy two character limit!!!!
+my $other = 2;
+END_CODE
+
+  # Comment violations should work correctly (this is the control case)
+  line_numbers($comment_code, [2],
+    "Comment long lines should report correct line numbers");
+};
+
+subtest "Empty POD blocks" => sub {
+  my $empty_pod_code = <<'END_CODE';
+my $var = 1;
+
+=pod
+
+=cut
+
+my $very_long_variable_name_that_exceeds_seventy_two_char_limit_after_pod = "v";
+END_CODE
+
+  # Should report violation at line 7
+  line_numbers($empty_pod_code, [7],
+    "Code after empty POD should report correct line numbers");
+};
+
+done_testing;
