@@ -6,6 +6,7 @@ use warnings;
 use feature "signatures";
 no warnings "experimental::signatures";
 
+use List::Util          qw( any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 use parent "Perl::Critic::Policy";
 
@@ -65,10 +66,12 @@ sub parse_quote_token ($self, $elem) {
     my ($op, $start_delim, $rest) = ($1, $2, $3);
     my $end_delim = $start_delim;
 
-    if    ($start_delim eq "(") { $end_delim = ")" }
-    elsif ($start_delim eq "[") { $end_delim = "]" }
-    elsif ($start_delim eq "{") { $end_delim = "}" }
-    elsif ($start_delim eq "<") { $end_delim = ">" }
+    $end_delim
+      = $start_delim eq "(" ? ")"
+      : $start_delim eq "[" ? "]"
+      : $start_delim eq "{" ? "}"
+      : $start_delim eq "<" ? ">"
+      :                       $start_delim;
     # Non-bracket delimiters use same char for start/end
 
     $rest =~ s/\Q$end_delim\E\z//;
@@ -140,9 +143,8 @@ sub find_optimal_delimiter (
   }
 
   my $current_is_optimal = 0;
-  if ($current_is_bracket && $current_delim) {
-    $current_is_optimal = ($current_delim eq $optimal);
-  }
+  $current_is_optimal = ($current_delim eq $optimal)
+    if $current_is_bracket && $current_delim;
 
   ($optimal, $current_is_optimal)
 }
@@ -271,11 +273,9 @@ sub check_qq_interpolate ($self, $elem) {
 
   my $string = $elem->string;
 
-  # Preserve qq() if escape sequences need interpretation
-  if ($self->_has_dangerous_escape_sequences($string)) {
-    # Only preserve qq() if escape sequences are actually needed
-    return $self->check_delimiter_optimisation($elem);
-  }
+  # Only preserve qq() if escape sequences are actually needed
+  return $self->check_delimiter_optimisation($elem)
+    if $self->_has_dangerous_escape_sequences($string);
 
   my $double_quote_suggestion
     = $self->_what_would_double_quotes_suggest($string);
@@ -288,9 +288,8 @@ sub check_qq_interpolate ($self, $elem) {
   }
 
   # Rule 2: If double quotes would suggest qq(), qq() is appropriate
-  if ($double_quote_suggestion && $double_quote_suggestion eq "qq()") {
-    return $self->check_delimiter_optimisation($elem);
-  }
+  return $self->check_delimiter_optimisation($elem)
+    if $double_quote_suggestion && $double_quote_suggestion eq "qq()";
 
   # Rule 3: Otherwise prefer simple double quotes unless delimiter chars present
   my $has_special_chars
@@ -298,11 +297,9 @@ sub check_qq_interpolate ($self, $elem) {
     || index($string, "'") != -1
     || $self->would_interpolate($string);
 
-  if (!$has_special_chars) {
-    return $self->violation($Desc, $Expl_double, $elem);
-  }
-
-  return $self->check_delimiter_optimisation($elem);
+  $has_special_chars
+    ? $self->check_delimiter_optimisation($elem)
+    : $self->violation($Desc, $Expl_double, $elem)
 }
 
 sub check_quote_operators ($self, $elem) {
@@ -313,7 +310,6 @@ sub check_quote_operators ($self, $elem) {
   return unless defined $current_start;
 
   # Don't skip empty content - () is preferred even for empty quotes
-
   my ($optimal_delim, $current_is_optimal)
     = $self->find_optimal_delimiter($content, $operator, $current_start,
       $current_end);
@@ -329,13 +325,12 @@ sub check_use_statement ($self, $elem) {
   # Only check 'use' statements, not 'require' or 'no'
   return unless $elem->type eq "use";
 
-  my @args = $self->_extract_use_arguments($elem);
-  return unless @args;
+  my @args = $self->_extract_use_arguments($elem) or return;
 
   my ($string_count, $has_qw, $qw_uses_parens)
     = $self->_analyze_use_arguments(@args);
-  return $self->_check_use_violations($elem, $string_count, $has_qw,
-    $qw_uses_parens, @args);
+  $self->_check_use_violations($elem, $string_count, $has_qw, $qw_uses_parens,
+    @args)
 }
 
 sub _extract_use_arguments ($self, $elem) {
@@ -358,7 +353,7 @@ sub _extract_use_arguments ($self, $elem) {
     }
   }
 
-  return @args;
+  @args
 }
 
 sub _analyze_use_arguments ($self, @args) {
@@ -371,56 +366,38 @@ sub _analyze_use_arguments ($self, @args) {
       \$qw_uses_parens);
   }
 
-  return ($string_count, $has_qw, $qw_uses_parens);
+  ($string_count, $has_qw, $qw_uses_parens)
 }
 
 sub _check_use_violations ($self, $elem, $string_count, $has_qw,
   $qw_uses_parens, @args,)
 {
-  my @violations;
+  return $self->violation($Desc, $Expl_use_qw, $elem)
+    if ($has_qw && !$qw_uses_parens)             # qw() without parens
+    || ($has_qw && $string_count > 0)            # Mixed qw() and quotes
+    || ($string_count > 1 && !$has_qw)           # Multiple strings
+    || (
+      $string_count == 1 && !$has_qw &&          # Single quotes
+      any { $_->isa("PPI::Token::Quote::Single") } @args
+    );
 
-  if ($string_count == 1 && !$has_qw) {
-    for my $arg (@args) {
-      if ($arg->isa("PPI::Token::Quote::Single")) {
-        push @violations, $self->violation($Desc, $Expl_use_qw, $elem);
-        last;
-      }
-    }
-  }
-
-  if ($string_count > 1 && !$has_qw) {
-    push @violations, $self->violation($Desc, $Expl_use_qw, $elem);
-  }
-
-  if ($string_count > 0 && $has_qw) {
-    push @violations, $self->violation($Desc, $Expl_use_qw, $elem);
-  }
-
-  if ($has_qw && !$qw_uses_parens) {
-    push @violations, $self->violation($Desc, $Expl_use_qw, $elem);
-  }
-
-  return @violations;
+  ()
 }
 
 sub _count_use_arguments ($self, $elem, $string_count_ref, $has_qw_ref,
   $qw_uses_parens_ref,)
 {
 
-  if ( $elem->isa("PPI::Token::Quote::Single")
+  $$string_count_ref++
+    if $elem->isa("PPI::Token::Quote::Single")
     || $elem->isa("PPI::Token::Quote::Double")
     || $elem->isa("PPI::Token::Quote::Literal")
-    || $elem->isa("PPI::Token::Quote::Interpolate"))
-  {
-    $$string_count_ref++;
-  }
+    || $elem->isa("PPI::Token::Quote::Interpolate");
 
   if ($elem->isa("PPI::Token::QuoteLike::Words")) {
     $$has_qw_ref = 1;
     my $content = $elem->content;
-    if ($content !~ /\Aqw\s*\(/) {
-      $$qw_uses_parens_ref = 0;
-    }
+    $$qw_uses_parens_ref = 0 if $content !~ /\Aqw\s*\(/;
   }
 
   # Recursively check children (for structures like lists)
@@ -439,7 +416,7 @@ sub _is_in_use_statement ($self, $elem) {
       if $current->isa("PPI::Statement::Include") && $current->type eq "use";
     $current = $current->parent;
   }
-  return 0;
+  0
 }
 
 sub _what_would_double_quotes_suggest ($self, $string) {
@@ -459,7 +436,7 @@ sub _what_would_double_quotes_suggest ($self, $string) {
   }
 
   # Rule 3: Otherwise double quotes are fine
-  return undef;
+  undef
 }
 
 sub _has_dangerous_escape_sequences ($self, $string) {
@@ -469,7 +446,7 @@ sub _has_dangerous_escape_sequences ($self, $string) {
   #
   # This only includes escape sequences where the conversion would change
   # the actual output, not just the internal representation.
-  return $string =~ /
+  $string =~ /
     \\(?:
       [tnrfbae]           |  # Single char escapes: \t \n \r \f \b \a \e
       x[0-9a-fA-F]*       |  # Hex escapes: \x1b \xff
@@ -479,14 +456,14 @@ sub _has_dangerous_escape_sequences ($self, $string) {
       c.                  |  # Control chars: \c[ \cA
       N\{[^}]*\}             # Named chars: \N{name} \N{U+263A}
     )
-  /x;
+  /x
 }
 
 sub _has_literal_escape_sigils ($self, $string) {
   # Check if string contains literal \$ or \@ that would have different
   # meanings between single and double quotes when converting FROM
   # single quotes TO double quotes (not the other direction).
-  return $string =~ /\\[\$\@]/;
+  $string =~ /\\[\$\@]/
 }
 
 1;

@@ -18,7 +18,7 @@ sub find_violations ($policy, $code) {
   my @violations;
 
   # Get the types this policy applies to
-  my @applies_to = $policy->applies_to();
+  my @applies_to = $policy->applies_to;
 
   # Handle policies that apply to PPI::Document directly
   if (@applies_to == 1 && $applies_to[0] eq "PPI::Document") {
@@ -42,7 +42,7 @@ sub find_violations ($policy, $code) {
 sub count_violations ($policy, $code, $expected_violations, $description) {
   my @violations = find_violations($policy, $code);
   Test2::V0::is @violations, $expected_violations, $description;
-  return @violations;
+  @violations
 }
 
 sub good ($policy, $code, $description) {
