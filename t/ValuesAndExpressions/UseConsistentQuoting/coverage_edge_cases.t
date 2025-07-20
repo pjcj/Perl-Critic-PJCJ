@@ -24,8 +24,10 @@ subtest "Edge cases for uncovered lines" => sub {
   # This should be impossible based on the logic, but let's test edge cases
 
   # Edge case: try strings with special characters that might confuse the parser
-  bad $Policy, q(my $x = 'text with \n newline but no interpolation'),
-    'use ""', 'Single quotes with escape sequences should use double quotes';
+  # Note: strings with escape sequences in single quotes should stay single
+  # quotes because \n has different meanings: literal in '', newline in ""
+  good $Policy, q(my $x = 'text with \n newline but no interpolation'),
+    'Single quotes with escape sequences should stay single quotes';
 
   # Test for line 291: q() cases that might fall through all conditions
   # Looking for: has_double_quotes && would_interpolate && !has_dollar &&

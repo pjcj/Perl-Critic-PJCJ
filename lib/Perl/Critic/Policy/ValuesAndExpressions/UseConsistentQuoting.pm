@@ -217,6 +217,13 @@ sub check_single_quoted ($self, $elem) {
   # in double quotes
   my $would_interpolate = $self->would_interpolate($string);
 
+  # Check if string contains escape sequences that would have different meanings
+  # in single vs double quotes. If so, preserve single quotes.
+  # In single quotes: \n, \t, \$, \@, etc. are literal backslash + character
+  # In double quotes: these become actual escape sequences with special meaning
+  return
+    if $string =~ /\\[nt\$\@rfbae0-7x]/;  # Common escape sequences
+
   # If content would not interpolate in double quotes, suggest double quotes
   return $self->violation($Desc, $Expl_double, $elem)
     if !$would_interpolate && index($string, '"') == -1;

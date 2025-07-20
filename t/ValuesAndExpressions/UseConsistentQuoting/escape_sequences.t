@@ -61,6 +61,59 @@ subtest "True variable interpolation should keep single quotes" => sub {
     "Complex variable reference should stay single quotes";
 };
 
+subtest "Escape sequences in single quotes should NOT suggest double quotes" =>
+  sub {
+  # Single quotes with literal backslash-escape sequences should NOT suggest
+  # double quotes because that would change their meaning from literal to
+  # escaped
+
+  # Literal backslash-n in single quotes should stay single quotes
+  # (in '' it's literal \n, in "" it would become newline)
+  good $Policy, q(my $literal_newline = 'text with \\n literal'),
+    'Literal \n in single quotes should stay single quotes';
+
+  # Literal backslash-t in single quotes should stay single quotes
+  # (in '' it's literal \t, in "" it would become tab)
+  good $Policy, q(my $literal_tab = 'text with \\t literal'),
+    'Literal \t in single quotes should stay single quotes';
+
+  # Literal backslash-dollar in single quotes should stay single quotes
+  # (in '' it's literal \$, in "" it would become escaped $)
+  good $Policy, q{my $literal_dollar = 'price: \\$5.00'},
+    'Literal \$ in single quotes should stay single quotes';
+
+  # Literal backslash-at in single quotes should stay single quotes
+  # (in '' it's literal \@, in "" it would become escaped @)
+  good $Policy, q{my $literal_at = 'email: user\\@domain.com'},
+    'Literal \@ in single quotes should stay single quotes';
+
+  # Complex case with multiple literal escapes should stay single quotes
+  good $Policy, q{my $complex = 'path: C:\\new\\folder with \\$var'},
+    'Multiple literal escapes in single quotes should stay single quotes';
+};
+
+subtest "Variables in single quotes are not suggested for interpolation" =>
+  sub {
+  # These test that the policy doesn't suggest interpolating actual variables
+  # Variables in single quotes should stay literal (not interpolated)
+
+  # Variable that exists in scope should not suggest interpolation
+  good $Policy, q(my $x = '$var literal'),
+    'Variables in single quotes should stay literal';
+
+  # Array reference should not suggest interpolation
+  good $Policy, q(my $x = '@arr literal'),
+    'Array refs in single quotes should stay literal';
+
+  # Hash reference should not suggest interpolation
+  good $Policy, q(my $x = '$hash{key} literal'),
+    'Hash refs in single quotes should stay literal';
+
+  # Email addresses with @ should not suggest interpolation
+  good $Policy, q(my $email = 'user@domain.com'),
+    'Email addresses should stay in single quotes';
+};
+
 subtest "Edge cases with backslashes" => sub {
   # Test boundary conditions
 
