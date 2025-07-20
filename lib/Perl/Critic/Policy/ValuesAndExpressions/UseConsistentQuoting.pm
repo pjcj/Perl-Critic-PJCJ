@@ -116,18 +116,18 @@ sub find_optimal_delimiter (
 
   for my $delim (@delimiters) {
     my $count = 0;
-    for my $char (@{ $delim->{chars} }) {
+    for my $char ($delim->{chars}->@*) {
       $count += () = $content =~ /\Q$char\E/g;
     }
-    $delim->{escape_count} = $count;
+    $delim->{count} = $count;
   }
 
   my $min_count
-    = (sort { $a <=> $b } map { $_->{escape_count} } @delimiters)[0];
+    = (sort { $a <=> $b } map { $_->{count} } @delimiters)[0];
 
   # Find optimal delimiter: handle unbalanced content, then preference order
   my ($optimal) = sort {
-    $a->{escape_count} <=> $b->{escape_count} ||  # Handle unbalanced first
+    $a->{count} <=> $b->{count} ||  # Handle unbalanced first
       $self->delimiter_preference_order($a->{start}) <=>  # Then prefer by order
       $self->delimiter_preference_order($b->{start})
   } @delimiters;
