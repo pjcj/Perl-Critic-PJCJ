@@ -86,8 +86,8 @@ subtest "Consistency verification" => sub {
     'suggested form for q(has "quotes") should not violate';
   good $Policy, q(my $x = "don't";),
     "suggested form for q(don't) should not violate";
-  good $Policy, q(my $x = 'price: \\$5.00';),
-    'suggested form for qq(price: $5.00) should not violate';
+  good $Policy, q(my $x = 'price: $5.00';),
+    'suggested form for qq(price: \\$5.00) should not violate';
 
   # These complex cases should not violate when using q()/qq() with optimal
   # delimiters

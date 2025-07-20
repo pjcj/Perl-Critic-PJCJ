@@ -213,10 +213,6 @@ sub check_single_quoted ($self, $elem) {
   # Check if string has escaped single quotes - then double quotes are better
   return $self->violation($Desc, $Expl_double, $elem) if $content =~ /\\'/;
 
-  # Check if this content has literal $ or @ that shouldn't be interpolated
-  # Single quotes are justified when content has sigils that should be literal
-  return if $string =~ /[\$\@]/;  # Contains literal $ or @ - justified
-
   # Use PPI's interpolations() method to test if this content would interpolate
   # in double quotes
   my $would_interpolate = $self->would_interpolate($string);

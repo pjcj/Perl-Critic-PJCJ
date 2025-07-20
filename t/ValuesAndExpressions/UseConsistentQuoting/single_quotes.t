@@ -79,7 +79,7 @@ subtest "Mixed quote content" => sub {
 
   # Single quotes with interpolatable content and double quotes are justified
   good $Policy, q(my $x = 'literal $var with "quotes"'),
-    'Single quotes justified when content has both interpolation and quotes';
+    "Single quotes justified when content has both interpolation and quotes";
   good $Policy, q(my $x = 'email@domain.com has "quotes"'),
     'Single quotes justified when content has @ and double quotes';
 };

@@ -43,9 +43,9 @@ subtest "q() operator" => sub {
     "q() with only double quotes should recommend single quotes";
 
   # When q() is justified but delimiter can be optimized
-  bad $Policy, q[my $x = q{has 'single' and "double" quotes}], "use q()",
+  bad $Policy, q(my $x = q{has 'single' and "double" quotes}), "use q()",
     "q{} with both quote types should optimize delimiter to q()";
-  bad $Policy, q[my $x = q[has 'single' and "double" quotes]], "use q()",
+  bad $Policy, q(my $x = q[has 'single' and "double" quotes]), "use q()",
     "q[] with both quote types should optimize delimiter to q()";
 
   # Test case that should reach the has_quotes branch in q literal
@@ -118,15 +118,15 @@ subtest "qq() operator" => sub {
     "qq() justified when content has interpolation and double quotes";
 
   # When qq() has single quotes (special chars) but double quotes would be fine
-  good $Policy, q(my $x = qq(string with 'single' quotes)),
+  good $Policy, q[my $x = qq(string with 'single' quotes)],
     "qq() justified when content has single quotes that need interpolation";
 
   # When qq() is justified due to single quotes and uses optimal delimiter
-  good $Policy, q(my $x = qq(interpolated $var with 'quotes')),
+  good $Policy, q[my $x = qq(interpolated $var with 'quotes')],
     "qq() justified when content has interpolation and single quotes";
 
   # When qq() suggestion comes from double quotes analysis
-  good $Policy, q(my $x = qq(content with "double" and 'single' quotes)),
+  good $Policy, q[my $x = qq(content with "double" and 'single' quotes)],
     "qq() justified when content has both quote types needing interpolation";
 };
 
