@@ -337,12 +337,8 @@ sub check_qq_interpolate ($self, $elem) {
     return $self->violation($Desc, $Expl_double, $elem);
   }
 
-  # If qq() is justified, optimize delimiter; otherwise suggest double quotes
-  my $delimiter_violation = $self->check_delimiter_optimisation($elem);
-  return $delimiter_violation                         if $delimiter_violation;
-  return $self->violation($Desc, $Expl_double, $elem) if !$has_special_chars;
-
-  return;
+  # If qq() is justified, optimize delimiter
+  return $self->check_delimiter_optimisation($elem);
 }
 
 sub check_quote_operators ($self, $elem) {
