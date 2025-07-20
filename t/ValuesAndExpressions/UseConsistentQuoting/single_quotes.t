@@ -64,6 +64,8 @@ subtest "Mixed quote content" => sub {
   # better delimiter
   bad $Policy, q(my $x = q[has 'single' and "double" quotes]), "use q()",
     "q[] with both quote types should recommend q() for optimal delimiter";
+  bad $Policy, q(my $x = q{contains 'single' and "double" quotes}), "use q()",
+    "q{} with both quote types should recommend q() for optimal delimiter";
 
   # When content has only single quotes - should recommend double quotes
   bad $Policy, q[my $x = q(has 'single' quotes)], 'use ""',
@@ -74,6 +76,12 @@ subtest "Mixed quote content" => sub {
   # interpolate)
   good $Policy, q[my $x = q($x ')],
     'q() is justified when content has both $ and single quote';
+
+  # Single quotes with interpolatable content and double quotes are justified
+  good $Policy, q(my $x = 'literal $var with "quotes"'),
+    'Single quotes justified when content has both interpolation and quotes';
+  good $Policy, q(my $x = 'email@domain.com has "quotes"'),
+    'Single quotes justified when content has @ and double quotes';
 };
 
 done_testing;
