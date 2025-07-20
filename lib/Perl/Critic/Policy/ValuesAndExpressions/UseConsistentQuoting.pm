@@ -219,10 +219,20 @@ sub check_single_quoted ($self, $elem) {
 
   # Check if string contains escape sequences that would have different meanings
   # in single vs double quotes. If so, preserve single quotes.
-  # In single quotes: \n, \t, \$, \@, etc. are literal backslash + character
+  # In single quotes: these are literal backslash + character
   # In double quotes: these become actual escape sequences with special meaning
-  return
-    if $string =~ /\\[nt\$\@rfbae0-7x]/;  # Common escape sequences
+  return if $string =~ /
+    \\(?:
+      [tnrfbae]           |  # Single char escapes: \t \n \r \f \b \a \e
+      [\$\@]              |  # Variable sigils: \$ \@
+      x[0-9a-fA-F]*       |  # Hex escapes: \x1b \xff
+      x\{[^}]*\}          |  # Hex braces: \x{1b} \x{263A}
+      [0-7]{1,3}          |  # Octal: \033 \377
+      o\{[^}]*\}          |  # Octal braces: \o{033}
+      c.                  |  # Control chars: \c[ \cA
+      N\{[^}]*\}             # Named chars: \N{name} \N{U+263A}
+    )
+  /x;
 
   # If content would not interpolate in double quotes, suggest double quotes
   return $self->violation($Desc, $Expl_double, $elem)

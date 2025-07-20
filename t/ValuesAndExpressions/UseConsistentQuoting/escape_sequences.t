@@ -92,6 +92,52 @@ subtest "Escape sequences in single quotes should NOT suggest double quotes" =>
     'Multiple literal escapes in single quotes should stay single quotes';
 };
 
+subtest "All Perl escape sequences should stay in single quotes" => sub {
+  # Test all escape sequences from perlop documentation
+
+  # Single character escapes: \t \n \r \f \b \a \e
+  good $Policy, q(my $text = 'Line with \\r carriage return'),
+    'Literal \r in single quotes should stay single quotes';
+  good $Policy, q(my $text = 'Form \\f feed here'),
+    'Literal \f in single quotes should stay single quotes';
+  good $Policy, q(my $text = 'Backspace \\b here'),
+    'Literal \b in single quotes should stay single quotes';
+  good $Policy, q(my $text = 'Bell \\a sound'),
+    'Literal \a in single quotes should stay single quotes';
+  good $Policy, q(my $text = 'Escape \\e sequence'),
+    'Literal \e in single quotes should stay single quotes';
+
+  # Hex escapes: \x1b \xff \x{263A}
+  good $Policy, q(my $hex = 'Hex \\x1b escape'),
+    'Literal \x hex escape should stay single quotes';
+  good $Policy, q(my $hex = 'Hex \\xff value'),
+    'Literal \xff hex escape should stay single quotes';
+  good $Policy, q{my $hex = 'Unicode \\x{263A} smiley'},
+    'Literal \x{} hex escape should stay single quotes';
+
+  # Octal escapes: \033 \377 \o{033}
+  good $Policy, q(my $oct = 'Octal \\033 escape'),
+    'Literal \033 octal escape should stay single quotes';
+  good $Policy, q(my $oct = 'Octal \\377 max'),
+    'Literal \377 octal escape should stay single quotes';
+  good $Policy, q{my $oct = 'Octal \\o{033} braced'},
+    'Literal \o{} octal escape should stay single quotes';
+
+  # Control characters: \c[ \cA \c@
+  good $Policy, q(my $ctrl = 'Control \\c[ char'),
+    'Literal \c control char should stay single quotes';
+  good $Policy, q(my $ctrl = 'Control \\cA char'),
+    'Literal \cA control char should stay single quotes';
+  good $Policy, q(my $ctrl = 'Control \\c@ null'),
+    'Literal \c@ control char should stay single quotes';
+
+  # Named Unicode: \N{name} \N{U+263A}
+  good $Policy, q{my $named = 'Named \\N{SMILEY} char'},
+    'Literal \N{name} escape should stay single quotes';
+  good $Policy, q{my $named = 'Unicode \\N{U+263A} point'},
+    'Literal \N{U+} escape should stay single quotes';
+};
+
 subtest "Variables in single quotes are not suggested for interpolation" =>
   sub {
   # These test that the policy doesn't suggest interpolating actual variables
