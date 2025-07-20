@@ -61,4 +61,22 @@ subtest "Quote parsing edge cases" => sub {
     "escaped variables suggest single quotes";
 };
 
+subtest "q() delimiter optimization path" => sub {
+  # Test case to cover line 298 in check_q_literal
+  # This is reached when q() is justified but needs delimiter optimization
+
+  # Test: q() with both quote types - justified, optimize delimiter
+  bad $Policy, q(my $text = q[mix 'single' and "double"]), "use q()",
+    "q[] with mixed quotes should use q()";
+
+  # Test: q() with single quotes and interpolation - justified,
+  # optimize delimiter
+  bad $Policy, q(my $text = q|can't use $var|), "use q()",
+    "q| with single quotes and interpolation should use q()";
+
+  # Test: q() already using optimal delimiter should not violate
+  good $Policy, q[my $text = q(mix 'single' and "double")],
+    "q() with mixed quotes and optimal delimiter is justified";
+};
+
 done_testing;

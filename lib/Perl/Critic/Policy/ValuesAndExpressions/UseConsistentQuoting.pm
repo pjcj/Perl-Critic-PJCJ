@@ -288,11 +288,6 @@ sub check_q_literal ($self, $elem) {
     return $self->violation($Desc, $Expl_single, $elem);
   }
 
-  if ($would_interpolate && $string =~ /\$/ && !$has_single_quotes) {
-    # Only suggest single quotes if there are no single quotes to escape
-    return $self->violation($Desc, $Expl_single, $elem);
-  }
-
   # For simple content without quotes, prefer simpler quotes
   if (!$has_single_quotes && !$has_double_quotes) {
     return $self->violation($Desc, $Expl_single, $elem) if $would_interpolate;
