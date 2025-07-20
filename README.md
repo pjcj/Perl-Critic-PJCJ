@@ -46,30 +46,30 @@ simple rules:
 
 ```perl
 # Excessive punctuation
-my $greeting = 'hello';           # should use double quotes (Rule 2)
-my @words = qw{word(with)parens}; # should use qw[] (Rules 1, 3)
-my $file = q/path/to/file/;       # should use "" (Rules 1, 3)
-my $text = qq(simple);            # should use "" instead of qq() (Rule 1)
-my $literal = q(contains$literal); # should use '' instead of q() (Rule 1)
+my $greeting = 'hello';                     # use double quotes (Rule 2)
+my @words    = qw{word(with)parens};        # use qw[] (Rules 1, 3)
+my $file     = q/path/to/file/;             # use "" (Rules 1, 3)
+my $text     = qq(simple);                  # use "" instead of qq() (Rule 1)
+my $literal  = q(contains$literal);         # use '' instead of q() (Rule 1)
 ```
 
 **Good examples:**
 
 ```perl
 # Rule 1: Reduce punctuation
-my $greeting = "hello";           # double quotes for simple strings
-my $text = "simple";              # "" preferred over qq()
-my $literal = 'contains$literal'; # '' preferred over q()
-my $file = "path/to/file";        # "" reduces punctuation
+my $greeting = "hello";                     # double quotes for simple strings
+my $text     = "simple";                    # "" preferred over qq()
+my $literal  = 'contains$literal';          # '' preferred over q()
+my $file     = "path/to/file";              # "" reduces punctuation
 
 # Rule 2: Prefer interpolated strings
-my $email = 'user@domain.com';    # literal @ uses single quotes
-my $var = 'Price: $10';           # literal $ uses single quotes
+my $email = 'user@domain.com';              # literal @ uses single quotes
+my $var   = 'Price: $10';                   # literal $ uses single quotes
 
 # Rule 3: Optimal delimiter selection
-my @words = qw[word(with)parens]; # [] handles unbalanced parentheses
-my $cmd = qx(command[with]brackets); # () handles unbalanced brackets
-my @list = qw(one two);           # bracket delimiters only
+my @words = qw[ word(with)parens ];         # [] handles unbalanced parentheses
+my $cmd   = qx( command[with]brackets );    # () handles unbalanced brackets
+my @list  = qw( one two );                  # bracket delimiters only
 ```
 
 ### Perl::Critic::Policy::CodeLayout::LimitLineLength
@@ -209,5 +209,5 @@ Paul Johnson <paul@pjcj.net>
 
 Copyright 2025 Paul Johnson.
 
-This program is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.

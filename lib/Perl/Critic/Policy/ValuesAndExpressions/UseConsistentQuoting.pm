@@ -480,16 +480,16 @@ consistent and optimal quoting
 =head1 SYNOPSIS
 
   # Bad examples:
-  my $greeting = 'hello';           # simple strings should use double quotes
-  my @words = qw{word(with)parens}; # should use qw[] for unbalanced content
-  my $text = qq(simple);            # should use "" instead of qq()
-  my $file = q/path/to/file/;       # should use "" instead of q()
+  my $greeting = 'hello';                 # use double quotes for simple strings
+  my @words    = qw{word(with)parens};    # use qw[] for unbalanced content
+  my $text     = qq(simple);              # use "" instead of qq()
+  my $file     = q/path/to/file/;         # use "" instead of q()
 
   # Good examples:
-  my $greeting = "hello";           # double quotes for simple strings
-  my @words = qw[word(with)parens]; # optimal delimiter choice
-  my $text = "simple";              # "" preferred over qq()
-  my $file = "path/to/file";        # "" reduces punctuation
+  my $greeting = "hello";                 # double quotes for simple strings
+  my @words    = qw[ word(with)parens ];  # optimal delimiter choice
+  my $text     = "simple";                # "" preferred over qq()
+  my $file     = "path/to/file";          # "" reduces punctuation
 
 =head1 DESCRIPTION
 
@@ -502,14 +502,14 @@ Prefer fewer characters and simpler syntax. Prefer real quotes over quote-like
 operators when possible.
 
   # Good
-  my $text = "hello world";       # "" preferred over qq()
-  my $literal = 'contains$literal'; # '' preferred over q()
-  my $path = "path/to/file";      # simple quotes reduce punctuation
+  my $text    = "hello world";            # "" preferred over qq()
+  my $literal = 'contains$literal';       # '' preferred over q()
+  my $path    = "path/to/file";           # simple quotes reduce punctuation
 
   # Bad
-  my $text = qq(hello world);     # unnecessary quote operator
-  my $literal = q(contains$literal); # unnecessary quote operator
-  my $path = q/path/to/file/;     # unnecessary quote operator
+  my $text    = qq(hello world);          # unnecessary quote operator
+  my $literal = q(contains$literal);      # unnecessary quote operator
+  my $path    = q/path/to/file/;          # unnecessary quote operator
 
 =head2 Rule 2: Prefer interpolated strings
 
@@ -517,12 +517,12 @@ If it doesn't matter whether a string is interpolated or not, prefer the
 interpolated version (double quotes).
 
   # Good
-  my $name = "John";              # simple string uses double quotes
-  my $email = 'user@domain.com';  # literal @ uses single quotes
-  my $var = 'Price: $10';         # literal $ uses single quotes
+  my $name  = "John";                     # simple string uses double quotes
+  my $email = 'user@domain.com';          # literal @ uses single quotes
+  my $var   = 'Price: $10';               # literal $ uses single quotes
 
   # Bad
-  my $name = 'John';              # should use double quotes
+  my $name = 'John';                      # should use double quotes
 
 =head2 Rule 3: Use bracket delimiters in preference order
 
@@ -530,15 +530,15 @@ If the best choice is a quote-like operator, prefer C<()>, C<[]>, C<< <> >>,
 or C<{}> in that order.
 
   # Good
-  my @words = qw(simple list);     # () preferred when content is simple
-  my @data = qw[has(parens)];      # [] optimal - handles unbalanced ()
-  my $cmd = qx(has[brackets]);     # () optimal - handles unbalanced []
-  my $text = q(has<angles>);       # () optimal - handles unbalanced <>
+  my @words = qw( simple list );          # () preferred when content is simple
+  my @data  = qw[ has(parens) ];          # [] optimal - handles unbalanced ()
+  my $cmd   = qx( has[brackets] );        # () optimal - handles unbalanced []
+  my $text  = q( has<angles> );           # () optimal - handles unbalanced <>
 
   # Bad - exotic delimiters
-  my @words = qw/word word/;       # should use qw()
-  my $path = q|some|path|;         # should use ""
-  my $text = qq#some#text#;        # should use ""
+  my @words = qw/word word/;              # should use qw()
+  my $path  = q|some|path|;               # should use ""
+  my $text  = qq#some#text#;              # should use ""
 
 =head2 Special Case: Use statements
 
@@ -555,17 +555,17 @@ Use statements have special quoting requirements for their import lists:
 =back
 
   # Good
-  use Foo;                         # no arguments
-  use Bar ();                      # empty parentheses
-  use Baz "single_arg";            # one argument with double quotes
-  use Qux qw( single_arg );        # one argument with qw()
-  use Quux qw( arg1 arg2 arg3 );   # multiple arguments with qw()
+  use Foo;                                # no arguments
+  use Bar ();                             # empty parentheses
+  use Baz "single_arg";                   # one argument with double quotes
+  use Qux qw( single_arg );               # one argument with qw()
+  use Quux qw( arg1 arg2 arg3 );          # multiple arguments with qw()
 
   # Bad
-  use Foo 'single_arg';            # single quotes not allowed
-  use Bar "arg1", "arg2";          # multiple arguments need qw()
-  use Baz qw[ arg1 arg2 ];         # qw() must use parentheses only
-  use Qux qw{ arg1 arg2 };         # qw() must use parentheses only
+  use Foo 'single_arg';                   # single quotes not allowed
+  use Bar "arg1", "arg2";                 # multiple arguments need qw()
+  use Baz qw[ arg1 arg2 ];                # qw() must use parentheses only
+  use Qux qw{ arg1 arg2 };                # qw() must use parentheses only
 
 
 =head1 AFFILIATION
@@ -581,61 +581,61 @@ This Policy is not configurable except for the standard options.
 =head2 String Literals
 
   # Bad
-  my $greeting = 'hello';          # Rule 2: should use double quotes
-  my $email = "user@domain.com";   # Rule 2: should use single quotes
-                                   # (literal @)
-  my $path = 'C:\Program Files';   # Rule 2: should use double quotes
+  my $greeting = 'hello';                 # Rule 2: should use double quotes
+  my $email    = "user@domain.com";       # Rule 2: should use single quotes
+                                          # (literal @)
+  my $path     = 'C:\Program Files';      # Rule 2: should use double quotes
 
   # Good
-  my $greeting = "hello";          # double quotes for simple strings
-  my $email = 'user@domain.com';   # single quotes for literal @
-  my $path = "C:\\Program Files";  # double quotes handle backslashes
+  my $greeting = "hello";                 # double quotes for simple strings
+  my $email    = 'user@domain.com';       # single quotes for literal @
+  my $path     = "C:\\Program Files";     # double quotes handle backslashes
 
 =head2 Quote Operators
 
   # Bad
-  my $simple = q(hello);           # Rule 1: should use ''
-  my $text = qq(hello);            # Rule 1: should use ""
-  my @words = qw/one two/;         # Rule 3: should use qw()
-  my $cmd = qx|ls|;                # Rule 3: should use qx()
+  my $simple = q(hello);                  # Rule 1: should use ''
+  my $text   = qq(hello);                 # Rule 1: should use ""
+  my @words  = qw/one two/;               # Rule 3: should use qw( )
+  my $cmd    = qx|ls|;                    # Rule 3: should use qx( )
 
   # Good
-  my $simple = 'hello$literal';    # single quotes for literal content
-  my $text = "hello";              # double quotes preferred
-  my @words = qw(one two);         # bracket delimiters only
-  my $cmd = qx(ls);                # bracket delimiters only
+  my $simple = 'hello$literal';           # single quotes for literal content
+  my $text   = "hello";                   # double quotes preferred
+  my @words  = qw( one two );             # bracket delimiters only
+  my $cmd    = qx( ls );                  # bracket delimiters only
 
 =head2 Optimal Delimiter Selection
 
   # Bad - unbalanced delimiters
-  my @list = qw(word(with)parens);       # Rules 1, 3: unbalanced () in content
-  my $cmd = qx[command[with]brackets];   # Rules 1, 3: unbalanced [] in content
-  my $text = q{word{with}braces};        # Rules 1, 3: unbalanced {} in content
+  my @list = qw(word(with)parens);        # Rules 1, 3: unbalanced () in content
+  my $cmd  = qx[command[with]brackets];   # Rules 1, 3: unbalanced [] in content
+  my $text = q{word{with}braces};         # Rules 1, 3: unbalanced {} in content
 
   # Good - balanced delimiters
-  my @list = qw[word(with)parens];       # [] handles parentheses in content
-  my $cmd = qx(command[with]brackets);   # () handles brackets in content
+  my @list = qw[ word(with)parens ];      # [] handles parentheses in content
+  my $cmd  = qx( command[with]brackets ); # () handles brackets in content
 
 =head2 Complex Content
 
   # When content has multiple quote types, quote-like operators may be needed
   my $both = qq(has 'single' and "double" quotes); # qq() handles both
-                                                   # quote types cleanly
+                                                    # quote types cleanly
 
 =head2 Use Statement Examples
 
   # Bad
-  use Foo 'single_arg';            # single quotes not allowed
-  use Bar "arg1", "arg2";          # multiple args need qw()
-  use Baz qw[ arg1 arg2 ];         # qw() must use parentheses
-  use Qux qw{ arg1 arg2 arg3 };    # qw() must use parentheses
+  use Foo 'single_arg';                   # single quotes not allowed
+  use Bar "arg1", "arg2";                 # multiple args need qw()
+  use Baz qw[ arg1 arg2 ];                # qw() must use parentheses
+  use Qux qw{ arg1 arg2 arg3 };           # qw() must use parentheses
 
   # Good
-  use Foo;                         # no arguments allowed
-  use Bar ();                      # empty parentheses allowed
-  use Baz "single_arg";            # one argument with double quotes
-  use Qux qw( single_arg );        # one argument with qw()
-  use Quux qw( arg1 arg2 arg3 );   # multiple arguments with qw() only
+  use Foo;                                # no arguments allowed
+  use Bar ();                             # empty parentheses allowed
+  use Baz "single_arg";                   # one argument with double quotes
+  use Qux qw( single_arg );               # one argument with qw()
+  use Quux qw( arg1 arg2 arg3 );          # multiple arguments with qw() only
 
 =head1 METHODS
 
@@ -750,7 +750,7 @@ Copyright 2025 Paul Johnson.
 
 =head1 LICENCE
 
-This program is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
 
 =cut
