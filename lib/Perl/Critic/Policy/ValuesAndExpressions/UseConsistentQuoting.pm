@@ -638,6 +638,10 @@ This Policy is not configurable except for the standard options.
 
 =head1 METHODS
 
+=head2 supported_parameters
+
+This policy has no configurable parameters.
+
 =head2 violates
 
 The main entry point for policy violation checking. Uses a dispatch table to
@@ -738,6 +742,13 @@ Handles C<qw()> and C<qx()> operators, focusing purely on delimiter
 optimisation according to Rules 1 and 3. These operators don't have simpler
 alternatives, so the policy only ensures they use the most appropriate
 delimiters to handle unbalanced content gracefully.
+
+=head2 check_use_statement
+
+Checks quoting consistency in C<use> statements. Enforces that single-argument
+use statements should use double quotes rather than C<qw()>, and that
+multi-argument use statements should always use C<qw()>. This promotes
+consistency and clarity in module import statements.
 
 =head1 AUTHOR
 

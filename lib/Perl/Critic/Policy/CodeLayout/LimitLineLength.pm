@@ -155,6 +155,12 @@ The maximum allowed line length in characters. Defaults to 80.
   my $error_message = "This is a very long error message that " .
     "exceeds the configured maximum";
 
+=head1 METHODS
+
+=head2 supported_parameters
+
+This method returns the parameters supported by this policy.
+
 =head1 AFFILIATION
 
 This Policy is part of the Perl::Critic::PJCJ distribution.

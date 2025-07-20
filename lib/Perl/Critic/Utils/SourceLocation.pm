@@ -69,6 +69,43 @@ This is a synthetic PPI element used by LimitLineLength policy to provide
 accurate line number reporting when no real PPI token exists on a line (such as
 within POD blocks).
 
+=head1 METHODS
+
+=head2 new
+
+  my $location = Perl::Critic::Utils::SourceLocation->new(
+    line_number   => 42,
+    column_number => 1,
+    content       => "line content",
+    filename      => "file.pl"
+  );
+
+Creates a new SourceLocation object. Parameters:
+
+=over 4
+
+=item * line_number (required) - The line number in the source file
+
+=item * column_number (optional) - The column number, defaults to 1
+
+=item * content (optional) - The content of the line, defaults to empty string
+
+=item * filename (optional) - The filename, can be undef
+
+=back
+
+=head2 is_policy
+
+  my $is_policy = $location->is_policy;  # Always returns 0
+
+Returns false to indicate this is not a Perl::Critic policy.
+
+=head2 filename
+
+  my $filename = $location->filename;
+
+Returns the filename associated with this location, or undef if none was set.
+
 =head1 AUTHOR
 
 Paul Johnson C<< <paul@pjcj.net> >>
