@@ -1,5 +1,5 @@
 .PHONY: show-deps install-deps reinstall-deps test format lint clean build \
-        install cover cover-html cover-compilation cover-nvim
+        install cover cover-html cover-compilation cover-nvim cover-all
 
 show-deps:
 	@dzil listdeps --develop
