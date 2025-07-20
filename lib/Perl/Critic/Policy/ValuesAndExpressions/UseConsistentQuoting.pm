@@ -268,34 +268,32 @@ sub check_q_literal ($self, $elem) {
   my $has_double_quotes = index($string, '"') != -1;
   my $would_interpolate = $self->would_interpolate($string);
 
-  # Rule 1: Reduce punctuation - check if simpler quotes would work
-  if ($has_single_quotes && $has_double_quotes) {
-    # q() justified when has both quote types - just optimize delimiter
-    return $self->check_delimiter_optimisation($elem);
+  # Has both quote types - q() avoids escaping
+  return $self->check_delimiter_optimisation($elem)
+    if $has_single_quotes && $has_double_quotes;
+
+  if ($has_single_quotes) {
+    return $would_interpolate
+      # Has single quotes and would interpolate - single quotes would need
+      # escaping, double quotes would interpolate
+      ? $self->check_delimiter_optimisation($elem)
+      # Only has single quotes, no interpolation - double quotes simpler
+      : $self->violation($Desc, $Expl_double, $elem);
   }
 
-  if ($has_single_quotes && $would_interpolate) {
-    # q() justified when has single quotes AND would interpolate
-    # (single quotes would need escaping, double quotes would interpolate)
-    return $self->check_delimiter_optimisation($elem);
+  if ($has_double_quotes) {
+    return $would_interpolate
+      # Has double quotes and would interpolate - single quotes would need
+      # escaping, double quotes would interpolate
+      ? $self->check_delimiter_optimisation($elem)
+      # Only has double quotes, no interpolation - single quotes simpler
+      : $self->violation($Desc, $Expl_single, $elem);
   }
 
-  if ($has_single_quotes && !$would_interpolate) {
-    return $self->violation($Desc, $Expl_double, $elem);
-  }
+  # Simple content without quotes - prefer simpler quotes
+  return $self->violation($Desc, $Expl_single, $elem) if $would_interpolate;
 
-  if ($has_double_quotes && !$would_interpolate) {
-    return $self->violation($Desc, $Expl_single, $elem);
-  }
-
-  # For simple content without quotes, prefer simpler quotes
-  if (!$has_single_quotes && !$has_double_quotes) {
-    return $self->violation($Desc, $Expl_single, $elem) if $would_interpolate;
-    return $self->violation($Desc, $Expl_double, $elem);
-  }
-
-  # Rule 2: If q() is justified, optimize delimiter
-  return $self->check_delimiter_optimisation($elem);
+  $self->violation($Desc, $Expl_double, $elem)
 }
 
 sub check_qq_interpolate ($self, $elem) {
