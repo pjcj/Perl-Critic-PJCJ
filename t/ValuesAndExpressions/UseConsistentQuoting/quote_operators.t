@@ -42,11 +42,11 @@ subtest "q() operator" => sub {
   bad $Policy, 'my $x = q(has "only" double quotes)', "use ''",
     "q() with only double quotes should recommend single quotes";
 
-  # When q() is justified but delimiter can be optimized
+  # When q() is justified but delimiter can be optimised
   bad $Policy, q(my $x = q{has 'single' and "double" quotes}), "use q()",
-    "q{} with both quote types should optimize delimiter to q()";
+    "q{} with both quote types should optimise delimiter to q()";
   bad $Policy, q(my $x = q[has 'single' and "double" quotes]), "use q()",
-    "q[] with both quote types should optimize delimiter to q()";
+    "q[] with both quote types should optimise delimiter to q()";
 
   # Test case that should reach the has_quotes branch in q literal
   good $Policy, q[my $x = q(string with both 'single' and "double" quotes)],
@@ -149,6 +149,35 @@ subtest "Priority rules" => sub {
   bad $Policy, 'my $x = q(literal$x)', "use ''",
     "q() should use single quotes for literal content";
   good $Policy, q(my $x = 'literal$x'), "Single quotes preferred over q()";
+};
+
+subtest "Additional q() operator coverage tests" => sub {
+  # Try edge case with @ but no $ and double quotes
+  bad $Policy, 'my $x = q(user@domain.com "needs" quoting)', "use ''",
+    'q() with @ and double quotes should suggest single quotes';
+
+  # Try case that might have interpolation issues with complex content
+  bad $Policy, 'my $x = q(complex@email.com with "embedded quotes" text)',
+    "use ''", 'q() with @ and double quotes should suggest single quotes';
+
+  # Edge case: content that might confuse the would_interpolate method
+  # q() with \@ is preserved because \@ would have different meaning
+  # in double quotes
+  good $Policy, q(my $x = q(\@escaped at sign with "quotes")),
+    'q() with escaped @ should stay q()';
+
+  # Test q() with escaped sigils and quotes
+  # q() with \$ or \@ is preserved because they would have different
+  # meaning in double quotes
+  good $Policy, q(my $x = q(\$var and "quotes" together)),
+    "q() with escaped dollar should stay q()";
+
+  good $Policy, q(my $x = q(\@var and "quotes" together)),
+    "q() with escaped at should stay q()";
+
+  # Test q() with content that might not be handled by early returns
+  bad $Policy, 'my $x = q(text with "quotes" and \\ escapes)', "use ''",
+    "q() with quotes and escapes should suggest single quotes";
 };
 
 done_testing;

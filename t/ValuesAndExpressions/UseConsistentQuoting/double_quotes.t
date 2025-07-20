@@ -54,4 +54,19 @@ subtest "Interpolation with quotes" => sub {
     "qq() appropriate when content has both quote types";
 };
 
+subtest "Additional double quote coverage tests" => sub {
+  # Test to hit the condition in double quote checking (line 292)
+  # This should exercise: $would_interpolate and not $has_single_quotes
+  good $Policy, 'my $x = "simple";',
+    "simple double quoted string is acceptable";
+
+  # Test interpolation cases to exercise would_interpolate branches
+  good $Policy, 'my $x = "variable: $var";',
+    "double quotes justified by interpolation";
+  good $Policy, 'my $x = "array: @arr";',
+    "double quotes justified by array interpolation";
+  bad $Policy, 'my $x = "escaped: \\$var";', "use ''",
+    "escaped variables suggest single quotes";
+};
+
 done_testing;

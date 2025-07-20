@@ -240,4 +240,29 @@ subtest "q() with other delimiter operators" => sub {
   good $Policy, 'my $x = qx(command[with]brackets)', "qx() with brackets";
 };
 
+subtest "q() delimiter optimisation path coverage" => sub {
+  # Test cases to cover when q() is justified and needs delimiter optimisation
+
+  # Test: q() with both quote types - justified, optimise delimiter
+  bad $Policy, q(my $text = q[mix 'single' and "double"]), "use q()",
+    "q[] with mixed quotes should use q()";
+
+  # Test: q() with single quotes and interpolation - justified,
+  # optimise delimiter
+  bad $Policy, q(my $text = q|can't use $var|), "use q()",
+    "q| with single quotes and interpolation should use q()";
+
+  # Test: q() with double quotes and interpolation - justified,
+  # optimise delimiter
+  bad $Policy, q(my $text = q|Hello "there" $name|), "use q()",
+    "q| with double quotes and interpolation should use q()";
+
+  # Test: q() already using optimal delimiter should not violate
+  good $Policy, q[my $text = q(mix 'single' and "double")],
+    "q() with mixed quotes and optimal delimiter is justified";
+
+  good $Policy, q[my $text = q(Hello "there" $name)],
+    "q() with double quotes and interpolation is justified";
+};
+
 done_testing;

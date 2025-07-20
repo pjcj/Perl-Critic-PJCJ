@@ -241,4 +241,17 @@ subtest "Edge cases with backslashes" => sub {
     "Simple apostrophe in double quotes is acceptable";
 };
 
+subtest "Additional escape sequence tests" => sub {
+  # Test cases that might confuse the PPI parser in would_interpolate
+  # Complex strings that might not parse correctly in double quotes
+  good $Policy, q(my $x = 'text with " and \\ and other escapes'),
+    'Single quotes for complex escape sequences';
+
+  # Single quotes with escape sequences should stay single quotes
+  # Note: strings with escape sequences in single quotes should stay single
+  # quotes because \n has different meanings: literal in '', newline in ""
+  good $Policy, q(my $x = 'text with \n newline but no interpolation'),
+    'Single quotes with escape sequences should stay single quotes';
+};
+
 done_testing;

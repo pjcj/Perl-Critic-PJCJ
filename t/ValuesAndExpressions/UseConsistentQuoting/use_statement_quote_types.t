@@ -72,4 +72,16 @@ subtest "Edge cases for coverage" => sub {
     "no statement qq() is processed by regular quote logic";
 };
 
+subtest "Use statement structure parsing coverage" => sub {
+  # Test to hit the semicolon condition (line 373)
+  # $child->isa("PPI::Token::Structure") and $child->content eq ";"
+  bad $Policy, 'use Foo "arg1", "arg2";', "use qw()",
+    "use statement with semicolon and multiple args";
+
+  # Test to hit condition line 410: $string_count > 1 and not $has_qw
+  # This should be triggered by multiple string arguments without qw
+  bad $Policy, 'use Foo "arg1", "arg2", "arg3"', "use qw()",
+    "three string arguments without qw should violate";
+};
+
 done_testing;
