@@ -31,7 +31,7 @@ sub find_violations ($policy, $code) {
     $doc->find(
       sub ($top, $elem) {
         push @violations, $policy->violates($elem, $doc) if $elem->isa($type);
-        0  # Don't descend further
+        0
       }
     );
   }

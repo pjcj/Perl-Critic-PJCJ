@@ -18,20 +18,17 @@ my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
 subtest "Double quoted strings" => sub {
-  # Should NOT violate - appropriate use of double quotes
   good $Policy, 'my $x = "hello"', "Double quoted simple string";
   good $Policy, 'my $x = "It\'s a nice day"',
     "String with single quote needs double quotes";
   good $Policy, 'my $x = "Hello $name"',
     "String with interpolation needs double quotes";
 
-  # Mixed escaped and real interpolation
   good $Policy, 'my $mixed = "\$a $b"',
     "Mixed escaped and real interpolation should stay double quotes";
 };
 
 subtest "Escaped special characters" => sub {
-  # Should violate - escaped characters that should use single quotes
   bad $Policy, 'my $output = "Price: \$10"', "use ''",
     "Escaped dollar signs should use single quotes";
   bad $Policy, 'my $email = "\@domain"', "use ''",

@@ -61,7 +61,7 @@ sub _find_token_on_line ($self, $doc, $target_line) {
       my $line = $elem->line_number;
       if (defined $line && $line == $target_line) {
         $found_token = $elem;
-        return 1;  # Stop searching
+        return 1;
       }
       return 0;
     }
