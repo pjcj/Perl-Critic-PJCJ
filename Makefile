@@ -54,4 +54,3 @@ cover-nvim: cover
 cover-all: cover
 	cover --report=nvim
 	cover --report=compilation
-	cover --report=html_basic --launch
