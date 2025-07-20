@@ -36,10 +36,9 @@ line length limits.
 
 =item L<Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting>
 
-Enforces consistent and optimal quoting practices. This policy combines two
-requirements: simple strings (containing no double quotes or @ symbols) should
-use double quotes, and quote-like operators should use delimiters that minimise
-escape characters.
+Enforces consistent and optimal quoting practices through three simple rules:
+reduce punctuation, prefer interpolated strings, and use bracket delimiters
+in preference order.
 
 =item L<Perl::Critic::Policy::CodeLayout::LimitLineLength>
 
