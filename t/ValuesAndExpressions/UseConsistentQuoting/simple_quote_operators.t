@@ -17,67 +17,58 @@ use ViolationFinder qw(find_violations count_violations good bad);
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
-# Helper subs that use the common policy
-sub good_code ($code, $description) {
-  ViolationFinder::good($Policy, $code, $description);
-}
-
-sub check_message ($code, $expected_message, $description) {
-  bad($Policy, $code, $expected_message, $description);
-}
-
 subtest "q() with simple strings - follow single quote rules" => sub {
   # Case 1: Simple strings that would cause single quotes to suggest double
   # quotes
-  check_message 'my $x = q(simple);', 'use ""',
+  bad $Policy, 'my $x = q(simple);', 'use ""',
     "q() with simple string should suggest double quotes";
-  check_message 'my $x = q{simple};', 'use ""',
+  bad $Policy, 'my $x = q{simple};', 'use ""',
     "q{} with simple string should suggest double quotes";
 
   # Case 2: Strings where single quotes would be acceptable
-  check_message 'my $x = q(has "quotes");', "use ''",
+  bad $Policy, 'my $x = q(has "quotes");', "use ''",
     "q() with content that justifies single quotes should suggest them";
-  check_message 'my $x = q{$variable};', "use ''",
+  bad $Policy, 'my $x = q{$variable};', "use ''",
     "q{} with variable content should suggest single quotes";
 
   # Case 3: Strings that would cause single quotes to suggest double quotes
   # (because they contain single quotes but no variables)
-  check_message q[my $x = q(don't);], 'use ""',
+  bad $Policy, q[my $x = q(don't);], 'use ""',
     "q() with embedded single quote should suggest double quotes";
-  check_message q(my $x = q{user's};), 'use ""',
+  bad $Policy, q(my $x = q{user's};), 'use ""',
     "q{} with embedded single quote should suggest double quotes";
 
   # Case 3: Strings that would cause single quotes to need q()
   # (because they have both single and double quotes)
-  check_message q(my $x = q/mix 'single' and "double"/;), "use q()",
+  bad $Policy, q(my $x = q/mix 'single' and "double"/;), "use q()",
     "q/ with mixed quotes should suggest q()";
-  check_message q(my $x = q|mix 'single' and "double"|;), "use q()",
+  bad $Policy, q(my $x = q|mix 'single' and "double"|;), "use q()",
     "q| with mixed quotes should suggest q()";
 
   # Case 4: Strings that have single quotes that would need escaping
-  check_message q(my $x = q/can't and won't/;), 'use ""',
+  bad $Policy, q(my $x = q/can't and won't/;), 'use ""',
     "q/ with single quotes should suggest double quotes";
 };
 
 subtest "qq() with simple strings - follow double quote rules" => sub {
   # Case 1: Simple strings that would be fine as double quotes
-  check_message 'my $x = qq(simple);', 'use ""',
+  bad $Policy, 'my $x = qq(simple);', 'use ""',
     "qq() with simple string should suggest double quotes";
-  check_message 'my $x = qq{simple};', 'use ""',
+  bad $Policy, 'my $x = qq{simple};', 'use ""',
     "qq{} with simple string should suggest double quotes";
 
   # Case 2: Strings that would cause double quotes to suggest single quotes
   # (because they have escaped characters that look like variables)
-  check_message 'my $x = qq(price: \\$5.00);', "use ''",
+  bad $Policy, 'my $x = qq(price: \\$5.00);', "use ''",
     "qq() with escaped dollar should suggest single quotes";
-  check_message 'my $x = qq{email\\@domain.com};', "use ''",
+  bad $Policy, 'my $x = qq{email\\@domain.com};', "use ''",
     "qq{} with escaped at-sign should suggest single quotes";
 
   # Case 3: Strings that would cause double quotes to need qq()
   # (because they contain double quotes and need interpolation)
-  check_message 'my $var = "test"; my $x = qq/has "quotes" and $var/;',
+  bad $Policy, 'my $var = "test"; my $x = qq/has "quotes" and $var/;',
     "use qq()", "qq/ with quotes and interpolation should suggest qq()";
-  check_message 'my @arr = (); my $x = qq|has "quotes" and @arr|;',
+  bad $Policy, 'my @arr = (); my $x = qq|has "quotes" and @arr|;',
     "use qq()", "qq| with quotes and interpolation should suggest qq()";
 };
 
@@ -85,24 +76,24 @@ subtest "Consistency verification" => sub {
   # Verify that following the suggestion doesn't create new violations
 
   # These simple cases should not violate when changed to suggested form
-  good_code 'my $x = "simple";',
+  good $Policy, 'my $x = "simple";',
     "suggested form for q(simple) should not violate";
-  good_code 'my $x = "simple";',
+  good $Policy, 'my $x = "simple";',
     "suggested form for qq(simple) should not violate";
 
   # These should not violate when changed to suggested form
-  good_code q(my $x = 'has "quotes"';),
+  good $Policy, q(my $x = 'has "quotes"';),
     'suggested form for q(has "quotes") should not violate';
-  good_code q(my $x = "don't";),
+  good $Policy, q(my $x = "don't";),
     "suggested form for q(don't) should not violate";
-  good_code q(my $x = 'price: \\$5.00';),
+  good $Policy, q(my $x = 'price: \\$5.00';),
     'suggested form for qq(price: $5.00) should not violate';
 
   # These complex cases should not violate when using q()/qq() with optimal
   # delimiters
-  good_code q[my $x = q(mix 'single' and "double");],
+  good $Policy, q[my $x = q(mix 'single' and "double");],
     "q() with optimal delimiter should not violate";
-  good_code 'my $var = "test"; my $x = qq(has "quotes" and $var);',
+  good $Policy, 'my $var = "test"; my $x = qq(has "quotes" and $var);',
     "qq() with optimal delimiter should not violate";
 };
 

@@ -17,105 +17,60 @@ use ViolationFinder qw(find_violations count_violations good bad);
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
-# Helper subs that use the common policy
-sub good_code ($code, $description) {
-  ViolationFinder::good($Policy, $code, $description);
-}
-
-sub check_message ($code, $expected_message, $description) {
-  bad($Policy, $code, $expected_message, $description);
-}
-
 subtest "Single quote violation messages" => sub {
-  check_message(q(my $x = 'hello'), 'use ""', "Simple single-quoted string");
+  bad $Policy, q(my $x = 'hello'), 'use ""', "Simple single-quoted string";
 
-  check_message(
-    q(my $x = 'I\'m happy'),
-    'use ""',
-    "Single quotes with escaped apostrophe"
-  );
+  bad $Policy, q(my $x = 'I\'m happy'), 'use ""',
+    "Single quotes with escaped apostrophe";
 };
 
 subtest "Double quote violation messages" => sub {
-  check_message(
-    'my $output = "Price: \$10"',
-    "use ''",
-    "Double quotes with escaped dollar"
-  );
+  bad $Policy, 'my $output = "Price: \$10"', "use ''",
+    "Double quotes with escaped dollar";
 };
 
 subtest "q() operator violation messages" => sub {
-  check_message('my $x = q(simple)', 'use ""', "q() with simple content");
+  bad $Policy, 'my $x = q(simple)', 'use ""', "q() with simple content";
 
-  check_message('my $x = q(literal$x)', "use ''", "q() with literal dollar");
+  bad $Policy, 'my $x = q(literal$x)', "use ''", "q() with literal dollar";
 };
 
 subtest "qq() operator violation messages" => sub {
-  check_message('my $x = qq(simple)', 'use ""', "qq() with simple content");
+  bad $Policy, 'my $x = qq(simple)', 'use ""', "qq() with simple content";
 };
 
 subtest "Delimiter optimisation messages with hints" => sub {
-  check_message(
-    'my @x = qw(word(with)parens)',
-    "use qw[]",
-    "qw() with parens - hint to use qw[]"
-  );
+  bad $Policy, 'my @x = qw(word(with)parens)', "use qw[]",
+    "qw() with parens - hint to use qw[]";
 
-  check_message(
-    'my @x = qw[word[with]brackets]',
-    "use qw()",
-    "qw[] with brackets - hint to use qw()"
-  );
+  bad $Policy, 'my @x = qw[word[with]brackets]', "use qw()",
+    "qw[] with brackets - hint to use qw()";
 
-  check_message(
-    'my @x = qw{word{with}braces}',
-    "use qw()",
-    "qw{} with braces - hint to use qw()"
-  );
+  bad $Policy, 'my @x = qw{word{with}braces}', "use qw()",
+    "qw{} with braces - hint to use qw()";
 
-  check_message(
-    'my @x = qw<word<with>angles>',
-    "use qw()",
-    "qw<> with angles - hint to use qw()"
-  );
+  bad $Policy, 'my @x = qw<word<with>angles>', "use qw()",
+    "qw<> with angles - hint to use qw()";
 
-  check_message(
-    'my @x = qw{simple words}',
-    "use qw()",
-    "qw{} simple - hint to use qw()"
-  );
+  bad $Policy, 'my @x = qw{simple words}', "use qw()",
+    "qw{} simple - hint to use qw()";
 
-  check_message(
-    'my $x = q(text(with)parens)',
-    'use ""',
-    "q() with parens should use double quotes"
-  );
+  bad $Policy, 'my $x = q(text(with)parens)', 'use ""',
+    "q() with parens should use double quotes";
 
-  check_message(
-    'my $x = qq[text[with]brackets]',
-    'use ""',
-    "qq[] with brackets should use double quotes"
-  );
+  bad $Policy, 'my $x = qq[text[with]brackets]', 'use ""',
+    "qq[] with brackets should use double quotes";
 };
 
 subtest "Exotic delimiter messages" => sub {
-  check_message(
-    'my $text = q/path\/to\/file/',
-    'use ""',
-    "q// with slashes should use double quotes"
-  );
+  bad $Policy, 'my $text = q/path\/to\/file/', 'use ""',
+    "q// with slashes should use double quotes";
 
-  check_message(
-    'my $text = q|option\|value|',
-    'use ""',
-    "q|| with pipes should use double quotes"
-  );
+  bad $Policy, 'my $text = q|option\|value|', 'use ""',
+    "q|| with pipes should use double quotes";
 
-  check_message(
-    'my @x = qw/word\/with\/slashes/',
-    "use qw()",
-    "qw// with slashes - hint to use qw()"
-  );
+  bad $Policy, 'my @x = qw/word\/with\/slashes/', "use qw()",
+    "qw// with slashes - hint to use qw()";
 };
 
 subtest "Combined violation messages" => sub {

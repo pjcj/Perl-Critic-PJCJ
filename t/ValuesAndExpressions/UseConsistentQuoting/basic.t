@@ -17,19 +17,6 @@ use ViolationFinder qw(find_violations count_violations good bad);
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
 
-# Helper subs that use the common policy
-sub count_violations_for_policy ($code, $expected_violations, $description) {
-  count_violations($Policy, $code, $expected_violations, $description);
-}
-
-sub good_code ($code, $description) {
-  ViolationFinder::good($Policy, $code, $description);
-}
-
-sub bad_code ($code, $description) {
-  bad($Policy, $code, 'use ""', $description);
-}
-
 subtest "Policy methods" => sub {
   # Test default_themes
   my @themes = $Policy->default_themes;
@@ -60,19 +47,19 @@ subtest "Policy methods" => sub {
 
 subtest "Basic functionality" => sub {
   # Simple tests to verify policy is working
-  bad_code q(my $x = 'hello'),
+  bad $Policy, q(my $x = 'hello'), 'use ""',
     "Single quoted simple string should use double quotes";
-  good_code 'my $x = "hello"', "Double quoted simple string";
+  good $Policy, 'my $x = "hello"', "Double quoted simple string";
 
   # Multiple violations
-  count_violations_for_policy q(
+  count_violations $Policy, q(
     my $x = 'hello';
     my $y = 'world';
     my $z = 'foo';
   ), 3, "Multiple simple single-quoted strings all violate";
 
   # Mixed violations
-  count_violations_for_policy q(
+  count_violations $Policy, q(
     my $x = 'hello';
     my $y = "world";
     my $z = 'user@example.com';
@@ -96,42 +83,43 @@ subtest "Invalid token types" => sub {
 
 subtest "Use statement argument rules" => sub {
   # Module with no arguments - OK
-  good_code "use Foo",    "use with no arguments is fine";
-  good_code "use Foo ()", "use with empty parens is fine";
+  good $Policy, "use Foo",    "use with no arguments is fine";
+  good $Policy, "use Foo ()", "use with empty parens is fine";
 
   # Module with one argument - can use "" or qw()
-  good_code 'use Foo "arg1"', "use with one double-quoted argument is fine";
-  bad($Policy, "use Foo 'arg1'",
-    "use qw()", "use with one single-quoted argument should use qw()");
-  good_code "use Foo qw(arg1)", "use with one qw() argument is fine";
+  good $Policy, 'use Foo "arg1"',
+    "use with one double-quoted argument is fine";
+  bad $Policy, "use Foo 'arg1'", "use qw()",
+    "use with one single-quoted argument should use qw()";
+  good $Policy, "use Foo qw(arg1)", "use with one qw() argument is fine";
 
   # Module with multiple arguments - must use qw()
-  bad($Policy, 'use Foo "arg1", "arg2"',
-    "use qw()", "use with multiple quoted arguments should use qw()");
-  bad($Policy, "use Foo 'arg1', 'arg2'",
-    "use qw()", "use with multiple single-quoted arguments should use qw()");
-  bad($Policy, "use Foo ('arg1', 'arg2')",
-    "use qw()", "use with multiple arguments in parens should use qw()");
-  bad($Policy, 'use Foo "arg1", "arg2", "arg3"',
-    "use qw()", "use with three quoted arguments should use qw()");
+  bad $Policy, 'use Foo "arg1", "arg2"', "use qw()",
+    "use with multiple quoted arguments should use qw()";
+  bad $Policy, "use Foo 'arg1', 'arg2'", "use qw()",
+    "use with multiple single-quoted arguments should use qw()";
+  bad $Policy, "use Foo ('arg1', 'arg2')", "use qw()",
+    "use with multiple arguments in parens should use qw()";
+  bad $Policy, 'use Foo "arg1", "arg2", "arg3"', "use qw()",
+    "use with three quoted arguments should use qw()";
 
   # Mixed arguments - should use qw()
-  bad($Policy, "use Foo qw(arg1), 'arg2'",
-    "use qw()", "mixed qw() and quotes should use qw() for all");
-  bad($Policy, "use Foo 'arg1', qw(arg2)",
-    "use qw()", "mixed quotes and qw() should use qw() for all");
+  bad $Policy, "use Foo qw(arg1), 'arg2'", "use qw()",
+    "mixed qw() and quotes should use qw() for all";
+  bad $Policy, "use Foo 'arg1', qw(arg2)", "use qw()",
+    "mixed quotes and qw() should use qw() for all";
 
   # Good cases with multiple arguments
-  good_code "use Foo qw(arg1 arg2)",
+  good $Policy, "use Foo qw(arg1 arg2)",
     "multiple arguments with qw() is correct";
-  good_code "use Foo qw(arg1 arg2 arg3)",
+  good $Policy, "use Foo qw(arg1 arg2 arg3)",
     "three arguments with qw() is correct";
-  bad($Policy, "use Foo qw[arg1 arg2]",
-    "use qw()", "qw[] should use qw() with parentheses only");
+  bad $Policy, "use Foo qw[arg1 arg2]", "use qw()",
+    "qw[] should use qw() with parentheses only";
 
   # Other statement types should not be checked
-  good_code "require Foo", "require statements are not checked";
-  good_code "no warnings", "no statements are not checked";
+  good $Policy, "require Foo", "require statements are not checked";
+  good $Policy, "no warnings", "no statements are not checked";
 };
 
 subtest "Find optimal delimiter coverage" => sub {
