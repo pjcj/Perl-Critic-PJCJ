@@ -219,20 +219,11 @@ sub check_single_quoted ($self, $elem) {
 
   # Check if string contains escape sequences that would have different meanings
   # in single vs double quotes. If so, preserve single quotes.
-  # In single quotes: these are literal backslash + character
-  # In double quotes: these become actual escape sequences with special meaning
-  return if $string =~ /
-    \\(?:
-      [tnrfbae]           |  # Single char escapes: \t \n \r \f \b \a \e
-      [\$\@]              |  # Variable sigils: \$ \@
-      x[0-9a-fA-F]*       |  # Hex escapes: \x1b \xff
-      x\{[^}]*\}          |  # Hex braces: \x{1b} \x{263A}
-      [0-7]{1,3}          |  # Octal: \033 \377
-      o\{[^}]*\}          |  # Octal braces: \o{033}
-      c.                  |  # Control chars: \c[ \cA
-      N\{[^}]*\}             # Named chars: \N{name} \N{U+263A}
-    )
-  /x;
+  return if $self->_has_dangerous_escape_sequences($string);
+
+  # Also check for literal \$ and \@ in single quotes that would become
+  # escaped sigils in double quotes, changing their meaning
+  return if $self->_has_literal_escape_sigils($string);
 
   # If content would not interpolate in double quotes, suggest double quotes
   return $self->violation($Desc, $Expl_double, $elem)
@@ -262,6 +253,14 @@ sub check_q_literal ($self, $elem) {
   return if $self->_is_in_use_statement($elem);
 
   my $string = $elem->string;
+
+  # Check if string contains escape sequences that would have different meanings
+  # in single vs double quotes. If so, preserve q() quoting.
+  return if $self->_has_dangerous_escape_sequences($string);
+
+  # Check if string contains literal \$ or \@ that would become escaped
+  # in double quotes. If so, preserve q() quoting.
+  return if $self->_has_literal_escape_sigils($string);
 
   # Apply simplified rules: prefer simpler quotes if possible, then
   # optimize delimiter
@@ -309,6 +308,15 @@ sub check_qq_interpolate ($self, $elem) {
   return if $self->_is_in_use_statement($elem);
 
   my $string = $elem->string;
+
+  # Check if string contains escape sequences. For qq(), these would be
+  # interpreted, so preserve qq() if switching to single quotes would
+  # change the meaning (escape sequences become literal in single quotes).
+  if ($self->_has_dangerous_escape_sequences($string)) {
+    # Only preserve qq() if the escape sequences are actually needed
+    # (i.e., if we want them interpreted, not literal)
+    return $self->check_delimiter_optimisation($elem);
+  }
 
   # Apply simplified rules: prefer double quotes, then check if qq() justified
   my $double_quote_suggestion
@@ -515,6 +523,33 @@ sub _what_would_double_quotes_suggest ($self, $string) {
 
   # Rule 3: Otherwise double quotes are fine
   return undef;
+}
+
+sub _has_dangerous_escape_sequences ($self, $string) {
+  # Check if string contains escape sequences that would have different meanings
+  # in single vs double quotes. These should be preserved in their current
+  # quote style to maintain their intended meaning.
+  #
+  # This only includes escape sequences where the conversion would change
+  # the actual output, not just the internal representation.
+  return $string =~ /
+    \\(?:
+      [tnrfbae]           |  # Single char escapes: \t \n \r \f \b \a \e
+      x[0-9a-fA-F]*       |  # Hex escapes: \x1b \xff
+      x\{[^}]*\}          |  # Hex braces: \x{1b} \x{263A}
+      [0-7]{1,3}          |  # Octal: \033 \377
+      o\{[^}]*\}          |  # Octal braces: \o{033}
+      c.                  |  # Control chars: \c[ \cA
+      N\{[^}]*\}             # Named chars: \N{name} \N{U+263A}
+    )
+  /x;
+}
+
+sub _has_literal_escape_sigils ($self, $string) {
+  # Check if string contains literal \$ or \@ that would have different
+  # meanings between single and double quotes when converting FROM
+  # single quotes TO double quotes (not the other direction).
+  return $string =~ /\\[\$\@]/;
 }
 
 1;

@@ -42,8 +42,10 @@ subtest "Edge cases for uncovered lines" => sub {
     "use ''", 'q() with @ and double quotes should suggest single quotes';
 
   # Edge case: content that might confuse the would_interpolate method
-  bad $Policy, q(my $x = q(\@escaped at sign with "quotes")), "use ''",
-    'q() with escaped @ and double quotes should suggest single quotes';
+  # q() with \@ is preserved because \@ would have different meaning
+  # in double quotes
+  good $Policy, q(my $x = q(\@escaped at sign with "quotes")),
+    'q() with escaped @ should stay q()';
 };
 
 subtest "Boundary conditions for interpolation detection" => sub {
@@ -57,11 +59,13 @@ subtest "Boundary conditions for interpolation detection" => sub {
     'Single quotes justified for escaped at with double quotes';
 
   # Test q() with escaped sigils and quotes
-  bad $Policy, q(my $x = q(\$var and "quotes" together)), "use ''",
-    'q() with escaped dollar and double quotes should suggest single quotes';
+  # q() with \$ or \@ is preserved because they would have different
+  # meaning in double quotes
+  good $Policy, q(my $x = q(\$var and "quotes" together)),
+    'q() with escaped dollar should stay q()';
 
-  bad $Policy, q(my $x = q(\@var and "quotes" together)), "use ''",
-    'q() with escaped at and double quotes should suggest single quotes';
+  good $Policy, q(my $x = q(\@var and "quotes" together)),
+    'q() with escaped at should stay q()';
 };
 
 subtest "Parser edge cases" => sub {
