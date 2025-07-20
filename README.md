@@ -201,6 +201,25 @@ dzil test
 dzil build
 ```
 
+### Additional Development Targets
+
+The generated Makefile includes additional development targets:
+
+```bash
+# Format code with perltidy
+make format
+
+# Run linting with perlcritic
+make lint
+
+# Generate test coverage reports
+make cover
+make cover-html
+make cover-compilation
+```
+
+These targets are automatically available after running `perl Makefile.PL`.
+
 ## Author
 
 Paul Johnson <paul@pjcj.net>
