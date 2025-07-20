@@ -255,15 +255,18 @@ sub check_q_literal ($self, $elem) {
   my $string = $elem->string;
 
   # Check if string contains escape sequences that would have different meanings
-  # in single vs double quotes. If so, preserve q() quoting.
-  return if $self->_has_dangerous_escape_sequences($string);
+  # in single vs double quotes. If so, preserve q() quoting but optimise
+  # delimiter.
+  return $self->check_delimiter_optimisation($elem)
+    if $self->_has_dangerous_escape_sequences($string);
 
   # Check if string contains literal \$ or \@ that would become escaped
-  # in double quotes. If so, preserve q() quoting.
-  return if $self->_has_literal_escape_sigils($string);
+  # in double quotes. If so, preserve q() quoting but optimise delimiter.
+  return $self->check_delimiter_optimisation($elem)
+    if $self->_has_literal_escape_sigils($string);
 
   # Apply simplified rules: prefer simpler quotes if possible, then
-  # optimize delimiter
+  # optimise delimiter
   my $has_single_quotes = index($string, "'") != -1;
   my $has_double_quotes = index($string, '"') != -1;
   my $would_interpolate = $self->would_interpolate($string);
@@ -337,7 +340,7 @@ sub check_qq_interpolate ($self, $elem) {
     return $self->violation($Desc, $Expl_double, $elem);
   }
 
-  # If qq() is justified, optimize delimiter
+  # If qq() is justified, optimise delimiter
   return $self->check_delimiter_optimisation($elem);
 }
 

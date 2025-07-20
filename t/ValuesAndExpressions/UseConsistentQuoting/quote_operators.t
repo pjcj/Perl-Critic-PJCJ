@@ -162,17 +162,20 @@ subtest "Additional q() operator coverage tests" => sub {
 
   # Edge case: content that might confuse the would_interpolate method
   # q() with \@ is preserved because \@ would have different meaning
-  # in double quotes
-  good $Policy, q(my $x = q(\@escaped at sign with "quotes")),
+  # in double quotes, but delimiter should be optimised
+  bad $Policy, 'my $x = q((\@));', "use q[]",
+    'q() with escaped @ and parens should optimise delimiter to q[]';
+
+  good $Policy, q[my $x = q(\@escaped at sign with "quotes")],
     'q() with escaped @ should stay q()';
 
   # Test q() with escaped sigils and quotes
   # q() with \$ or \@ is preserved because they would have different
   # meaning in double quotes
-  good $Policy, q(my $x = q(\$var and "quotes" together)),
+  good $Policy, q[my $x = q(\$var and "quotes" together)],
     "q() with escaped dollar should stay q()";
 
-  good $Policy, q(my $x = q(\@var and "quotes" together)),
+  good $Policy, q[my $x = q(\@var and "quotes" together)],
     "q() with escaped at should stay q()";
 
   # Test q() with content that might not be handled by early returns
