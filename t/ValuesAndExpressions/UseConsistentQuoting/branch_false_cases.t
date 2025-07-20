@@ -56,7 +56,7 @@ subtest "Try to trigger false branches" => sub {
 
   # Test cases that might trigger different sorting/comparison results
   check_message 'my $x = qq{content with (parens) and [brackets]};',
-    "use qq<>", "qq with {} containing multiple bracket types";
+    'use ""', "qq with {} containing multiple bracket types";
 };
 
 done_testing;

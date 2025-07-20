@@ -93,14 +93,17 @@ subtest "Delimiter optimisation messages with hints" => sub {
 
   check_message(
     'my $x = qq[text[with]brackets]',
-    "use qq()",
-    "qq[] with brackets - hint to use qq()"
+    'use ""',
+    "qq[] with brackets should use double quotes"
   );
 };
 
 subtest "Exotic delimiter messages" => sub {
-  check_message('my $text = q/path\/to\/file/',
-    'use ""', "q// with slashes should use double quotes");
+  check_message(
+    'my $text = q/path\/to\/file/',
+    'use ""',
+    "q// with slashes should use double quotes"
+  );
 
   check_message(
     'my $text = q|option\|value|',

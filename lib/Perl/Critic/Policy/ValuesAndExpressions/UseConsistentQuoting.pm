@@ -320,9 +320,7 @@ sub check_qq_interpolate ($self, $elem) {
     || $self->would_interpolate($string);
 
   if (!$has_special_chars) {
-    my $has_delimiter_chars = $string =~ /[\/\|\#\!\%\&\~\<\>\[\]\{\}\(\)]/;
-    return $self->violation($Desc, $Expl_double, $elem)
-      if !$has_delimiter_chars;
+    return $self->violation($Desc, $Expl_double, $elem);
   }
 
   # If qq() is justified, optimize delimiter; otherwise suggest double quotes

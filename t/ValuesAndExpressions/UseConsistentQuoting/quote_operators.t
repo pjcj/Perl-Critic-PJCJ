@@ -99,6 +99,16 @@ subtest "qq() operator" => sub {
   check_message 'my $x = qq(simple)', 'use ""',
     "qq() should use double quotes for simple content";
 
+  # qq() with content containing "delimiter characters" should still suggest ""
+  check_message 'my $x = qq(content(with)parens)', 'use ""',
+    "qq() with parens should use double quotes";
+  check_message 'my $x = qq/path/to/file/', 'use ""',
+    "qq// with slashes should use double quotes";
+  check_message 'my $x = qq#hash#tag#', 'use ""',
+    "qq## with hashes should use double quotes";
+  check_message 'my $x = qq{simple[brackets]}', 'use ""',
+    "qq{} with brackets should use double quotes";
+
   # When qq() is appropriate (has double quotes)
   good_code 'my $x = qq(has "double" quotes)',
     "qq() appropriate when content has double quotes";
