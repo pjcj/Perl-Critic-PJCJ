@@ -122,8 +122,7 @@ sub find_optimal_delimiter (
     $delim->{count} = $count;
   }
 
-  my $min_count
-    = (sort { $a <=> $b } map { $_->{count} } @delimiters)[0];
+  my $min_count = (sort { $a <=> $b } map { $_->{count} } @delimiters)[0];
 
   # Find optimal delimiter: handle unbalanced content, then preference order
   my ($optimal) = sort {
