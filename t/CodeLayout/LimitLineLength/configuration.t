@@ -3,28 +3,15 @@
 use v5.24.0;
 use strict;
 use warnings;
-use feature "signatures";
+use feature      qw( signatures );
+use experimental qw( signatures );
 
 use Test2::V0;
 
 # Test the policy with custom configuration
 use lib qw( lib t/lib );
 use Perl::Critic::Policy::CodeLayout::LimitLineLength;
-use ViolationFinder qw(find_violations);
-
-sub count_violations ($policy, $code, $expected_violations, $description) {
-  my @violations = find_violations($policy, $code);
-  is @violations, $expected_violations, $description;
-  return @violations;
-}
-
-sub good ($policy, $code, $description) {
-  count_violations($policy, $code, 0, $description);
-}
-
-sub bad ($policy, $code, $description) {
-  count_violations($policy, $code, 1, $description);
-}
+use ViolationFinder qw( find_violations count_violations good bad );
 
 subtest "Custom max_line_length = 40" => sub {
   my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
@@ -41,7 +28,8 @@ subtest "Custom max_line_length = 40" => sub {
   # Test line over 40 chars (but under default 80)
   my $over_40 = 'my $var = "' . ("x" x 28) . '";';
   is length($over_40), 41, "Test string is 41 chars";
-  bad $policy, $over_40, "Line over 40 characters violates with custom limit";
+  bad $policy, $over_40, "Line is 41 characters long (exceeds 40)",
+    "Line over 40 characters violates with custom limit";
 
   # Test getter method
   is $policy->{_max_line_length}, 40, "Custom max_line_length is 40";
@@ -59,7 +47,8 @@ subtest "Custom max_line_length = 120" => sub {
   # Test line over 120 chars
   my $over_120 = 'my $var = "' . ("x" x 108) . '";';
   is length($over_120), 121, "Test string is 121 chars";
-  bad $policy, $over_120, "Line over 120 characters violates";
+  bad $policy, $over_120, "Line is 121 characters long (exceeds 120)",
+    "Line over 120 characters violates";
 
   # Test getter method
   is $policy->{_max_line_length}, 120, "Custom max_line_length is 120";
@@ -70,7 +59,8 @@ subtest "Very short custom limit" => sub {
   $policy->{_max_line_length} = 10;
 
   # Even short lines violate with very short limit
-  bad $policy, 'my $x = 1; ', "Normal line violates 10-char limit";
+  bad $policy, 'my $x = 1; ', "Line is 11 characters long (exceeds 10)",
+    "Normal line violates 10-char limit";
 
   # Very short line is OK
   good $policy, 'my $x=1', "Compact line within 10 chars";
@@ -91,7 +81,8 @@ subtest "Default behavior when no configuration set" => sub {
 
   # Test with 81-char line
   my $over_80 = 'my $var = "' . ("x" x 68) . '";';
-  bad $policy, $over_80, "81-char line violates default";
+  bad $policy, $over_80, "Line is 81 characters long (exceeds 80)",
+    "81-char line violates default";
 };
 
 done_testing;

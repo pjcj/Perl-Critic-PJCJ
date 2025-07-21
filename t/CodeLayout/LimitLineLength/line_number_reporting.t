@@ -3,7 +3,8 @@
 use v5.24.0;
 use strict;
 use warnings;
-use feature "signatures";
+use feature      qw( signatures );
+use experimental qw( signatures );
 
 use Test2::V0;
 
@@ -19,6 +20,14 @@ sub line_numbers ($code, $expected_lines, $description) {
   my @actual_lines = map { $_->line_number } @violations;
 
   is \@actual_lines, $expected_lines, $description;
+
+  # Check that each violation has the correct message format
+  for my $violation (@violations) {
+    like $violation->description,
+      qr/Line is \d+ characters long \(exceeds 72\)/,
+      "Violation on line " . $violation->line_number . " has correct message";
+  }
+
   @violations
 }
 
@@ -39,8 +48,12 @@ Another short line
 my $other = 2;
 END_CODE
 
-  line_numbers($code_with_pod, [8],
+  my @violations = line_numbers($code_with_pod, [8],
     "POD long line should report correct line number");
+
+  # Also check the exact message
+  is $violations[0]->description, "Line is 73 characters long (exceeds 72)",
+    "POD violation has exact expected message";
 };
 
 subtest "Mixed POD and code violations" => sub {
@@ -58,11 +71,19 @@ This long POD line exceeds the seventy two character limit and triggers a
 my $another_very_long_variable_name_that_exceeds_seventy_two_char_limit = "end";
 END_CODE
 
-  line_numbers(
+  my @violations = line_numbers(
     $mixed_code,
     [ 2, 7, 11 ],
     "Mixed code and POD violations should report correct line numbers"
   );
+
+  # Check specific messages
+  is $violations[0]->description, "Line is 74 characters long (exceeds 72)",
+    "First code violation message";
+  is $violations[1]->description, "Line is 73 characters long (exceeds 72)",
+    "POD violation message";
+  is $violations[2]->description, "Line is 80 characters long (exceeds 72)",
+    "Second code violation message";
 };
 
 subtest "Multiple POD sections" => sub {
@@ -105,11 +126,17 @@ subtest "POD with code snippets" => sub {
 =cut
 END_CODE
 
-  line_numbers(
+  my @violations = line_numbers(
     $pod_with_code,
     [ 5, 6 ],
     "Long lines within POD code examples should report correct line numbers"
   );
+
+  # Check specific line lengths
+  is $violations[0]->description, "Line is 73 characters long (exceeds 72)",
+    "First POD code example violation";
+  is $violations[1]->description, "Line is 73 characters long (exceeds 72)",
+    "Second POD code example violation";
 };
 
 subtest "Comment line number reporting edge cases" => sub {
@@ -119,8 +146,11 @@ my $var = 1;
 my $other = 2;
 END_CODE
 
-  line_numbers($comment_code, [2],
+  my @violations = line_numbers($comment_code, [2],
     "Comment long lines should report correct line numbers");
+
+  is $violations[0]->description, "Line is 73 characters long (exceeds 72)",
+    "Comment violation has correct message";
 };
 
 subtest "Empty POD blocks" => sub {
@@ -134,8 +164,11 @@ my $var = 1;
 my $very_long_variable_name_that_exceeds_seventy_two_char_limit_after_pod = "v";
 END_CODE
 
-  line_numbers($empty_pod_code, [7],
+  my @violations = line_numbers($empty_pod_code, [7],
     "Code after empty POD should report correct line numbers");
+
+  is $violations[0]->description, "Line is 80 characters long (exceeds 72)",
+    "Line after empty POD has correct violation message";
 };
 
 done_testing;

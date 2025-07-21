@@ -3,30 +3,17 @@
 use v5.24.0;
 use strict;
 use warnings;
-use feature "signatures";
 
 use Test2::V0;
+use feature      qw( signatures );
+use experimental qw( signatures );
 
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
 use Perl::Critic::Policy::CodeLayout::LimitLineLength;
-use ViolationFinder qw(find_violations);
+use ViolationFinder qw( find_violations count_violations good bad );
 
 my $Policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
-
-sub count_violations ($code, $expected_violations, $description) {
-  my @violations = find_violations($Policy, $code);
-  is @violations, $expected_violations, $description;
-  return @violations;
-}
-
-sub good ($code, $description) {
-  count_violations($code, 0, $description);
-}
-
-sub bad ($code, $description) {
-  count_violations($code, 1, $description);
-}
 
 subtest "Policy methods" => sub {
   # Test default_themes
@@ -46,33 +33,45 @@ subtest "Policy methods" => sub {
 
 subtest "Basic functionality" => sub {
   # Test lines within limit
-  good 'my $x = "hello"', "Short line within 80 chars";
-  good 'my $short = 1',   "Very short line";
-  good "",                "Empty string";
-  good "\n",              "Just newline";
+  good $Policy, 'my $x = "hello"', "Short line within 80 chars";
+  good $Policy, 'my $short = 1',   "Very short line";
+  good $Policy, "",                "Empty string";
+  good $Policy, "\n",              "Just newline";
 
   # Test lines exactly at limit (80 chars)
   my $exactly_80 = 'my $var = "' . ("x" x 67) . '";';
   is length($exactly_80), 80, "Test string is exactly 80 chars";
-  good $exactly_80, "Line exactly at 80 characters";
+  good $Policy, $exactly_80, "Line exactly at 80 characters";
 
   # Test lines over limit
   my $over_80 = 'my $var = "' . ("x" x 68) . '";';
   is length($over_80), 81, "Test string is 81 chars";
-  bad $over_80, "Line over 80 characters should violate";
+  bad $Policy, $over_80, "Line is 81 characters long (exceeds 80)",
+    "Line over 80 characters should violate";
 };
 
 subtest "Multiple lines" => sub {
   # Multiple short lines - all good
-  good qq(my \$x = "hello";\nmy \$y = "world";), "Multiple short lines";
+  good $Policy, qq(my \$x = "hello";\nmy \$y = "world";),
+    "Multiple short lines";
 
   # Multiple long lines - all bad
-  my $code
-    = 'my $very_long_variable_name = '
-    . '"this is a very long string that exceeds eighty chars";' . "\n"
-    . 'my $another_long_variable = '
+  my $long_line1 = 'my $very_long_variable_name = '
+    . '"this is a very long string that exceeds eighty chars";';
+  my $long_line2 = 'my $another_long_variable = '
     . '"this is another very long string that also exceeds eighty chars";';
-  count_violations($code, 2, "Multiple long lines both violate");
+  my $code = $long_line1 . "\n" . $long_line2;
+
+  my @violations = count_violations $Policy, $code, 2,
+    "Multiple long lines both violate";
+
+  # Check each violation message
+  like $violations[0]->description,
+    qr/Line is \d+ characters long \(exceeds 80\)/,
+    "First violation has correct message";
+  like $violations[1]->description,
+    qr/Line is \d+ characters long \(exceeds 80\)/,
+    "Second violation has correct message";
 
   # Mixed lines - only long ones violate
   my $mixed
@@ -80,25 +79,31 @@ subtest "Multiple lines" => sub {
     . 'my $very_long_variable_name = '
     . '"this is a very long string that exceeds eighty chars";' . "\n"
     . 'my $also_short = 2;';
-  count_violations($mixed, 1, "Only long line in mixed content violates");
+  my @mixed_violations = count_violations $Policy, $mixed, 1,
+    "Only long line in mixed content violates";
+  like $mixed_violations[0]->description,
+    qr/Line is \d+ characters long \(exceeds 80\)/,
+    "Mixed content violation has correct message";
 };
 
 subtest "Edge cases" => sub {
   # Empty file
-  good "", "Empty file";
+  good $Policy, "", "Empty file";
 
   # Just whitespace
-  good "   ",  "Whitespace only";
-  good "\t\t", "Tabs only";
+  good $Policy, "   ",  "Whitespace only";
+  good $Policy, "\t\t", "Tabs only";
 
   # Very long line
   my $very_long = 'my $x = ' . ('"' . ("a" x 200) . '"') . ";";
-  bad $very_long, "Very long line (200+ chars) violates";
+  bad $Policy, $very_long, "Line is 211 characters long (exceeds 80)",
+    "Very long line (200+ chars) violates";
 
   # Line with exactly 81 characters (one over limit)
   my $line_81 = "a" x 81;
   is length($line_81), 81, "Test string is exactly 81 chars";
-  bad $line_81, "Line with exactly 81 characters violates";
+  bad $Policy, $line_81, "Line is 81 characters long (exceeds 80)",
+    "Line with exactly 81 characters violates";
 };
 
 subtest "Configuration parameter handling" => sub {
