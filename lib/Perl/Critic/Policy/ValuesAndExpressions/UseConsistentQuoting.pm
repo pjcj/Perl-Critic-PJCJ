@@ -602,6 +602,30 @@ few very special cases, strings with literal newlines are not a good idea.
     line 2
   );
 
+=RATIONALE
+
+=over 4
+
+=item * Minimising escape characters improves readability and reduces errors
+
+=item * Simple quotes are preferred over their C<q()> and C<qq()> equivalents
+when possible
+
+=item * Double quotes are preferred for consistency and to allow potential
+interpolation
+
+=item * Many years ago, Tom Christiansen wrote a lengthy article on how perl's
+default quoting system is interpolation, and not interpolating means something
+extraordinary is happening. I can't find the original article, but you can see
+that double quotes are used by default in The Perl Cookbook, for example.
+
+=item * Only bracket delimiters should be used (no exotic delimiters like C</>,
+  C<|>, C<#>, etc.)
+
+=item * Optimal delimiter selection reduces visual noise in code
+
+=back
+
 =head1 AFFILIATION
 
 This Policy is part of the Perl::Critic::PJCJ distribution.

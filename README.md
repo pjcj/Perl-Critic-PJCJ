@@ -32,18 +32,18 @@ simple rules:
 
 #### Rationale
 
-- Double quotes are preferred for consistency and to allow potential
-  interpolation
 - Minimising escape characters improves readability and reduces errors
 - Simple quotes are preferred over their `q()` and `qq()` equivalents when
   possible
-- Only bracket delimiters should be used (no exotic delimiters like `/`,
-  `|`, `#`, etc.)
-- Optimal delimiter selection reduces visual noise in code
+- Double quotes are preferred for consistency and to allow potential
+  interpolation
 - Many years ago, Tom Christiansen wrote a lengthy article on how perl's default
   quoting system is interpolation, and not interpolating means something
   extraordinary is happening. I can't find the original article, but you can
   see that double quotes are used by default in The Perl Cookbook, for example.
+- Only bracket delimiters should be used (no exotic delimiters like `/`,
+  `|`, `#`, etc.)
+- Optimal delimiter selection reduces visual noise in code
 
 #### Examples
 
