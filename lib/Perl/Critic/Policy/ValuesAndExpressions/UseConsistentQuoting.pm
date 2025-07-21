@@ -1,11 +1,9 @@
 package Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
 
-use v5.20.0;
+use v5.24.0;
 use strict;
 use warnings;
 use feature "signatures";
-no warnings "experimental::signatures";
-use experimental "postderef";
 
 use List::Util          qw( any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );

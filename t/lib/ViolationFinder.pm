@@ -1,6 +1,6 @@
 package ViolationFinder;
 
-use v5.20.0;
+use v5.24.0;
 use strict;
 use warnings;
 use feature "signatures";
@@ -8,8 +8,6 @@ use feature "signatures";
 use Exporter qw(import);
 use PPI;
 use Test2::V0;
-
-no warnings "experimental::signatures";
 
 our @EXPORT_OK = qw(find_violations count_violations good bad);
 

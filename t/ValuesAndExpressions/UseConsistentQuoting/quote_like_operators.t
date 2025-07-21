@@ -1,13 +1,11 @@
 #!/usr/bin/env perl
 
-use v5.20.0;
+use v5.24.0;
 use strict;
 use warnings;
 use feature "signatures";
 
 use Test2::V0;
-
-no warnings "experimental::signatures";
 
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
