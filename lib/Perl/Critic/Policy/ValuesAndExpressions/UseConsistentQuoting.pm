@@ -3,11 +3,12 @@ package Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
 use v5.24.0;
 use strict;
 use warnings;
-use feature "signatures";
+use feature      qw( signatures );
+use experimental qw( signatures );
 
 use List::Util          qw( any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
-use parent "Perl::Critic::Policy";
+use parent              qw( Perl::Critic::Policy );
 
 # VERSION
 

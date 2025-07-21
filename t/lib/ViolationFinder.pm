@@ -3,13 +3,14 @@ package ViolationFinder;
 use v5.24.0;
 use strict;
 use warnings;
-use feature "signatures";
+use feature      qw( signatures );
+use experimental qw( signatures );
 
-use Exporter qw(import);
+use Exporter qw( import );
 use PPI;
 use Test2::V0;
 
-our @EXPORT_OK = qw(find_violations count_violations good bad);
+our @EXPORT_OK = qw( find_violations count_violations good bad );
 
 sub find_violations ($policy, $code) {
   my $doc = PPI::Document->new(\$code);

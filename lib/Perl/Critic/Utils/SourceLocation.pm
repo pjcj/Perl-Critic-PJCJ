@@ -3,9 +3,10 @@ package Perl::Critic::Utils::SourceLocation;
 use v5.24.0;
 use strict;
 use warnings;
-use feature "signatures";
+use feature      qw( signatures );
+use experimental qw( signatures );
 
-use parent "PPI::Element";
+use parent qw( PPI::Element );
 
 # This is NOT a Perl::Critic policy - it's a helper class
 sub is_policy { 0 }
