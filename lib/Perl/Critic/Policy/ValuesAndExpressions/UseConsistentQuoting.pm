@@ -211,6 +211,9 @@ sub check_single_quoted ($self, $elem) {
   my $string  = $elem->string;
   my $content = $elem->content;
 
+  # Special case: strings with newlines don't follow the rules
+  return if $self->_has_newlines($string);
+
   # Rules 1,2: Use double quotes unless string has literal $/@ or double quotes
   return if index($string, '"') != -1;
 
@@ -238,6 +241,9 @@ sub check_double_quoted ($self, $elem) {
   my $string  = $elem->string;
   my $content = $elem->content;
 
+  # Special case: strings with newlines don't follow the rules
+  return if $self->_has_newlines($string);
+
   # Check for escaped dollar/at signs or double quotes, but only suggest single
   # quotes if no other interpolation exists
   return $self->violation($Desc, $Expl_single, $elem)
@@ -250,6 +256,9 @@ sub check_q_literal ($self, $elem) {
   return if $self->_is_in_use_statement($elem);
 
   my $string = $elem->string;
+
+  # Special case: strings with newlines don't follow the rules
+  return if $self->_has_newlines($string);
 
   # Preserve q() for escape sequences, optimize delimiter
   return $self->check_delimiter_optimisation($elem)
@@ -271,6 +280,9 @@ sub check_qq_interpolate ($self, $elem) {
   return if $self->_is_in_use_statement($elem);
 
   my $string = $elem->string;
+
+  # Special case: strings with newlines don't follow the rules
+  return if $self->_has_newlines($string);
 
   # Only preserve qq() if escape sequences are actually needed
   return $self->check_delimiter_optimisation($elem)
@@ -465,6 +477,11 @@ sub _has_literal_escape_sigils ($self, $string) {
   $string =~ /\\[\$\@]/
 }
 
+sub _has_newlines ($self, $string) {
+  # Check if string contains literal newlines (not \n escape sequences)
+  index($string, "\n") != -1
+}
+
 "
 I see the people working
 And see it working for them
@@ -574,6 +591,16 @@ L<perlimports|https://metacpan.org/pod/perlimports>.
   use Baz qw[ arg1 arg2 ];                # qw() must use parentheses only
   use Qux qw{ arg1 arg2 };                # qw() must use parentheses only
 
+=head2 Special Case: Newlines
+
+Strings containing newlines do not follow the rules.  But note that outside of a
+few very special cases, strings with literal newlines are not a good idea.
+
+  # Allowed
+  my $text = qq(
+    line 1
+    line 2
+  );
 
 =head1 AFFILIATION
 
