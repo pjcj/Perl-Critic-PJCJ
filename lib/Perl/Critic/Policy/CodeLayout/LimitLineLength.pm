@@ -80,7 +80,10 @@ sub _find_token_on_line ($self, $doc, $target_line) {
   $found_token
 }
 
-1;
+"
+I know you have a little life in you yet
+I know you have a lot of strength left
+"
 
 __END__
 

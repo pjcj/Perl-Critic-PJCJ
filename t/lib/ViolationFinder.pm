@@ -53,7 +53,10 @@ sub bad ($policy, $code, $expected_message, $description) {
     "$description - should suggest $expected_message";
 }
 
-1;
+"
+How I'm moved
+How you move me
+"
 
 __END__
 

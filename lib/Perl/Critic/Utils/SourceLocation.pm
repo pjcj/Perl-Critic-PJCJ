@@ -45,7 +45,10 @@ sub filename             ($self) { $self->{filename} }
 # Return self as the "document"
 sub top ($self) { $self }
 
-1;
+"
+She sent him scented letters
+And he received them with a strange delight
+"
 
 __END__
 

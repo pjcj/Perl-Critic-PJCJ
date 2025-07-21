@@ -6,7 +6,11 @@ use warnings;
 
 # VERSION
 
-1;
+"
+How could you leave me
+When I needed to possess you?
+I hated you, I loved you, too
+"
 
 __END__
 

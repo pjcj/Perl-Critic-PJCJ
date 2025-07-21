@@ -465,7 +465,12 @@ sub _has_literal_escape_sigils ($self, $string) {
   $string =~ /\\[\$\@]/
 }
 
-1;
+"
+I see the people working
+And see it working for them
+And so I want to join in
+But then I find it hurt me
+"
 
 __END__
 
