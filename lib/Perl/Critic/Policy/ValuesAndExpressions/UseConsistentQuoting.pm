@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use feature "signatures";
 no warnings "experimental::signatures";
+use experimental "postderef";
 
 use List::Util          qw( any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
