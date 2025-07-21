@@ -9,7 +9,6 @@ use Test2::V0;
 
 no warnings "experimental::signatures";
 
-# Test line number reporting accuracy for LimitLineLength policy
 use lib qw( lib t/lib );
 use Perl::Critic::Policy::CodeLayout::LimitLineLength;
 use ViolationFinder qw( find_violations );
@@ -26,7 +25,6 @@ sub line_numbers ($code, $expected_lines, $description) {
 }
 
 subtest "POD line number reporting" => sub {
-  # Test case where long line is within POD block
   my $code_with_pod = <<'END_CODE';
 #!/usr/bin/env perl
 
@@ -43,8 +41,6 @@ Another short line
 my $other = 2;
 END_CODE
 
-  # The long POD line is on line 8
-  # Currently this will FAIL because it reports line 1 instead of line 8
   line_numbers($code_with_pod, [8],
     "POD long line should report correct line number");
 };
@@ -64,8 +60,6 @@ This long POD line exceeds the seventy two character limit and triggers a
 my $another_very_long_variable_name_that_exceeds_seventy_two_char_limit = "end";
 END_CODE
 
-  # Should report violations at lines 2, 7, and 11
-  # Currently this will FAIL because POD line reports as line 1
   line_numbers(
     $mixed_code,
     [ 2, 7, 11 ],
@@ -94,8 +88,6 @@ Another long POD line in the second section that exceeds seventy two char
 my $end = 3;
 END_CODE
 
-  # Should report violations at lines 5 and 13
-  # Currently this will FAIL because POD lines report as line 1
   line_numbers(
     $multi_pod_code,
     [ 5, 13 ],
@@ -115,8 +107,6 @@ subtest "POD with code snippets" => sub {
 =cut
 END_CODE
 
-  # Should report violations at lines 5 and 6
-  # Currently this will FAIL because POD lines report as line 1
   line_numbers(
     $pod_with_code,
     [ 5, 6 ],
@@ -131,7 +121,6 @@ my $var = 1;
 my $other = 2;
 END_CODE
 
-  # Comment violations should work correctly (this is the control case)
   line_numbers($comment_code, [2],
     "Comment long lines should report correct line numbers");
 };
@@ -147,7 +136,6 @@ my $var = 1;
 my $very_long_variable_name_that_exceeds_seventy_two_char_limit_after_pod = "v";
 END_CODE
 
-  # Should report violation at line 7
   line_numbers($empty_pod_code, [7],
     "Code after empty POD should report correct line numbers");
 };
