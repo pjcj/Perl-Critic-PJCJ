@@ -25,6 +25,11 @@ simple rules:
 3. **Use bracket delimiters in preference order** - If the best choice is a
    quote-like operator, prefer `()`, `[]`, `<>`, or `{}` in that order.
 
+**Special Cases:**
+
+- **Use statements** - Import lists require `qw()` for multiple arguments
+- **Newlines** - Multi-line strings may use any quoting style
+
 #### Rationale
 
 - Double quotes are preferred for consistency and to allow potential
@@ -70,6 +75,19 @@ my $var   = 'Price: $10';                   # literal $ uses single quotes
 my @words = qw[ word(with)parens ];         # [] handles unbalanced parentheses
 my $cmd   = qx( command[with]brackets );    # () handles unbalanced brackets
 my @list  = qw( one two );                  # bracket delimiters only
+
+# Special Case: Use statements
+use Foo;                                    # no arguments allowed
+use Bar ();                                 # empty parentheses allowed
+use Baz "single_arg";                       # single arg with double quotes
+use Qux qw( single_arg );                   # single arg with qw()
+use Quux qw( arg1 arg2 arg3 );              # multiple args with qw() only
+
+# Special Case: Strings with newlines
+my $text = qq(                              # Any quoting style is allowed
+  line 1                                    # for multi-line strings
+  line 2
+);
 ```
 
 ### Perl::Critic::Policy::CodeLayout::LimitLineLength
