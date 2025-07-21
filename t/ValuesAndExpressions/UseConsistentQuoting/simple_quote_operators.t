@@ -3,9 +3,10 @@
 use v5.24.0;
 use strict;
 use warnings;
-use feature "signatures";
 
 use Test2::V0;
+use feature      qw( signatures );
+use experimental qw( signatures );
 
 # Test that q() and qq() suggest simpler quotes for simple strings
 use lib qw( lib t/lib );

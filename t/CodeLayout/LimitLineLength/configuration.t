@@ -3,10 +3,10 @@
 use v5.24.0;
 use strict;
 use warnings;
-use feature      qw( signatures );
-use experimental qw( signatures );
 
 use Test2::V0;
+use feature      qw( signatures );
+use experimental qw( signatures );
 
 # Test the policy with custom configuration
 use lib qw( lib t/lib );
