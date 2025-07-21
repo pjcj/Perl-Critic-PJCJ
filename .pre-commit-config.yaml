@@ -87,7 +87,7 @@ repos:
         name: perlcritic
         description: Ensure perl files adhere to standards
         language: perl
-        entry: perlcritic lib t
+        entry: perlcritic lib t dev
         pass_filenames: false
       - id: jscpd
         name: Check for duplicated code
