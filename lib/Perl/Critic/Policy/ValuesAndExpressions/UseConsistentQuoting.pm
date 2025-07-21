@@ -558,6 +558,9 @@ Use statements have special quoting requirements for their import lists:
 
 =back
 
+This allows for compatibility with
+L<perlimports|https://metacpan.org/pod/perlimports>.
+
   # Good
   use Foo;                                # no arguments
   use Bar ();                             # empty parentheses
