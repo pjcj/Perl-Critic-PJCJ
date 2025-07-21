@@ -1,46 +1,39 @@
 #!/usr/bin/env perl
 
+use v5.20.0;
 use strict;
 use warnings;
+use feature "signatures";
+no warnings "experimental::signatures";
+
 use File::Spec;
-use List::Util qw(any);
+use List::Util qw( any );
 
-sub read_targets_file {
-  my ($targets_file) = @_;
-
+sub read_targets_file ($targets_file) {
   unless (-f $targets_file) {
     die "Cannot find $targets_file - make sure it exists in the current "
       . "directory\n";
   }
-
-  open my $targets_fh, "<", $targets_file
-    or die "Cannot read $targets_file: $!\n";
-  my $targets_content = do { local $/ = undef; <$targets_fh> };
-  close $targets_fh or warn "Cannot close $targets_file: $!\n";
-
-  return $targets_content;
+  open my $fh, "<", $targets_file or die "Cannot read $targets_file: $!\n";
+  my $targets_content = do { local $/ = undef; <$fh> };
+  close $fh or die "Cannot close $targets_file: $!\n";
+  $targets_content
 }
 
-sub clean_targets_content {
-  my ($targets_content) = @_;
-
+sub clean_targets_content ($targets_content) {
   # Remove comments but preserve Makefile formatting
   $targets_content =~ s/^#.*$//gm;    # Remove comment lines
   $targets_content =~ s/^\s*$//gm;    # Remove empty lines
   $targets_content =~ s/\s+$//gm;     # Remove trailing whitespace
   $targets_content =~ s/\n{2,}/\n/g;  # Collapse multiple newlines
-  # DO NOT remove leading whitespace - Makefiles need tabs!
-
-  return $targets_content;
+    # DO NOT remove leading whitespace - Makefiles need tabs!
+  $targets_content
 }
 
-sub filter_conflicting_targets {
-  my ($targets_content) = @_;
-
+sub filter_conflicting_targets ($targets_content) {
   # Remove targets that conflict with ExtUtils::MakeMaker
   # These targets are already defined by MakeMaker with :: syntax
-  my @conflicting_targets = qw(test clean install);
-
+  my @conflicting_targets = qw( test clean install );
   # Process line by line to avoid mangling
   my @lines = split /\n/, $targets_content;
   my @filtered_lines;
@@ -84,12 +77,10 @@ sub filter_conflicting_targets {
     push @filtered_lines, $line;
   }
 
-  return join "\n", @filtered_lines;
+  join "\n", @filtered_lines
 }
 
-sub create_postamble {
-  my ($targets_content) = @_;
-
+sub create_postamble ($targets_content) {
   return <<"END_POSTAMBLE";
 
 sub MY::postamble {
@@ -102,55 +93,111 @@ END_MAKEFILE
 END_POSTAMBLE
 }
 
-sub read_makefile_pl {
-  my ($makefile_pl) = @_;
-
-  open my $fh, "<", $makefile_pl or die "Cannot read $makefile_pl: $!\n";
-  my $content = do { local $/ = undef; <$fh> };
-  close $fh or warn "Cannot close $makefile_pl: $!\n";
-
-  return $content;
+sub read_makefile_pl ($makefile_pl) {
+  open my $Fh, "<", $makefile_pl or die "Cannot read $makefile_pl: $!\n";
+  my $content = do { local $/ = undef; <$Fh> };
+  close $Fh or die "Cannot close $makefile_pl: $!\n";
+  $content
 }
 
-sub write_makefile_pl {
-  my ($makefile_pl, $content) = @_;
-
-  open my $fh, ">", $makefile_pl or die "Cannot write $makefile_pl: $!\n";
-  print $fh $content;
-  close $fh or warn "Cannot close $makefile_pl: $!\n";
+sub write_makefile_pl ($makefile_pl, $content) {
+  open my $Fh, ">", $makefile_pl or die "Cannot write $makefile_pl: $!\n";
+  print $Fh $content;
+  close $Fh or die "Cannot close $makefile_pl: $!\n";
 }
 
-sub inject_postamble {
-  my ($content, $postamble) = @_;
-
+sub inject_postamble ($content, $postamble) {
   # Append the postamble before the final WriteMakefile call
   $content =~ s/(WriteMakefile\(%WriteMakefileArgs\);)/$postamble\n$1/;
-
-  return $content;
+  $content
 }
 
-sub main {
-  my $makefile_pl = shift @ARGV or die "Usage: $0 <Makefile.PL>\n";
-
-  # Read the shared targets from dev/Makefile.targets
-  my $targets_file = "dev/Makefile.targets";
+sub main () {
+  my $makefile_pl     = shift @ARGV or die "Usage: $0 <Makefile.PL>\n";
+  my $targets_file    = "dev/Makefile.targets";
   my $targets_content = read_targets_file($targets_file);
-
-  # Clean and filter the targets content
   $targets_content = clean_targets_content($targets_content);
   $targets_content = filter_conflicting_targets($targets_content);
-
-  # Create the postamble
   my $postamble = create_postamble($targets_content);
-
-  # Read and modify the Makefile.PL
-  my $content = read_makefile_pl($makefile_pl);
+  my $content   = read_makefile_pl($makefile_pl);
   $content = inject_postamble($content, $postamble);
-
-  # Write it back
   write_makefile_pl($makefile_pl, $content);
-
   print "Successfully added targets from $targets_file to $makefile_pl\n";
 }
 
-main();
+main;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+append_postamble - Inject custom Makefile targets into Dist::Zilla
+generated Makefile.PL
+
+=head1 SYNOPSIS
+
+  perl dev/append_postamble Makefile.PL
+
+=head1 DESCRIPTION
+
+This script reads custom Makefile targets from F<dev/Makefile.targets> and
+injects them into a Dist::Zilla generated F<Makefile.PL> file via a postamble
+subroutine. It automatically filters out targets that conflict with
+ExtUtils::MakeMaker's built-in targets.
+
+The script is designed to run as part of the Dist::Zilla build process via
+the Run::AfterBuild plugin.
+
+=head1 FUNCTIONS
+
+=head2 read_targets_file($targets_file)
+
+Reads the contents of the targets file and returns it as a string.
+
+=head2 clean_targets_content($targets_content)
+
+Removes comments and empty lines while preserving Makefile formatting
+(particularly tabs which are significant in Makefiles).
+
+=head2 filter_conflicting_targets($targets_content)
+
+Removes targets that would conflict with ExtUtils::MakeMaker's built-in
+targets (test, clean, install) to avoid "target redefined" warnings.
+
+=head2 create_postamble($targets_content)
+
+Creates the Perl code for the MY::postamble subroutine that will be
+injected into the Makefile.PL.
+
+=head2 read_makefile_pl($makefile_pl)
+
+Reads the Makefile.PL file and returns its contents.
+
+=head2 write_makefile_pl($makefile_pl, $content)
+
+Writes the modified content back to the Makefile.PL file.
+
+=head2 inject_postamble($content, $postamble)
+
+Injects the postamble code before the WriteMakefile call in the Makefile.PL.
+
+=head2 main()
+
+Main program logic that orchestrates the entire process.
+
+=head1 AUTHOR
+
+Paul Johnson C<< <paul@pjcj.net> >>
+
+=head1 COPYRIGHT
+
+Copyright 2025 Paul Johnson.
+
+=head1 LICENCE
+
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
