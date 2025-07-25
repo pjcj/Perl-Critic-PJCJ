@@ -12,6 +12,8 @@ subtest "Module loading" => sub {
   ok require Perl::Critic::PJCJ, "Can load Perl::Critic::PJCJ";
   ok require Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting,
     "Can load UseConsistentQuoting policy";
+  ok require Perl::Critic::Policy::CodeLayout::LimitLineLength,
+    "Can load LimitLineLength policy";
 };
 
 done_testing;
