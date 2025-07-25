@@ -4,7 +4,7 @@ use v5.24.0;
 use strict;
 use warnings;
 
-use Test2::V0;
+use Test2::V0    qw( done_testing ok subtest );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
