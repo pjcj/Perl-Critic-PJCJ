@@ -6,10 +6,9 @@ use warnings;
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
-use parent              qw( Perl::Critic::Policy );
-use PPI;
-use Perl::Critic::Utils::SourceLocation;
+use Perl::Critic::Utils                 qw( $SEVERITY_MEDIUM );
+use parent                              qw( Perl::Critic::Policy );
+use Perl::Critic::Utils::SourceLocation ();
 
 my $Desc = "Line exceeds maximum length";
 my $Expl = "Keep lines under the configured maximum for readability";
