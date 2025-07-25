@@ -502,7 +502,7 @@ consistent and optimal quoting
   my $greeting = 'hello';                 # use double quotes for simple strings
   my @words    = qw{word(with)parens};    # use qw[] for unbalanced content
   my $text     = qq(simple);              # use "" instead of qq()
-  my $file     = q/path/to/file/;         # use "" instead of q()
+  my $file     = q!path/to/file!;         # use "" instead of q()
 
   # Good examples:
   my $greeting = "hello";                 # double quotes for simple strings
@@ -528,7 +528,7 @@ operators when possible.
   # Bad
   my $text    = qq(hello world);          # unnecessary quote operator
   my $literal = q(contains$literal);      # unnecessary quote operator
-  my $path    = q/path/to/file/;          # unnecessary quote operator
+  my $path    = q!path/to/file!;          # unnecessary quote operator
 
 =head2 Rule 2: Prefer interpolated strings
 
