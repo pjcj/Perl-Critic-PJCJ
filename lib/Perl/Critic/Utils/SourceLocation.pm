@@ -11,8 +11,6 @@ use parent qw( PPI::Element );
 # This is NOT a Perl::Critic policy - it's a helper class
 sub is_policy { 0 }
 
-# Synthetic element for accurate line number reporting when no PPI token exists
-
 sub new ($class, %args) {
   bless {
     line_number   => $args{line_number},
