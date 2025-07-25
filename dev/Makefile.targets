@@ -1,6 +1,15 @@
 .PHONY: show-deps install-deps reinstall-deps test format lint clean build \
         install cover cover-html cover-compilation cover-nvim
 
+show-authordeps:
+	@dzil authordeps
+
+install-authordeps:
+	dzil authordeps --missing | cpm install -g -
+
+reinstall-authordeps:
+	dzil authordeps | cpm install -g --reinstall --no-prebuilt -
+
 show-deps:
 	@dzil listdeps --develop
 
