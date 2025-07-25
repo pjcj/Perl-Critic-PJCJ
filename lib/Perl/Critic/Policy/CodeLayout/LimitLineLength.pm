@@ -11,8 +11,6 @@ use parent              qw( Perl::Critic::Policy );
 use PPI;
 use Perl::Critic::Utils::SourceLocation;
 
-# VERSION
-
 my $Desc = "Line exceeds maximum length";
 my $Expl = "Keep lines under the configured maximum for readability";
 

@@ -10,8 +10,6 @@ use List::Util          qw( any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 use parent              qw( Perl::Critic::Policy );
 
-# VERSION
-
 my $Desc         = "Quoting";
 my $Expl_double  = 'use ""';
 my $Expl_single  = "use ''";

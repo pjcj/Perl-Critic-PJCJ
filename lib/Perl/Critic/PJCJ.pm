@@ -4,8 +4,6 @@ use v5.24.0;
 use strict;
 use warnings;
 
-# VERSION
-
 "
 How could you leave me
 When I needed to possess you?
