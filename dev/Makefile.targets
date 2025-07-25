@@ -1,5 +1,7 @@
-.PHONY: show-deps install-deps reinstall-deps test format lint clean build \
-        install cover cover-html cover-compilation cover-nvim
+.PHONY: show-authordeps install-authordeps reinstall-authordeps \
+	show-deps install-deps reinstall-deps \
+	t xt format lint clean build install \
+	cover cover-html cover-compilation cover-nvim
 
 show-authordeps:
 	@dzil authordeps
@@ -19,8 +21,12 @@ install-deps:
 reinstall-deps:
 	dzil listdeps --develop | cpm install -g --reinstall --no-prebuilt -
 
-test:
+t:
 	yath test -j20 --qvf --no-color -T --term-width=$(tput cols)
+
+xt:
+	dzil test
+	dzil xt
 
 format:
 	@mkdir -p tmp/perltidy
@@ -49,7 +55,7 @@ install: build
 
 cover: build
 	cover --delete
-	HARNESS_PERL_SWITCHES=-MDevel::Cover=+ignore,^t/ make test
+	HARNESS_PERL_SWITCHES=-MDevel::Cover=+ignore,^t/ make t
 
 cover-html: cover
 	cover --report=html_basic --launch
