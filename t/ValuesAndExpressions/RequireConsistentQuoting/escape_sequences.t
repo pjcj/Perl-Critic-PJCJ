@@ -13,12 +13,10 @@ use lib qw( lib t/lib );
 use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 use ViolationFinder qw( bad good );
 
-
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
 subtest "Escaped sigils should suggest double quotes" => sub {
-  # These are currently incorrectly handled by line 218
   # In single quotes: '\$' is literally backslash-dollar
   # In double quotes: "\$" is properly escaped dollar
 
@@ -30,7 +28,7 @@ subtest "Escaped sigils should suggest double quotes" => sub {
 
   # Mixed escaped and literal content
   bad $Policy, q(my $mixed = "\$escaped and literal text"), "use ''",
-    "Escaped sigils with text should suggest double quotes";
+    "Escaped sigils with text should suggest single quotes";
 };
 
 subtest "Other escape sequences in single quotes" => sub {
