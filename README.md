@@ -53,7 +53,7 @@ simple rules:
 # Excessive punctuation
 my $greeting = 'hello';                     # use double quotes (Rule 2)
 my @words    = qw{word(with)parens};        # use qw[] (Rules 1, 3)
-my $file     = q/path/to/file/;             # use "" (Rules 1, 3)
+my $file     = q!path/to/file!;             # use "" (Rules 1, 3)
 my $text     = qq(simple);                  # use "" instead of qq() (Rule 1)
 my $literal  = q(contains$literal);         # use '' instead of q() (Rule 1)
 ```
