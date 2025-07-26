@@ -32,7 +32,7 @@ sub line_numbers ($code, $expected_lines, $description) {
 }
 
 subtest "POD line number reporting" => sub {
-  my $code_with_pod = <<'END_CODE';
+  my $code_with_pod = <<'EOCODE';
 #!/usr/bin/env perl
 
 my $var = 1;
@@ -46,7 +46,7 @@ Another short line
 =cut
 
 my $other = 2;
-END_CODE
+EOCODE
 
   my @violations = line_numbers($code_with_pod, [8],
     "POD long line should report correct line number");
@@ -57,7 +57,7 @@ END_CODE
 };
 
 subtest "Mixed POD and code violations" => sub {
-  my $mixed_code = <<'END_CODE';
+  my $mixed_code = <<'EOCODE';
 my $short = 1;
 my $very_long_variable_name_that_exceeds_seventy_two_char_limit = "value";
 
@@ -69,7 +69,7 @@ This long POD line exceeds the seventy two character limit and triggers a
 =cut
 
 my $another_very_long_variable_name_that_exceeds_seventy_two_char_limit = "end";
-END_CODE
+EOCODE
 
   my @violations = line_numbers(
     $mixed_code,
@@ -87,7 +87,7 @@ END_CODE
 };
 
 subtest "Multiple POD sections" => sub {
-  my $multi_pod_code = <<'END_CODE';
+  my $multi_pod_code = <<'EOCODE';
 my $var = 1;
 
 =pod
@@ -105,7 +105,7 @@ Another long POD line in the second section that exceeds seventy two char
 =cut
 
 my $end = 3;
-END_CODE
+EOCODE
 
   line_numbers(
     $multi_pod_code,
@@ -115,7 +115,7 @@ END_CODE
 };
 
 subtest "POD with code snippets" => sub {
-  my $pod_with_code = <<'END_CODE';
+  my $pod_with_code = <<'EOCODE';
 =pod
 
 =head1 EXAMPLES
@@ -124,7 +124,7 @@ subtest "POD with code snippets" => sub {
   my $example_variable_with_very_long_name = "this makes line too long!";
 
 =cut
-END_CODE
+EOCODE
 
   my @violations = line_numbers(
     $pod_with_code,
@@ -140,11 +140,11 @@ END_CODE
 };
 
 subtest "Comment line number reporting edge cases" => sub {
-  my $comment_code = <<'END_CODE';
+  my $comment_code = <<'EOCODE';
 my $var = 1;
 # This is a long comment that exceeds the seventy two character limit!!!!
 my $other = 2;
-END_CODE
+EOCODE
 
   my @violations = line_numbers($comment_code, [2],
     "Comment long lines should report correct line numbers");
@@ -154,7 +154,7 @@ END_CODE
 };
 
 subtest "Empty POD blocks" => sub {
-  my $empty_pod_code = <<'END_CODE';
+  my $empty_pod_code = <<'EOCODE';
 my $var = 1;
 
 =pod
@@ -162,7 +162,7 @@ my $var = 1;
 =cut
 
 my $very_long_variable_name_that_exceeds_seventy_two_char_limit_after_pod = "v";
-END_CODE
+EOCODE
 
   my @violations = line_numbers($empty_pod_code, [7],
     "Code after empty POD should report correct line numbers");
