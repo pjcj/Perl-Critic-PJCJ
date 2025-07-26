@@ -75,17 +75,17 @@ subtest "Escape sequences in single quotes should NOT suggest double quotes" =>
 
     # Literal backslash-dollar in single quotes should stay single quotes
     # (in '' it's literal \$, in "" it would become escaped $)
-    good $Policy, q{my $literal_dollar = 'price: \\$5.00'},
+    good $Policy, q(my $literal_dollar = 'price: \\$5.00'),
     'Literal \$ in single quotes should stay single quotes';
 
     # Literal backslash-at in single quotes should stay single quotes
     # (in '' it's literal \@, in "" it would become escaped @)
-    good $Policy, q{my $literal_at = 'email: user\\@domain.com'},
+    good $Policy, q(my $literal_at = 'email: user\\@domain.com'),
     'Literal \@ in single quotes should stay single quotes';
 
     # Complex case with multiple literal escapes should stay single quotes
-    good $Policy, q{my $complex = 'path: C:\\new\\folder with \\$var'},
-    'Multiple literal escapes in single quotes should stay single quotes';
+    good $Policy, q(my $complex = 'path: C:\\new\\folder with \\$var'),
+    "Multiple literal escapes in single quotes should stay single quotes";
   };
 
 subtest "All Perl escape sequences should stay in single quotes" => sub {
@@ -108,7 +108,7 @@ subtest "All Perl escape sequences should stay in single quotes" => sub {
     'Literal \x hex escape should stay single quotes';
   good $Policy, q(my $hex = 'Hex \\xff value'),
     'Literal \xff hex escape should stay single quotes';
-  good $Policy, q{my $hex = 'Unicode \\x{263A} smiley'},
+  good $Policy, q(my $hex = 'Unicode \\x{263A} smiley'),
     'Literal \x{} hex escape should stay single quotes';
 
   # Octal escapes: \033 \377 \o{033}
@@ -116,7 +116,7 @@ subtest "All Perl escape sequences should stay in single quotes" => sub {
     'Literal \033 octal escape should stay single quotes';
   good $Policy, q(my $oct = 'Octal \\377 max'),
     'Literal \377 octal escape should stay single quotes';
-  good $Policy, q{my $oct = 'Octal \\o{033} braced'},
+  good $Policy, q(my $oct = 'Octal \\o{033} braced'),
     'Literal \o{} octal escape should stay single quotes';
 
   # Control characters: \c[ \cA \c@
@@ -128,9 +128,9 @@ subtest "All Perl escape sequences should stay in single quotes" => sub {
     'Literal \c@ control char should stay single quotes';
 
   # Named Unicode: \N{name} \N{U+263A}
-  good $Policy, q{my $named = 'Named \\N{SMILEY} char'},
+  good $Policy, q(my $named = 'Named \\N{SMILEY} char'),
     'Literal \N{name} escape should stay single quotes';
-  good $Policy, q{my $named = 'Unicode \\N{U+263A} point'},
+  good $Policy, q(my $named = 'Unicode \\N{U+263A} point'),
     'Literal \N{U+} escape should stay single quotes';
 };
 
@@ -139,31 +139,31 @@ subtest "q() with escape sequences should stay q()" => sub {
   # So q() with escape sequences should be preserved to maintain literal meaning
 
   # Single character escapes in q()
-  good $Policy, q{my $text = q(Line with \\n newline)},
+  good $Policy, q[my $text = q(Line with \\n newline)],
     'q() with literal \n should stay q()';
-  good $Policy, q{my $text = q(Tab \\t here)},
+  good $Policy, q[my $text = q(Tab \\t here)],
     'q() with literal \t should stay q()';
-  good $Policy, q{my $text = q(Return \\r here)},
-    'q() with literal \r should stay q()';
+  good $Policy, q[my $text = q(Return \\r here)],
+    "q() with literal \r should stay q()";
 
   # Variable sigils in q() - these are literal backslash-dollar/at
   # Since \$ in q() is literal (two characters), it's preserved
-  good $Policy, q{my $price = q(Cost: \\$5.00)},
+  good $Policy, q[my $price = q(Cost: \\$5.00)],
     'q() with literal \$ should stay q()';
-  good $Policy, q{my $email = q(user\\@domain.com)},
+  good $Policy, q[my $email = q(user\\@domain.com)],
     'q() with literal \@ should stay q()';
 
   # Hex/octal escapes in q()
-  good $Policy, q{my $hex = q(Hex \\x1b escape)},
+  good $Policy, q[my $hex = q(Hex \\x1b escape)],
     'q() with literal \x hex should stay q()';
-  good $Policy, q{my $oct = q(Octal \\033 escape)},
+  good $Policy, q[my $oct = q(Octal \\033 escape)],
     'q() with literal \033 should stay q()';
 
   # Control and named escapes in q()
-  good $Policy, q{my $ctrl = q(Control \\c[ char)},
+  good $Policy, q<my $ctrl = q(Control \\c[ char)>,
     'q() with literal \c should stay q()';
-  good $Policy, q{my $named = q(Named \\N{SMILEY} char)},
-    'q() with literal \N should stay q()';
+  good $Policy, q[my $named = q(Named \\N{SMILEY} char)],
+    "q() with literal \\N should stay q()";
 };
 
 subtest "qq() with escape sequences should stay qq()" => sub {
@@ -172,31 +172,31 @@ subtest "qq() with escape sequences should stay qq()" => sub {
   # interpreted meaning
 
   # Single character escapes in qq()
-  good $Policy, q{my $text = qq(Line with \\n newline)},
+  good $Policy, q[my $text = qq(Line with \\n newline)],
     'qq() with interpreted \n should stay qq()';
-  good $Policy, q{my $text = qq(Tab \\t here)},
+  good $Policy, q[my $text = qq(Tab \\t here)],
     'qq() with interpreted \t should stay qq()';
-  good $Policy, q{my $text = qq(Return \\r here)},
+  good $Policy, q[my $text = qq(Return \\r here)],
     'qq() with interpreted \r should stay qq()';
 
   # Variable sigils in qq() - these escape the sigils for literal output
   # Since \$ in qq() produces a literal $, single quotes would work too
-  bad $Policy, q{my $price = qq(Cost: \\$5.00)}, "use ''",
+  bad $Policy, q[my $price = qq(Cost: \\$5.00)], "use ''",
     'qq() with escaped \$ should suggest single quotes';
-  bad $Policy, q{my $email = qq(user\\@domain.com)}, "use ''",
+  bad $Policy, q[my $email = qq(user\\@domain.com)], "use ''",
     'qq() with escaped \@ should suggest single quotes';
 
   # Hex/octal escapes in qq()
-  good $Policy, q{my $hex = qq(Hex \\x1b escape)},
+  good $Policy, q[my $hex = qq(Hex \\x1b escape)],
     'qq() with interpreted \x hex should stay qq()';
-  good $Policy, q{my $oct = qq(Octal \\033 escape)},
+  good $Policy, q[my $oct = qq(Octal \\033 escape)],
     'qq() with interpreted \033 should stay qq()';
 
   # Control and named escapes in qq()
-  good $Policy, q{my $ctrl = qq(Control \\c[ char)},
+  good $Policy, q<my $ctrl = qq(Control \\c[ char)>,
     'qq() with interpreted \c should stay qq()';
-  good $Policy, q{my $named = qq(Named \\N{SMILEY} char)},
-    'qq() with interpreted \N should stay qq()';
+  good $Policy, q[my $named = qq(Named \\N{SMILEY} char)],
+    "qq() with interpreted \\N should stay qq()";
 };
 
 subtest "Variables in single quotes are not suggested for interpolation" =>
@@ -206,26 +206,26 @@ subtest "Variables in single quotes are not suggested for interpolation" =>
 
     # Variable that exists in scope should not suggest interpolation
     good $Policy, q(my $x = '$var literal'),
-    'Variables in single quotes should stay literal';
+    "Variables in single quotes should stay literal";
 
     # Array reference should not suggest interpolation
     good $Policy, q(my $x = '@arr literal'),
-    'Array refs in single quotes should stay literal';
+    "Array refs in single quotes should stay literal";
 
     # Hash reference should not suggest interpolation
     good $Policy, q(my $x = '$hash{key} literal'),
-    'Hash refs in single quotes should stay literal';
+    "Hash refs in single quotes should stay literal";
 
     # Email addresses with @ should not suggest interpolation
     good $Policy, q(my $email = 'user@domain.com'),
-    'Email addresses should stay in single quotes';
+    "Email addresses should stay in single quotes";
   };
 
 subtest "Edge cases with backslashes" => sub {
   # Test boundary conditions
 
-  good $Policy, q(my $backslash = "Just \\ backslash"),
-    "Escaped backslash in double quotes is acceptable";
+  bad $Policy, q(my $backslash = 'Just \\ backslash'), 'use ""',
+    "Literal backslashes in single quotes should suggest double quotes";
 
   good $Policy, q(my $quote = 'Has "double" quotes'),
     "Single quotes justified by containing double quotes";
@@ -241,13 +241,13 @@ subtest "Additional escape sequence tests" => sub {
   # Test cases that might confuse the PPI parser in would_interpolate
   # Complex strings that might not parse correctly in double quotes
   good $Policy, q(my $x = 'text with " and \\ and other escapes'),
-    'Single quotes for complex escape sequences';
+    "Single quotes for complex escape sequences";
 
   # Single quotes with escape sequences should stay single quotes
   # Note: strings with escape sequences in single quotes should stay single
   # quotes because \n has different meanings: literal in '', newline in ""
   good $Policy, q(my $x = 'text with \n newline but no interpolation'),
-    'Single quotes with escape sequences should stay single quotes';
+    "Single quotes with escape sequences should stay single quotes";
 };
 
 done_testing;
