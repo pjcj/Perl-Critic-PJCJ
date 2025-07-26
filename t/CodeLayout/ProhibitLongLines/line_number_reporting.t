@@ -8,9 +8,9 @@ use Test2::V0    qw( done_testing is like subtest );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use lib                                               qw( lib t/lib );
+use lib                                                 qw( lib t/lib );
 use Perl::Critic::Policy::CodeLayout::ProhibitLongLines ();
-use ViolationFinder                                   qw( find_violations );
+use ViolationFinder                                     qw( find_violations );
 
 my $Policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new(
   max_line_length => 72);

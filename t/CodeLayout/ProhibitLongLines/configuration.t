@@ -9,9 +9,9 @@ use feature      qw( signatures );
 use experimental qw( signatures );
 
 # Test the policy with custom configuration
-use lib                                               qw( lib t/lib );
+use lib                                                 qw( lib t/lib );
 use Perl::Critic::Policy::CodeLayout::ProhibitLongLines ();
-use ViolationFinder                                   qw( bad good );
+use ViolationFinder                                     qw( bad good );
 
 subtest "Custom max_line_length = 40" => sub {
   my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
