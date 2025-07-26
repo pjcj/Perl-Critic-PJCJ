@@ -49,7 +49,7 @@ lint:
 clean:
 	dzil clean
 
-build:
+build: clean
 	dzil build
 
 install: build
