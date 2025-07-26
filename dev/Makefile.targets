@@ -33,15 +33,15 @@ xt:
 
 format:
 	@mkdir -p tmp/perltidy
-	@git ls-files '*.pl' '*.pm' '*.t' | while read file; do \
-		if perltidy -b -bext=tdybak "$$file" >/dev/null 2>&1; then \
-			if [[ -f "$$file.tdybak" ]]; then \
-				if ! diff -q "$$file" "$$file.tdybak" >/dev/null 2>&1; then \
-					echo "Formatted $$file"; \
-				fi; \
-				mv "$$file.tdybak" tmp/perltidy/; \
-			fi; \
+	@git ls-files "*.pl" "*.pm" "*.t" | while read file; do \
+		cp "$$file" "$$file.tdybak"; \
+		perlimports --inplace-edit --no-preserve-unused \
+			"$$file" 2>/dev/null || true; \
+		perltidy -b "$$file" >/dev/null 2>&1; \
+		if ! diff -q "$$file.tdybak" "$$file" >/dev/null 2>&1; then \
+			echo "Formatted $$file"; \
 		fi; \
+		mv "$$file.tdybak" tmp/perltidy/; \
 	done
 
 lint:
