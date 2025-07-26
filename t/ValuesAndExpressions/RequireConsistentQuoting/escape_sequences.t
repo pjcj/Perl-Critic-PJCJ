@@ -224,6 +224,10 @@ subtest "Variables in single quotes are not suggested for interpolation" =>
 subtest "Edge cases with backslashes" => sub {
   # Test boundary conditions
 
+  # Original test - let's see if this uncovers a bug
+  good $Policy, 'my $backslash = "Just \\ backslash"',
+    "Escaped backslash in double quotes is acceptable";
+
   bad $Policy, q(my $backslash = 'Just \\ backslash'), 'use ""',
     "Literal backslashes in single quotes should suggest double quotes";
 
