@@ -20,7 +20,7 @@ sub filter_conflicting_targets ($targets_content) {
   # Remove targets that conflict with ExtUtils::MakeMaker
   # These targets are already defined by MakeMaker with :: syntax
 
-  my $conflicts = { map { $_ => 1 } qw( clean install ) };
+  my $conflicts = { map { $_ => 1 } qw( test clean install ) };
 
   # Process line by line to avoid mangling
   my @lines = split /^/, $targets_content;

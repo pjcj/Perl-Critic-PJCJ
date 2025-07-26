@@ -27,6 +27,9 @@ t:
 zt: clean
 	dzil test -j20
 
+test: zt
+	:
+
 format:
 	@mkdir -p tmp/perltidy
 	@git ls-files "*.pl" "*.pm" "*.t" | while read file; do \
