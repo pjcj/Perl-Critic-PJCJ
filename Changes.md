@@ -1,8 +1,8 @@
 # Revision history for Perl::Critic::PJCJ
 
-## {{$NEXT}}
+ {{$NEXT}}
 
-## v0.1.2 - 26 July 2025
+## v0.1.2 - 2025-07-26
 
 - Initial release
 - Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting policy
