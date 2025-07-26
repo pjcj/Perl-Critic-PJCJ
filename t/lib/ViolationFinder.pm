@@ -1,6 +1,6 @@
 package ViolationFinder;
 
-use v5.24.0;
+use v5.26.0;
 use strict;
 use warnings;
 

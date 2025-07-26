@@ -1,6 +1,6 @@
 package Perl::Critic::Utils::SourceLocation;
 
-use v5.24.0;
+use v5.26.0;
 use strict;
 use warnings;
 use feature      qw( signatures );
