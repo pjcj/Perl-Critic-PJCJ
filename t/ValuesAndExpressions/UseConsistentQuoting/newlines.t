@@ -4,14 +4,14 @@ use v5.24.0;
 use strict;
 use warnings;
 
-use Test2::V0;
+use Test2::V0    qw( done_testing subtest );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
 # Test the newline special case handling
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
-use ViolationFinder qw( find_violations count_violations good bad );
+use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting ();
+use ViolationFinder qw( bad good );
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;

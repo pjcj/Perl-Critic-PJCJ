@@ -4,12 +4,12 @@ use v5.24.0;
 use strict;
 use warnings;
 
-use Test2::V0;
+use Test2::V0    qw( done_testing is isa_ok subtest );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use lib qw( lib t/lib );
-use Perl::Critic::Utils::SourceLocation;
+use lib                                 qw( lib t/lib );
+use Perl::Critic::Utils::SourceLocation ();
 
 subtest "Constructor with all parameters" => sub {
   my $location = Perl::Critic::Utils::SourceLocation->new(

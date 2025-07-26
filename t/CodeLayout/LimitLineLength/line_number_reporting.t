@@ -4,13 +4,13 @@ use v5.24.0;
 use strict;
 use warnings;
 
-use Test2::V0;
+use Test2::V0    qw( done_testing is like subtest );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use lib qw( lib t/lib );
-use Perl::Critic::Policy::CodeLayout::LimitLineLength;
-use ViolationFinder qw( find_violations );
+use lib                                               qw( lib t/lib );
+use Perl::Critic::Policy::CodeLayout::LimitLineLength ();
+use ViolationFinder                                   qw( find_violations );
 
 my $Policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new(
   max_line_length => 72);
