@@ -21,6 +21,9 @@ install-deps:
 reinstall-deps:
 	dzil listdeps --develop | cpm install -g --reinstall --no-prebuilt -
 
+test:
+	prove -r t
+
 t:
 	yath test -j20 --qvf --no-color -T --term-width=$(tput cols)
 
