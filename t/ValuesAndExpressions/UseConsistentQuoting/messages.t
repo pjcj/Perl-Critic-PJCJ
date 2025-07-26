@@ -73,12 +73,12 @@ subtest "Exotic delimiter messages" => sub {
 };
 
 subtest "Combined violation messages" => sub {
-  my @violations = find_violations($Policy, <<~'CODE');
+  my @violations = find_violations($Policy, <<~'EOCODE');
     my $simple = 'hello';
     my @words = qw{word(with)parens};
     my $ok = "world";
     my @ok_words = qw[more(parens)];
-    CODE
+    EOCODE
 
   is @violations, 2, "Two violations in combined code";
 
