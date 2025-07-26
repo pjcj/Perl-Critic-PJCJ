@@ -10,11 +10,11 @@ use experimental qw( signatures );
 
 # Test the newline special case handling
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 use ViolationFinder qw( bad good );
 
 my $Policy
-  = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+  = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
 subtest "Single-quoted strings with newlines" => sub {
   # Single-quoted strings with literal newlines are allowed

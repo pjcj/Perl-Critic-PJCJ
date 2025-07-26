@@ -10,11 +10,11 @@ use experimental qw( signatures );
 
 # Test to exercise uncovered branches in quote checking within use statements
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 use ViolationFinder qw( bad good );
 
 my $Policy
-  = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+  = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
 subtest "Exercise _is_in_use_statement branches" => sub {
   # These test cases are designed to exercise the _is_in_use_statement method

@@ -10,13 +10,12 @@ use experimental qw( signatures );
 
 # Test escape sequence handling in quotes
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 use ViolationFinder qw( bad good );
 
-## no critic (ValuesAndExpressions::UseConsistentQuoting)
 
 my $Policy
-  = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+  = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
 subtest "Escaped sigils should suggest double quotes" => sub {
   # These are currently incorrectly handled by line 218

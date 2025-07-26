@@ -56,7 +56,7 @@ Perl::Critic::Utils::SourceLocation - Synthetic PPI element
 
 =head1 SYNOPSIS
 
-  # Used internally by LimitLineLength policy
+  # Used internally by ProhibitLongLines policy
   my $location = SourceLocation->new(
     line_number => 42,
     content     => "long line content"
@@ -64,7 +64,7 @@ Perl::Critic::Utils::SourceLocation - Synthetic PPI element
 
 =head1 DESCRIPTION
 
-This is a synthetic PPI element used by LimitLineLength policy to provide
+This is a synthetic PPI element used by ProhibitLongLines policy to provide
 accurate line number reporting when no real PPI token exists on a line (such as
 within POD blocks).
 

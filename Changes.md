@@ -3,5 +3,5 @@
 ## {{$NEXT}}
 
 - Initial release
-- Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting policy
-- Perl::Critic::Policy::CodeLayout::LimitLineLength policy
+- Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting policy
+- Perl::Critic::Policy::CodeLayout::ProhibitLongLines policy

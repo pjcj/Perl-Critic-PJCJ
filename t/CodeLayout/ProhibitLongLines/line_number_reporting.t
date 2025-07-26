@@ -9,10 +9,10 @@ use feature      qw( signatures );
 use experimental qw( signatures );
 
 use lib                                               qw( lib t/lib );
-use Perl::Critic::Policy::CodeLayout::LimitLineLength ();
+use Perl::Critic::Policy::CodeLayout::ProhibitLongLines ();
 use ViolationFinder                                   qw( find_violations );
 
-my $Policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new(
+my $Policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new(
   max_line_length => 72);
 
 sub line_numbers ($code, $expected_lines, $description) {

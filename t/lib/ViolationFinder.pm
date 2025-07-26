@@ -50,9 +50,11 @@ sub bad ($policy, $code, $expected_message, $description) {
   my @violations = find_violations($policy, $code);
   is @violations, 1, "$description - should have one violation";
 
-  # For UseConsistentQuoting policy, check explanation instead of description
+  # For quoting policies, check explanation instead of description
   my $field
-    = ref($policy) =~ /UseConsistentQuoting/ ? "explanation" : "description";
+    = ref($policy) =~ /RequireConsistentQuoting/
+    ? "explanation"
+    : "description";
   like $violations[0]->$field, qr/\Q$expected_message\E/,
     "$description - should suggest $expected_message";
 }
@@ -174,7 +176,7 @@ Parameters:
 
 This function verifies that the code violates the policy exactly once and that
 the violation message contains the expected text. For most policies, it checks
-the description field. For the UseConsistentQuoting policy, it checks the
+the description field. For the RequireConsistentQuoting policy, it checks the
 explanation field instead.
 
 =head1 AUTHOR

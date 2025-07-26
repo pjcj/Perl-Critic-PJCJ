@@ -36,13 +36,13 @@ limits.
 
 =over 4
 
-=item L<Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting>
+=item L<Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting>
 
 Enforces consistent and optimal quoting practices through three simple rules:
 reduce punctuation, prefer interpolated strings, and use bracket delimiters in
 preference order.
 
-=item L<Perl::Critic::Policy::CodeLayout::LimitLineLength>
+=item L<Perl::Critic::Policy::CodeLayout::ProhibitLongLines>
 
 Enforces a configurable maximum line length to improve code readability. Lines
 that exceed the specified limit (default: 80 characters) are flagged as

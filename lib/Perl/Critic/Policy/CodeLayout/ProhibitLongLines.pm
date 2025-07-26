@@ -1,4 +1,4 @@
-package Perl::Critic::Policy::CodeLayout::LimitLineLength;
+package Perl::Critic::Policy::CodeLayout::ProhibitLongLines;
 
 use v5.24.0;
 use strict;
@@ -88,11 +88,11 @@ __END__
 
 =head1 NAME
 
-Perl::Critic::Policy::CodeLayout::LimitLineLength - Limit the length of lines
+Perl::Critic::Policy::CodeLayout::ProhibitLongLines - Prohibit long lines
 
 =head1 SYNOPSIS
 
-  [CodeLayout::LimitLineLength]
+  [CodeLayout::ProhibitLongLines]
   max_line_length = 72
 
   # Bad - line exceeds configured maximum
@@ -121,7 +121,7 @@ when it is unable to do that will you need to manually make changes.
 
 The maximum allowed line length in characters. Defaults to 80.
 
-  [CodeLayout::LimitLineLength]
+  [CodeLayout::ProhibitLongLines]
   max_line_length = 72
 
 =head1 EXAMPLES

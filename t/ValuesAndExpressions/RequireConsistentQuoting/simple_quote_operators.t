@@ -10,11 +10,11 @@ use experimental qw( signatures );
 
 # Test that q() and qq() suggest simpler quotes for simple strings
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 use ViolationFinder qw( bad good );
 
 my $Policy
-  = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+  = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
 subtest "q() with simple strings - follow single quote rules" => sub {
   # Case 1: Simple strings that would cause single quotes to suggest double

@@ -1,4 +1,4 @@
-package Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting;
+package Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting;
 
 use v5.24.0;
 use strict;
@@ -493,7 +493,7 @@ __END__
 
 =head1 NAME
 
-Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting - Use
+Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting - Use
 consistent and optimal quoting
 
 =head1 SYNOPSIS

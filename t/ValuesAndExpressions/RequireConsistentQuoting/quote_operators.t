@@ -10,11 +10,11 @@ use experimental qw( signatures );
 
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 use ViolationFinder qw( bad good );
 
 my $Policy
-  = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+  = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
 subtest "q() operator" => sub {
   # Simple content should use double quotes instead of q()

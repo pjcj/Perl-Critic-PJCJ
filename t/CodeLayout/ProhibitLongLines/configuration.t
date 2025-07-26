@@ -10,11 +10,11 @@ use experimental qw( signatures );
 
 # Test the policy with custom configuration
 use lib                                               qw( lib t/lib );
-use Perl::Critic::Policy::CodeLayout::LimitLineLength ();
+use Perl::Critic::Policy::CodeLayout::ProhibitLongLines ();
 use ViolationFinder                                   qw( bad good );
 
 subtest "Custom max_line_length = 40" => sub {
-  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
   $policy->{_max_line_length} = 40;
 
   # Test lines within 40 char limit
@@ -36,7 +36,7 @@ subtest "Custom max_line_length = 40" => sub {
 };
 
 subtest "Custom max_line_length = 120" => sub {
-  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
   $policy->{_max_line_length} = 120;
 
   # Test line that would violate default 80 but is OK with 120
@@ -55,7 +55,7 @@ subtest "Custom max_line_length = 120" => sub {
 };
 
 subtest "Very short custom limit" => sub {
-  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
   $policy->{_max_line_length} = 10;
 
   # Even short lines violate with very short limit
@@ -70,7 +70,7 @@ subtest "Very short custom limit" => sub {
 };
 
 subtest "Default behavior when no configuration set" => sub {
-  my $policy = Perl::Critic::Policy::CodeLayout::LimitLineLength->new;
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
 
   # Should use default of 80
   is $policy->{_max_line_length}, 80, "Default max_line_length is 80";

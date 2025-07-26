@@ -11,7 +11,7 @@ policies for string quoting consistency and line length limits.
 
 ## Policies
 
-### Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting
+### Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting
 
 This policy enforces consistent and optimal quoting practices through three
 simple rules:
@@ -90,7 +90,7 @@ my $text = qq(                              # Any quoting style is allowed
 );
 ```
 
-### Perl::Critic::Policy::CodeLayout::LimitLineLength
+### Perl::Critic::Policy::CodeLayout::ProhibitLongLines
 
 This policy enforces a configurable maximum line length to improve code
 readability, especially in narrow terminal windows or when viewing code
@@ -152,14 +152,14 @@ my $error_message = "This is a very long error message that " .
 Add to your `.perlcriticrc` file:
 
 ```ini
-[CodeLayout::LimitLineLength]
+[CodeLayout::ProhibitLongLines]
 max_line_length = 72
 ```
 
 Or use the default 80 character limit:
 
 ```ini
-[CodeLayout::LimitLineLength]
+[CodeLayout::ProhibitLongLines]
 ```
 
 ## Installation
@@ -184,9 +184,9 @@ make install
 Add individual policies to your `.perlcriticrc` file:
 
 ```ini
-[ValuesAndExpressions::UseConsistentQuoting]
+[ValuesAndExpressions::RequireConsistentQuoting]
 
-[CodeLayout::LimitLineLength]
+[CodeLayout::ProhibitLongLines]
 max_line_length = 72
 ```
 
@@ -201,10 +201,10 @@ Then run perlcritic on your code:
 ```bash
 # Run individual policies
 perlcritic --single-policy \
-  ValuesAndExpressions::UseConsistentQuoting MyScript.pl
+  ValuesAndExpressions::RequireConsistentQuoting MyScript.pl
 
 perlcritic --single-policy \
-  CodeLayout::LimitLineLength MyScript.pl
+  CodeLayout::ProhibitLongLines MyScript.pl
 
 # Or run all policies from the distribution
 perlcritic --include Perl::Critic::PJCJ MyScript.pl

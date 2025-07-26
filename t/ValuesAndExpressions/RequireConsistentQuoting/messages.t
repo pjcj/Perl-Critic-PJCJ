@@ -10,11 +10,11 @@ use experimental qw( signatures );
 
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 use ViolationFinder qw( bad find_violations );
 
 my $Policy
-  = Perl::Critic::Policy::ValuesAndExpressions::UseConsistentQuoting->new;
+  = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
 subtest "Single quote violation messages" => sub {
   bad $Policy, q(my $x = 'hello'), 'use ""', "Simple single-quoted string";
