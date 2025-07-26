@@ -48,10 +48,17 @@ jobs:
 
       - run: perl -V
 
-      - name: Install Perl dependencies
-        run:
-          cpanm --notest --installdeps .
+      - name: Install Dist::Zilla
+        run: cpanm --notest Dist::Zilla
 
-      - name: Run tests
-        run:
+      - name: Install author dependencies
+        run: dzil authordeps --missing | cpanm --notest
+
+      - name: Build distribution
+        run: dzil build --in build-dir
+
+      - name: Install dependencies and test
+        run: |
+          cd build-dir
+          cpanm --notest --installdeps .
           cpanm --verbose --test-only .
