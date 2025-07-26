@@ -600,7 +600,7 @@ few very special cases, strings with literal newlines are not a good idea.
     line 2
   );
 
-=RATIONALE
+=head2 RATIONALE
 
 =over 4
 
