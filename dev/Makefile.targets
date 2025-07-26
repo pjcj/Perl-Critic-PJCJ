@@ -28,8 +28,8 @@ t:
 	yath test -j20 --qvf --no-color -T --term-width=$(tput cols)
 
 xt:
-	dzil test
-	dzil xt
+	dzil test -j20
+	dzil xt -j20
 
 format:
 	@mkdir -p tmp/perltidy
