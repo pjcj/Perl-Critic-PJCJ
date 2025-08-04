@@ -24,6 +24,9 @@ reinstall-deps:
 t:
 	yath test -j20 --qvf --no-color -T --term-width=$(tput cols)
 
+tv:
+	yath test -j20 --qvf --no-color -T --term-width=$(tput cols) -v
+
 zt: clean
 	dzil test -j20
 
