@@ -16,6 +16,47 @@ use ViolationFinder qw( bad good );
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
+subtest "Use statement argument rules" => sub {
+  # Module with no arguments - OK
+  good $Policy, "use Foo",    "use with no arguments is fine";
+  good $Policy, "use Foo ()", "use with empty parens is fine";
+
+  # Module with one argument - can use "" or qw()
+  good $Policy, 'use Foo "arg1"',
+    "use with one double-quoted argument is fine";
+  bad $Policy, "use Foo 'arg1'", "use qw()",
+    "use with one single-quoted argument should use qw()";
+  good $Policy, "use Foo qw(arg1)", "use with one qw() argument is fine";
+
+  # Module with multiple arguments - double quotes are now allowed
+  good $Policy, 'use Foo "arg1", "arg2"',
+    "use with multiple double-quoted arguments is allowed";
+  bad $Policy, "use Foo 'arg1', 'arg2'", "use qw()",
+    "use with multiple single-quoted arguments should use qw()";
+  bad $Policy, "use Foo ('arg1', 'arg2')", "use qw()",
+    "use with multiple single-quoted arguments in parens should use qw()";
+  good $Policy, 'use Foo "arg1", "arg2", "arg3"',
+    "use with three double-quoted arguments is allowed";
+
+  # Mixed arguments - should use qw()
+  bad $Policy, "use Foo qw(arg1), 'arg2'", "use qw()",
+    "mixed qw() and quotes should use qw() for all";
+  bad $Policy, "use Foo 'arg1', qw(arg2)", "use qw()",
+    "mixed quotes and qw() should use qw() for all";
+
+  # Good cases with multiple arguments
+  good $Policy, "use Foo qw(arg1 arg2)",
+    "multiple arguments with qw() is correct";
+  good $Policy, "use Foo qw(arg1 arg2 arg3)",
+    "three arguments with qw() is correct";
+  bad $Policy, "use Foo qw[arg1 arg2]", "use qw()",
+    "qw[] should use qw() with parentheses only";
+
+  # Other statement types should not be checked
+  good $Policy, "require Foo", "require statements are not checked";
+  good $Policy, "no warnings", "no statements are not checked";
+};
+
 subtest "Exercise _is_in_use_statement branches" => sub {
   # These test cases are designed to exercise the _is_in_use_statement method
   # by having quote tokens inside use statements that would normally be flagged
@@ -72,15 +113,12 @@ subtest "Edge cases for coverage" => sub {
 };
 
 subtest "Use statement structure parsing coverage" => sub {
-  # Test to hit the semicolon condition (line 373)
-  # $child->isa("PPI::Token::Structure") and $child->content eq ";"
-  bad $Policy, 'use Foo "arg1", "arg2";', "use qw()",
-    "use statement with semicolon and multiple args";
+  # With the new behavior, multiple double-quoted strings are allowed
+  good $Policy, 'use Foo "arg1", "arg2";',
+    "use statement with semicolon and multiple double-quoted args is allowed";
 
-  # Test to hit condition line 410: $string_count > 1 and not $has_qw
-  # This should be triggered by multiple string arguments without qw
-  bad $Policy, 'use Foo "arg1", "arg2", "arg3"', "use qw()",
-    "three string arguments without qw should violate";
+  good $Policy, 'use Foo "arg1", "arg2", "arg3"',
+    "three double-quoted string arguments are allowed";
 };
 
 subtest "Use statements with parentheses" => sub {

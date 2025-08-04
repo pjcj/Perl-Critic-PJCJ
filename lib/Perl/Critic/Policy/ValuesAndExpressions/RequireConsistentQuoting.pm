@@ -358,10 +358,33 @@ sub _extract_use_arguments ($self, $elem) {
     if ($found_module) {
       next if $child->isa("PPI::Token::Whitespace");
       next if $child->isa("PPI::Token::Structure") && $child->content eq ";";
-      push @args, $child;
+      next
+        if $child->isa("PPI::Token::Operator")
+        ;  # Skip commas and other operators
+
+      # If it's a list structure (parentheses), extract its contents
+      if ($child->isa("PPI::Structure::List")) {
+        push @args, $self->_extract_list_arguments($child);
+      } else {
+        push @args, $child;
+      }
     }
   }
 
+  @args
+}
+
+sub _extract_list_arguments ($self, $list) {
+  my @args;
+  for my $child ($list->children) {
+    if ($child->isa("PPI::Statement::Expression")) {
+      for my $expr_child ($child->children) {
+        next if $expr_child->isa("PPI::Token::Whitespace");
+        next if $expr_child->isa("PPI::Token::Operator");
+        push @args, $expr_child;
+      }
+    }
+  }
   @args
 }
 
@@ -381,12 +404,25 @@ sub _analyze_use_arguments ($self, @args) {
 sub _check_use_violations ($self, $elem, $string_count, $has_qw,
   $qw_uses_parens, @args,)
 {
+  # Check if we have any q() or qq() operators
+  my $has_q_operators = any {
+         $_->isa("PPI::Token::Quote::Literal")
+      || $_->isa("PPI::Token::Quote::Interpolate")
+  } @args;
+
+  # Check if we have mixed quote types
+  my $has_single       = any { $_->isa("PPI::Token::Quote::Single") } @args;
+  my $has_double       = any { $_->isa("PPI::Token::Quote::Double") } @args;
+  my $has_mixed_quotes = ($has_single && $has_double)
+    || ($has_q_operators && ($has_single || $has_double));
+
   return $self->violation($Desc, $Expl_use_qw, $elem)
-    if ($has_qw && !$qw_uses_parens)             # qw() without parens
-    || ($has_qw && $string_count > 0)            # Mixed qw() and quotes
-    || ($string_count > 1 && !$has_qw)           # Multiple strings
+    if ($has_qw && !$qw_uses_parens)            # qw() without parens
+    || ($has_qw          && $string_count > 0)  # Mixed qw() and quotes
+    || ($has_q_operators && $string_count > 1)  # Multiple q() or qq()
+    || $has_mixed_quotes                        # Mixed quote types
     || (
-      $string_count == 1 && !$has_qw &&          # Single quotes
+      $string_count >= 1 && !$has_qw &&         # Single quotes (one or more)
       any { $_->isa("PPI::Token::Quote::Single") } @args
     );
 
