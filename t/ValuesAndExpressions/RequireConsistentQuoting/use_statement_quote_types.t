@@ -83,4 +83,42 @@ subtest "Use statement structure parsing coverage" => sub {
     "three string arguments without qw should violate";
 };
 
+subtest "Use statements with parentheses" => sub {
+  # Test arguments in plain parentheses
+  good $Policy, 'use Foo ("arg1", "arg2")',
+    "use statement with arguments in parentheses works";
+
+  # Test arguments without any bracketing
+  good $Policy, 'use Foo "arg1", "arg2"',
+    "use statement with unbracketed arguments works";
+
+  # Test the Data::Printer example
+  good $Policy, <<~'EOT', "complex use statement with parentheses works";
+  use Data::Printer (
+    deparse       => 0,
+    show_unicode  => 1,
+    print_escapes => 1,
+    class         => { expand => "all", parents => 0, show_methods => "none" },
+    filters => $Data::Printer::VERSION >= 1 ? ["DB"] : { -external => ["DB"] }
+  );
+  EOT
+
+  good $Policy, <<~'EOT', "complex use statement without parentheses works";
+  use Data::Printer
+    deparse       => 0,
+    show_unicode  => 1,
+    print_escapes => 1,
+    class         => { expand => "all", parents => 0, show_methods => "none" },
+    filters => $Data::Printer::VERSION >= 1 ? ["DB"] : { -external => ["DB"] };
+  EOT
+
+  # Test single argument in parentheses - should be fine as only one argument
+  good $Policy, 'use Foo ("single")',
+    "single argument in parentheses is acceptable";
+
+  # Test mixed formats
+  good $Policy, 'use Foo ("arg1"), "arg2"',
+    "mixed parentheses and bare arguments should trigger violation";
+};
+
 done_testing;
