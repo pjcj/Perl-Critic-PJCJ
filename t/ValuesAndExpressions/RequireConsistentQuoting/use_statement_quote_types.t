@@ -21,22 +21,22 @@ subtest "Use statement argument rules" => sub {
   good $Policy, "use Foo",    "use with no arguments is fine";
   good $Policy, "use Foo ()", "use with empty parens is fine";
 
-  # Module with one argument - can use "" or qw()
-  good $Policy, 'use Foo "arg1"',
-    "use with one double-quoted argument is fine";
+  # Module with one argument - should use qw()
+  bad $Policy, 'use Foo "arg1"', "use qw()",
+    "use with one double-quoted argument should use qw()";
   bad $Policy, "use Foo 'arg1'", "use qw()",
     "use with one single-quoted argument should use qw()";
   good $Policy, "use Foo qw(arg1)", "use with one qw() argument is fine";
 
-  # Module with multiple arguments - double quotes are now allowed
-  good $Policy, 'use Foo "arg1", "arg2"',
-    "use with multiple double-quoted arguments is allowed";
+  # Module with multiple arguments - all simple strings should use qw()
+  bad $Policy, 'use Foo "arg1", "arg2"', "use qw()",
+    "use with multiple double-quoted arguments should use qw()";
   bad $Policy, "use Foo 'arg1', 'arg2'", "use qw()",
     "use with multiple single-quoted arguments should use qw()";
   bad $Policy, "use Foo ('arg1', 'arg2')", "use qw()",
     "use with multiple single-quoted arguments in parens should use qw()";
-  good $Policy, 'use Foo "arg1", "arg2", "arg3"',
-    "use with three double-quoted arguments is allowed";
+  bad $Policy, 'use Foo "arg1", "arg2", "arg3"', "use qw()",
+    "use with three double-quoted arguments should use qw()";
 
   # Mixed arguments - should use qw()
   bad $Policy, "use Foo qw(arg1), 'arg2'", "use qw()",
@@ -57,31 +57,29 @@ subtest "Use statement argument rules" => sub {
   good $Policy, "no warnings", "no statements are not checked";
 };
 
-subtest "Exercise _is_in_use_statement branches" => sub {
-  # These test cases are designed to exercise the _is_in_use_statement method
-  # by having quote tokens inside use statements that would normally be flagged
+subtest "q() and qq() operators in use statements should use qw()" => sub {
+  # With the new rules, q() and qq() operators should trigger use qw()
+  # violations
 
-  # Test q() quotes inside use statements - should be skipped by regular q()
-  # checking
-  good $Policy, "use Foo q(simple)",
-    "q() in use statements bypasses regular q() rules";
-  good $Policy, "use Foo q{simple}",
-    "q{} in use statements bypasses regular q() rules";
-  good $Policy, "use Foo q[simple]",
-    "q[] in use statements bypasses regular q() rules";
-  good $Policy, "use Foo q<simple>",
-    "q<> in use statements bypasses regular q() rules";
+  # Test q() quotes inside use statements - should use qw()
+  bad $Policy, "use Foo q(simple)", "use qw()",
+    "q() in use statements should use qw()";
+  bad $Policy, "use Foo q{simple}", "use qw()",
+    "q{} in use statements should use qw()";
+  bad $Policy, "use Foo q[simple]", "use qw()",
+    "q[] in use statements should use qw()";
+  bad $Policy, "use Foo q<simple>", "use qw()",
+    "q<> in use statements should use qw()";
 
-  # Test qq() quotes inside use statements - should be skipped by regular qq()
-  # checking
-  good $Policy, "use Foo qq(simple)",
-    "qq() in use statements bypasses regular qq() rules";
-  good $Policy, "use Foo qq{simple}",
-    "qq{} in use statements bypasses regular qq() rules";
-  good $Policy, "use Foo qq[simple]",
-    "qq[] in use statements bypasses regular qq() rules";
-  good $Policy, "use Foo qq<simple>",
-    "qq<> in use statements bypasses regular qq() rules";
+  # Test qq() quotes inside use statements - should use qw()
+  bad $Policy, "use Foo qq(simple)", "use qw()",
+    "qq() in use statements should use qw()";
+  bad $Policy, "use Foo qq{simple}", "use qw()",
+    "qq{} in use statements should use qw()";
+  bad $Policy, "use Foo qq[simple]", "use qw()",
+    "qq[] in use statements should use qw()";
+  bad $Policy, "use Foo qq<simple>", "use qw()",
+    "qq<> in use statements should use qw()";
 };
 
 subtest "Use statements with multiple quote types" => sub {
@@ -101,8 +99,8 @@ subtest "Use statements with multiple quote types" => sub {
 subtest "Edge cases for coverage" => sub {
   # Test semicolon handling - covers the semicolon branch in
   # _extract_use_arguments
-  good $Policy, 'use Foo "arg"; # with semicolon',
-    "use statement with semicolon works";
+  bad $Policy, 'use Foo "arg"; # with semicolon', "use qw()",
+    "use statement with semicolon should use qw() for simple string";
 
   # Test require and no statements to ensure they don't trigger use statement
   # logic
@@ -113,35 +111,33 @@ subtest "Edge cases for coverage" => sub {
 };
 
 subtest "Use statement structure parsing coverage" => sub {
-  # With the new behavior, multiple double-quoted strings are allowed
-  good $Policy, 'use Foo "arg1", "arg2";',
-    "use statement with semicolon and multiple double-quoted args is allowed";
+  # With the new behavior, multiple double-quoted strings should use qw()
+  bad $Policy, 'use Foo "arg1", "arg2";', "use qw()",
+    "use statement with semicolon and multiple double-quoted args "
+    . "should use qw()";
 
-  good $Policy, 'use Foo "arg1", "arg2", "arg3"',
-    "three double-quoted string arguments are allowed";
+  bad $Policy, 'use Foo "arg1", "arg2", "arg3"', "use qw()",
+    "three double-quoted string arguments should use qw()";
 };
 
-subtest "Use statements with parentheses" => sub {
-  # Test arguments in plain parentheses
-  good $Policy, 'use Foo ("arg1", "arg2")',
-    "use statement with arguments in parentheses works";
+subtest
+  "Use statements with hash-style arguments (=>) should have no parentheses" =>
+  sub {
+    # Test the Data::Printer example - should prefer no parentheses
+    bad $Policy, <<~'EOT', "remove parentheses",
+    use Data::Printer (
+      deparse       => 0,
+      show_unicode  => 1,
+      print_escapes => 1,
+      class => { expand => "all", parents => 0, show_methods => "none" },
+      filters => $Data::Printer::VERSION >= 1 ?
+        ["DB"] : { -external => ["DB"] }
+    );
+    EOT
+    "complex use statement with parentheses should remove parentheses";
 
-  # Test arguments without any bracketing
-  good $Policy, 'use Foo "arg1", "arg2"',
-    "use statement with unbracketed arguments works";
-
-  # Test the Data::Printer example
-  good $Policy, <<~'EOT', "complex use statement with parentheses works";
-  use Data::Printer (
-    deparse       => 0,
-    show_unicode  => 1,
-    print_escapes => 1,
-    class         => { expand => "all", parents => 0, show_methods => "none" },
-    filters => $Data::Printer::VERSION >= 1 ? ["DB"] : { -external => ["DB"] }
-  );
-  EOT
-
-  good $Policy, <<~'EOT', "complex use statement without parentheses works";
+    good $Policy,
+    <<~'EOT', "complex use statement without parentheses is correct";
   use Data::Printer
     deparse       => 0,
     show_unicode  => 1,
@@ -150,13 +146,55 @@ subtest "Use statements with parentheses" => sub {
     filters => $Data::Printer::VERSION >= 1 ? ["DB"] : { -external => ["DB"] };
   EOT
 
-  # Test single argument in parentheses - should be fine as only one argument
-  good $Policy, 'use Foo ("single")',
-    "single argument in parentheses is acceptable";
+    # Mixed => and simple strings should have no parentheses
+    good $Policy, 'use Foo "simple", key => "value", "another"',
+    "mixed simple strings and hash-style should have no parentheses";
 
-  # Test mixed formats
-  good $Policy, 'use Foo ("arg1"), "arg2"',
-    "mixed parentheses and bare arguments should trigger violation";
+    bad $Policy, 'use Foo ("simple", key => "value")', "remove parentheses",
+    "mixed arguments with parentheses should remove parentheses";
+  };
+
+subtest "Complex expressions should have no parentheses" => sub {
+  # Variables and expressions
+  good $Policy, 'use Module $VERSION',
+    "variable argument without parentheses is correct";
+  good $Policy, 'use Module $DEBUG ? "verbose" : "quiet"',
+    "conditional expression without parentheses is correct";
+  good $Policy, 'use Module { config => "hash" }',
+    "hash reference without parentheses is correct";
+
+  # These should trigger violations for having parentheses
+  bad $Policy, 'use Module ($VERSION)', "remove parentheses",
+    "variable argument with parentheses should remove parentheses";
+  bad $Policy, 'use Module ($DEBUG ? "verbose" : "quiet")',
+    "remove parentheses",
+    "conditional expression with parentheses should remove parentheses";
+  bad $Policy, 'use Module ({ config => "hash" })', "remove parentheses",
+    "hash reference with parentheses should remove parentheses";
+};
+
+subtest "Special cases should not trigger violations" => sub {
+  # Version numbers
+  good $Policy, "use Module 1.23",
+    "numeric version should not trigger violation";
+  good $Policy, "use Module v5.10.0",
+    "v-string version should not trigger violation";
+
+  # Already correct qw() usage
+  good $Policy, "use Foo qw(arg1 arg2)",
+    "correct qw() usage should not trigger violation";
+};
+
+subtest "Simple strings in parentheses should use qw()" => sub {
+  # These were previously good but should now be bad
+  bad $Policy, 'use Foo ("arg1", "arg2")', "use qw()",
+    "simple strings in parentheses should use qw()";
+
+  bad $Policy, 'use Foo ("single")', "use qw()",
+    "single string in parentheses should use qw()";
+
+  bad $Policy, 'use Foo ("arg1"), "arg2"', "use qw()",
+    "mixed parentheses and bare simple strings should use qw()";
 };
 
 done_testing;

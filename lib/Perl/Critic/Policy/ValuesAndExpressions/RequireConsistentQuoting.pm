@@ -330,6 +330,35 @@ sub check_quote_operators ($self, $elem) {
   return
 }
 
+sub _analyse_argument_types ($self, $elem, @args) {
+
+  my $fat_comma
+    = any { $_->isa("PPI::Token::Operator") && $_->content eq "=>" } @args;
+  my $complex_expr = any {
+         $_->isa("PPI::Token::Symbol")
+      || $_->isa("PPI::Structure")
+      || $_->isa("PPI::Statement")
+  } @args;
+  my $version = any {
+         $_->isa("PPI::Token::Number::Version")
+      || $_->isa("PPI::Token::Number::Float")
+  } @args;
+  my $simple_strings = any {
+         $_->isa("PPI::Token::Quote::Single")
+      || $_->isa("PPI::Token::Quote::Double")
+  } @args;
+  my $q_operators = any {
+         $_->isa("PPI::Token::Quote::Literal")
+      || $_->isa("PPI::Token::Quote::Interpolate")
+  } @args;
+
+  # Check if the original use statement has parentheses
+  my @children = $elem->children;
+  my $parens   = any { $_->isa("PPI::Structure::List") } @children;
+
+  ($fat_comma, $complex_expr, $version, $simple_strings, $q_operators, $parens)
+}
+
 sub check_use_statement ($self, $elem) {
   # Only check 'use' statements, not 'require' or 'no'
   return unless $elem->type eq "use";
@@ -337,9 +366,50 @@ sub check_use_statement ($self, $elem) {
   my @args = $self->_extract_use_arguments($elem) or return;
 
   my ($string_count, $has_qw, $qw_uses_parens)
-    = $self->_analyze_use_arguments(@args);
-  $self->_check_use_violations($elem, $string_count, $has_qw, $qw_uses_parens,
-    @args)
+    = $self->_summarise_use_arguments(@args);
+
+  # Check for different types of arguments
+  my (
+    $has_fat_comma,      $has_complex_expr, $has_version,
+    $has_simple_strings, $has_q_operators,  $has_parens
+  ) = $self->_analyse_argument_types($elem, @args);
+
+  # Rule 4: Special cases - no violation
+  return () if $has_version && @args == 1;  # Single version number
+
+  # Rule 1: qw() without parens should use qw()
+  return $self->violation($Desc, $Expl_use_qw, $elem)
+    if $has_qw && !$qw_uses_parens;
+
+  # Rule 2: Any => operator anywhere → should have no parentheses
+  if ($has_fat_comma) {
+    if ($has_parens) {
+      state $expl_remove_parens = "remove parentheses";
+      return $self->violation($Desc, $expl_remove_parens, $elem);
+    }
+    return ();
+  }
+
+  # Rule 3: Complex expressions → should have no parentheses
+  if ($has_complex_expr) {
+    if ($has_parens) {
+      state $expl_remove_parens_complex = "remove parentheses";
+      return $self->violation($Desc, $expl_remove_parens_complex, $elem);
+    }
+    return ();
+  }
+
+  # Rule 1: All simple strings or q() operators → use qw()
+  if (($has_simple_strings || $has_q_operators) && !$has_qw) {
+    return $self->violation($Desc, $Expl_use_qw, $elem);
+  }
+
+  # Mixed qw() and other things
+  if ($has_qw && ($string_count > 0 || $has_q_operators)) {
+    return $self->violation($Desc, $Expl_use_qw, $elem);
+  }
+
+  ()
 }
 
 sub _extract_use_arguments ($self, $elem) {
@@ -358,9 +428,8 @@ sub _extract_use_arguments ($self, $elem) {
     if ($found_module) {
       next if $child->isa("PPI::Token::Whitespace");
       next if $child->isa("PPI::Token::Structure") && $child->content eq ";";
-      next
-        if $child->isa("PPI::Token::Operator")
-        ;  # Skip commas and other operators
+      # Skip commas but keep fat comma (=>) and other significant operators
+      next if $child->isa("PPI::Token::Operator") && $child->content eq ",";
 
       # If it's a list structure (parentheses), extract its contents
       if ($child->isa("PPI::Structure::List")) {
@@ -380,15 +449,26 @@ sub _extract_list_arguments ($self, $list) {
     if ($child->isa("PPI::Statement::Expression")) {
       for my $expr_child ($child->children) {
         next if $expr_child->isa("PPI::Token::Whitespace");
-        next if $expr_child->isa("PPI::Token::Operator");
+        # Skip commas but keep fat comma (=>) and other significant operators
+        next
+          if $expr_child->isa("PPI::Token::Operator")
+          && $expr_child->content eq ",";
         push @args, $expr_child;
       }
+    } elsif ($child->isa("PPI::Statement") || $child->isa("PPI::Structure")) {
+      # Handle other statements and structures (like hash constructors)
+      push @args, $child;
+    } else {
+      # Handle direct tokens
+      next if $child->isa("PPI::Token::Whitespace");
+      next if $child->isa("PPI::Token::Structure");  # Skip ( ) { } etc.
+      push @args, $child;
     }
   }
   @args
 }
 
-sub _analyze_use_arguments ($self, @args) {
+sub _summarise_use_arguments ($self, @args) {
   my $string_count   = 0;
   my $has_qw         = 0;
   my $qw_uses_parens = 1;
@@ -401,55 +481,26 @@ sub _analyze_use_arguments ($self, @args) {
   ($string_count, $has_qw, $qw_uses_parens)
 }
 
-sub _check_use_violations ($self, $elem, $string_count, $has_qw,
-  $qw_uses_parens, @args,)
-{
-  # Check if we have any q() or qq() operators
-  my $has_q_operators = any {
-         $_->isa("PPI::Token::Quote::Literal")
-      || $_->isa("PPI::Token::Quote::Interpolate")
-  } @args;
-
-  # Check if we have mixed quote types
-  my $has_single       = any { $_->isa("PPI::Token::Quote::Single") } @args;
-  my $has_double       = any { $_->isa("PPI::Token::Quote::Double") } @args;
-  my $has_mixed_quotes = ($has_single && $has_double)
-    || ($has_q_operators && ($has_single || $has_double));
-
-  return $self->violation($Desc, $Expl_use_qw, $elem)
-    if ($has_qw && !$qw_uses_parens)            # qw() without parens
-    || ($has_qw          && $string_count > 0)  # Mixed qw() and quotes
-    || ($has_q_operators && $string_count > 1)  # Multiple q() or qq()
-    || $has_mixed_quotes                        # Mixed quote types
-    || (
-      $string_count >= 1 && !$has_qw &&         # Single quotes (one or more)
-      any { $_->isa("PPI::Token::Quote::Single") } @args
-    );
-
-  ()
-}
-
-sub _count_use_arguments ($self, $elem, $string_count_ref, $has_qw_ref,
-  $qw_uses_parens_ref,)
+sub _count_use_arguments ($self, $elem, $str_count_ref, $qw_ref, $qw_parens_ref)
 {
 
-  $$string_count_ref++
+  $$str_count_ref++
     if $elem->isa("PPI::Token::Quote::Single")
     || $elem->isa("PPI::Token::Quote::Double")
     || $elem->isa("PPI::Token::Quote::Literal")
     || $elem->isa("PPI::Token::Quote::Interpolate");
 
   if ($elem->isa("PPI::Token::QuoteLike::Words")) {
-    $$has_qw_ref = 1;
+    $$qw_ref = 1;
     my $content = $elem->content;
-    $$qw_uses_parens_ref = 0 if $content !~ /\Aqw\s*\(/;
+    $$qw_parens_ref = 0 if $content !~ /\Aqw\s*\(/;
   }
 
   # Recursively check children (for structures like lists)
   if ($elem->can("children")) {
     for my $child ($elem->children) {
-      $self->_count_use_arguments($child, $string_count_ref, $has_qw_ref,
-        $qw_uses_parens_ref);
+      $self->_count_use_arguments($child, $str_count_ref, $qw_ref,
+        $qw_parens_ref);
     }
   }
 }
