@@ -54,7 +54,45 @@ subtest "Use statement argument rules" => sub {
 
   # Other statement types should not be checked
   good $Policy, "require Foo", "require statements are not checked";
-  good $Policy, "no warnings", "no statements are not checked";
+};
+
+subtest "'no' statement argument rules" => sub {
+  # Module with no arguments - OK
+  good $Policy, "no warnings",    "no with no arguments is fine";
+  good $Policy, "no warnings ()", "no with empty parens is fine";
+
+  # Module with one argument - should use qw()
+  bad $Policy, 'no warnings "arg1"', "use qw()",
+    "no with one double-quoted argument should use qw()";
+  bad $Policy, "no warnings 'arg1'", "use qw()",
+    "no with one single-quoted argument should use qw()";
+  good $Policy, "no warnings qw(arg1)", "no with one qw() argument is fine";
+
+  # Module with multiple arguments - all simple strings should use qw()
+  bad $Policy, 'no warnings "arg1", "arg2"', "use qw()",
+    "no with multiple double-quoted arguments should use qw()";
+  bad $Policy, "no warnings 'arg1', 'arg2'", "use qw()",
+    "no warnings with multiple single-quoted arguments should use qw()";
+
+  # Good cases with multiple arguments
+  good $Policy, "no warnings qw(arg1 arg2)",
+    "multiple arguments with qw() is correct";
+
+  # Mixed arguments - should use qw()
+  bad $Policy, "no warnings qw(arg1), 'arg2'", "use qw()",
+    "mixed qw() and quotes should use qw() for all";
+
+  # No statements with interpolation should not suggest qw()
+  good $Policy, 'no warnings "$x/d1", "$x/d2"',
+    "double quotes with interpolation should not suggest qw()";
+  good $Policy, q(no warnings '$x/d1', '$x/d2'),
+    'single quotes with \$ characters should not suggest qw()';
+
+  # Mixed case - interpolation prevents qw() suggestion
+  good $Policy, 'no warnings "$x/d1", "static"',
+    "mixed interpolation and static string with double quotes";
+  bad $Policy, q(no warnings "$x/d1", 'static'), 'use ""',
+    "single quotes for simple string should suggest double quotes";
 };
 
 subtest "q() and qq() operators in use statements should use qw()" => sub {
@@ -106,8 +144,8 @@ subtest "Edge cases for coverage" => sub {
   # logic
   bad $Policy, "require q(file.pl)", 'use ""',
     "require with q() is not processed by use statement logic";
-  bad $Policy, "no warnings qq(experimental)", 'use ""',
-    "no statement qq() is processed by regular quote logic";
+  bad $Policy, "no warnings qq(experimental)", "use qw()",
+    "no statement qq() is now processed by use statement logic";
 };
 
 subtest "Use statement structure parsing coverage" => sub {

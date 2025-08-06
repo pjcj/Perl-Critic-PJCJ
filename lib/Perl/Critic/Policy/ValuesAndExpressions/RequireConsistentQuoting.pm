@@ -358,8 +358,8 @@ sub _analyse_argument_types ($self, $elem, @args) {
 }
 
 sub check_use_statement ($self, $elem) {
-  # Only check 'use' statements, not 'require' or 'no'
-  return unless $elem->type eq "use";
+  # Check "use" and "no" statements, but not "require"
+  return unless $elem->type =~ /^(use|no)$/;
 
   my @args = $self->_extract_use_arguments($elem) or return;
 
@@ -429,7 +429,7 @@ sub _extract_use_arguments ($self, $elem) {
 
   for my $child (@children) {
     if ($child->isa("PPI::Token::Word") && !$found_module) {
-      next if $child->content eq "use";
+      next if $child->content =~ /^(use|no)$/;
       # This is the module name
       $found_module = 1;
       next;
@@ -518,7 +518,9 @@ sub _count_use_arguments ($self, $elem, $str_count_ref, $qw_ref, $qw_parens_ref)
 sub _is_in_use_statement ($self, $elem) {
   my $current = $elem;
   while ($current) {
-    if ($current->isa("PPI::Statement::Include") && $current->type eq "use") {
+    if ($current->isa("PPI::Statement::Include")
+      && ($current->type =~ /^(use|no)$/))
+    {
       # Check if this use statement has any strings that would interpolate
       my @args = $self->_extract_use_arguments($current);
       for my $arg (@args) {
