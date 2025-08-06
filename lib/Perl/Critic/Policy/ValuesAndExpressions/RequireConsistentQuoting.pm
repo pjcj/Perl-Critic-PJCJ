@@ -616,12 +616,17 @@ consistent and optimal quoting
   my @words    = qw{word(with)parens};    # use qw[] for unbalanced content
   my $text     = qq(simple);              # use "" instead of qq()
   my $file     = q!path/to/file!;         # use "" instead of q()
+  use Config 'arg1', 'arg2';              # simple strings should use qw()
+  use lib ( "$HOME/perl" );               # complex expressions need no
+                                          # parentheses
 
   # Good examples:
   my $greeting = "hello";                 # double quotes for simple strings
   my @words    = qw[ word(with)parens ];  # optimal delimiter choice
   my $text     = "simple";                # "" preferred over qq()
   my $file     = "path/to/file";          # "" reduces punctuation
+  use Config qw( arg1 arg2 );             # simple use arguments use qw()
+  use lib "$HOME/perl";                   # interpolation uses normal rules
 
 =head1 DESCRIPTION
 
@@ -672,35 +677,67 @@ or C<{}> in that order.
   my $path  = q|some|path|;               # should use ""
   my $text  = qq#some#text#;              # should use ""
 
-=head2 Special Case: Use statements
+=head2 Special Case: Use and No statements
 
-Use statements have special quoting requirements for their import lists:
+Use and no statements have special quoting requirements for their import lists.
+Both C<use> and C<no> statements follow identical rules:
 
 =over 4
 
 =item * Modules with no arguments or empty parentheses are acceptable
 
-=item * Modules with one argument may use double quotes C<""> or C<qw( )>
+=item * Single version numbers (e.g., C<1.23>, C<v5.10.0>) are exempt from all
+rules
 
-=item * Modules with multiple arguments must use C<qw( )> with parentheses only
+=item * Fat comma (C<=E<gt>>) arguments should have no parentheses for
+readability
+
+=item * Complex expressions (variables, conditionals, structures) should have
+no parentheses
+
+=item * Arguments requiring interpolation follow normal string quoting rules
+individually
+
+=item * Simple string arguments without interpolation should use C<qw( )>
+with parentheses only
 
 =back
 
-This allows for compatibility with
+This design promotes readability whilst maintaining compatibility with
 L<perlimports|https://metacpan.org/pod/perlimports>.
 
-  # Good
+  # Good - basic cases
   use Foo;                                # no arguments
   use Bar ();                             # empty parentheses
-  use Baz "single_arg";                   # one argument with double quotes
-  use Qux qw( single_arg );               # one argument with qw()
-  use Quux qw( arg1 arg2 arg3 );          # multiple arguments with qw()
+  use Baz 1.23;                           # version numbers exempt
+  no warnings;                            # no statements follow same rules
 
-  # Bad
-  use Foo 'single_arg';                   # single quotes not allowed
-  use Bar "arg1", "arg2";                 # multiple arguments need qw()
+  # Good - fat comma arguments (no parentheses)
+  use Data::Printer
+    deparse       => 0,
+    show_unicode  => 1,
+    class         => { expand => "all" };
+
+  # Good - complex expressions (no parentheses)
+  use Module $VERSION;
+  use Config $DEBUG ? "verbose" : "quiet";
+  use Handler { config => "file.conf" };
+
+  # Good - interpolation cases (normal string rules)
+  use lib "$HOME/perl", "/usr/lib";       # interpolation prevents qw()
+  no warnings "$category", "another";     # applies to no statements too
+
+  # Good - simple strings use qw()
+  use Foo qw( arg1 arg2 arg3 );           # multiple simple arguments
+  no warnings qw( experimental uninitialized );
+
+  # Bad - incorrect quoting
+  use Foo 'single_arg';                   # single quotes should use qw()
+  use Bar "arg1", "arg2";                 # simple strings need qw()
   use Baz qw[ arg1 arg2 ];                # qw() must use parentheses only
-  use Qux qw{ arg1 arg2 };                # qw() must use parentheses only
+  use Qux ( key => "value" );             # fat comma needs no parentheses
+  use Quux ( $VERSION );                  # complex expressions need no
+                                          # parentheses
 
 =head2 Special Case: Newlines
 
@@ -791,20 +828,46 @@ This Policy is not configurable except for the standard options.
   my $both = qq(has 'single' and "double" quotes); # qq() handles both
                                                     # quote types cleanly
 
-=head2 Use Statement Examples
+=head2 Use and No Statement Examples
 
   # Bad
-  use Foo 'single_arg';                   # single quotes not allowed
-  use Bar "arg1", "arg2";                 # multiple args need qw()
-  use Baz qw[ arg1 arg2 ];                # qw() must use parentheses
-  use Qux qw{ arg1 arg2 arg3 };           # qw() must use parentheses
+  use Foo 'single_arg';                   # single quotes should use qw()
+  use Bar "arg1", "arg2";                 # simple strings need qw()
+  use Baz qw[ arg1 arg2 ];                # qw() must use parentheses only
+  use Qux ( key => "value" );             # fat comma should have no parentheses
+  use Quux ( $VERSION );                  # complex expressions need no
+                                          # parentheses
+  no warnings ( "experimental" );         # simple strings should use qw()
 
   # Good
-  use Foo;                                # no arguments allowed
-  use Bar ();                             # empty parentheses allowed
-  use Baz "single_arg";                   # one argument with double quotes
-  use Qux qw( single_arg );               # one argument with qw()
-  use Quux qw( arg1 arg2 arg3 );          # multiple arguments with qw() only
+  use Foo;                                # no arguments
+  use Bar ();                             # empty parentheses
+  use Baz 1.23;                           # version numbers exempt
+  use Qux qw( single_arg );               # simple string uses qw()
+  use Quux qw( arg1 arg2 arg3 );          # multiple simple arguments
+  no warnings qw( experimental uninitialized ); # no statements follow same
+                                                  # rules
+
+  # Fat comma examples (no parentheses)
+  use Data::Printer
+    deparse       => 0,
+    show_unicode  => 1;
+  use Config
+    key           => "value",
+    another_key   => { nested => "structure" };
+
+  # Complex expression examples (no parentheses)
+  use Module $VERSION;                    # variable argument
+  use Config $DEBUG ? "verbose" : "quiet"; # conditional expression
+  use Handler { config => "file.conf" };   # hash reference
+
+  # Interpolation examples (normal string rules apply)
+  use lib "$HOME/perl", "/usr/lib";       # interpolation prevents qw()
+  use lib "$x/d1", "$x/d2";               # both strings need interpolation
+  use lib "$HOME/perl", "static";         # mixed interpolation uses double
+                                          # quotes
+  no warnings "$category", "another";     # no statements handle
+                                          # interpolation too
 
 =head1 METHODS
 
@@ -915,10 +978,59 @@ delimiters to handle unbalanced content gracefully.
 
 =head2 check_use_statement
 
-Checks quoting consistency in C<use> statements. Enforces that single-argument
-use statements should use double quotes rather than C<qw()>, and that
-multi-argument use statements should always use C<qw()>. This promotes
-consistency and clarity in module import statements.
+Checks quoting consistency in C<use> and C<no> statements. Implements
+comprehensive argument analysis to enforce appropriate quoting based on
+argument types:
+
+=over 4
+
+=item * Version numbers are exempt from all quoting rules
+
+=item * Fat comma arguments should have no parentheses for readability
+
+=item * Complex expressions should have no parentheses to reduce visual noise
+
+=item * Arguments requiring interpolation follow normal string quoting rules
+
+=item * Simple string arguments should use C<qw()> with parentheses only
+
+=back
+
+This promotes consistency and clarity whilst supporting modern Perl idioms
+and maintaining compatibility with tools like perlimports.
+
+=head2 _analyse_argument_types
+
+Analyses use/no statement arguments to classify them into different types:
+fat comma operators, complex expressions, version numbers, simple strings,
+and quote operators. This classification drives the quoting rule enforcement
+in C<check_use_statement>.
+
+Also detects whether the original statement uses parentheses, which affects
+the violation messages for fat comma and complex expression cases.
+
+=head2 _extract_use_arguments
+
+Extracts and processes arguments from use/no statements, handling both bare
+arguments and those enclosed in parentheses. Skips whitespace, commas, and
+semicolons whilst preserving significant operators like fat comma (C<=E<gt>>).
+
+Handles nested list structures by recursively extracting their contents,
+ensuring all argument types are properly identified for rule enforcement.
+
+=head2 _extract_list_arguments
+
+Recursively processes parenthesised argument lists within use/no statements.
+Handles complex nested structures including expressions, statements, and
+hash constructors whilst filtering out structural tokens that don't affect
+quoting decisions.
+
+=head2 _summarise_use_arguments
+
+Provides summary statistics about use/no statement arguments: counts string
+tokens, detects C<qw()> usage, and verifies that C<qw()> operators use
+parentheses rather than other delimiters. This information drives the
+violation logic in C<check_use_statement>.
 
 =head1 AUTHOR
 
