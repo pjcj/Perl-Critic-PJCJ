@@ -301,12 +301,10 @@ sub check_qq_interpolate ($self, $elem) {
     if $double_quote_suggestion && $double_quote_suggestion eq "qq()";
 
   # Rule 1: Otherwise prefer simple double quotes unless delimiter chars present
-  my $has_special_chars
-    = index($string, '"') != -1
-    || index($string, "'") != -1
-    || $self->would_interpolate($string);
+  my $has_delimiter_chars
+    = index($string, '"') != -1 || index($string, "'") != -1;
 
-  $has_special_chars
+  $has_delimiter_chars
     ? $self->check_delimiter_optimisation($elem)
     : $self->violation($Desc, $Expl_double, $elem)
 }
@@ -398,6 +396,22 @@ sub check_use_statement ($self, $elem) {
     }
     return ();
   }
+
+  # Check if any string would interpolate (works for all quote types)
+  my $needs_interpolation = 0;
+  for my $arg (@args) {
+    # Skip qw() tokens as they never interpolate
+    next if $arg->isa("PPI::Token::QuoteLike::Words");
+
+    my $content = $arg->string;
+    if ($self->would_interpolate($content)) {
+      $needs_interpolation = 1;
+      last;
+    }
+  }
+
+  # If interpolation is needed, don't suggest qw() - let normal rules apply
+  return () if $needs_interpolation;
 
   # Rule 1: All simple strings or q() operators → use qw()
   if (($has_simple_strings || $has_q_operators) && !$has_qw) {
@@ -508,8 +522,22 @@ sub _count_use_arguments ($self, $elem, $str_count_ref, $qw_ref, $qw_parens_ref)
 sub _is_in_use_statement ($self, $elem) {
   my $current = $elem;
   while ($current) {
-    return 1
-      if $current->isa("PPI::Statement::Include") && $current->type eq "use";
+    if ($current->isa("PPI::Statement::Include") && $current->type eq "use") {
+      # Check if this use statement has any strings that would interpolate
+      my @args = $self->_extract_use_arguments($current);
+      for my $arg (@args) {
+        # Skip qw() tokens as they never interpolate
+        next if $arg->isa("PPI::Token::QuoteLike::Words");
+
+        my $content = $arg->string;
+        if ($self->would_interpolate($content)) {
+          # If interpolation is needed, don't treat this as a use statement
+          # so individual strings get checked normally
+          return 0;
+        }
+      }
+      return 1;
+    }
     $current = $current->parent;
   }
   0

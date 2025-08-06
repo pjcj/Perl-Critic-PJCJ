@@ -185,6 +185,40 @@ subtest "Special cases should not trigger violations" => sub {
     "correct qw() usage should not trigger violation";
 };
 
+subtest "Use statements with interpolation should not suggest qw()" => sub {
+  # When strings need interpolation, they should follow normal string rules
+  # not suggest qw()
+
+  # These should be good - interpolation is needed
+  good $Policy, 'use lib "$x/d1", "$x/d2"',
+    "double quotes with interpolation should not suggest qw()";
+  good $Policy, 'use lib "$HOME/perl", "$HOME/lib"',
+    "multiple interpolations should not suggest qw()";
+
+  # Single quotes with $ or @ should not suggest qw() because it would change
+  # meaning
+  good $Policy, q(use lib '$x/d1', '$x/d2'),
+    'single quotes with \$ characters should not suggest qw()';
+
+  # Mixed case - interpolation in one, not in other
+  # The non-interpolating string should follow normal rules
+  good $Policy, 'use lib "$x/d1", "static"',
+    "mixed interpolation and static string with double quotes";
+  bad $Policy, q(use lib "$x/d1", 'static'), 'use ""',
+    "single quotes for simple string should suggest double quotes";
+
+  # More mixed cases
+  bad $Policy, q(use lib "$HOME/perl", '/usr/lib'), 'use ""',
+    "single quotes for /usr/lib should suggest double quotes";
+  good $Policy, 'use lib "$HOME/perl", "/usr/lib"',
+    "double quotes for both when one needs interpolation";
+
+  # qq{} with interpolation should not suggest qw(), but should follow normal
+  # rules
+  bad $Policy, 'use lib qq{$HOME/perl}, "$HOME/lib"', 'use ""',
+    "qq{} should suggest double quotes per normal rules";
+};
+
 subtest "Simple strings in parentheses should use qw()" => sub {
   # These were previously good but should now be bad
   bad $Policy, 'use Foo ("arg1", "arg2")', "use qw()",
