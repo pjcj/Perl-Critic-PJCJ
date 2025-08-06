@@ -398,20 +398,16 @@ sub check_use_statement ($self, $elem) {
   }
 
   # Check if any string would interpolate (works for all quote types)
-  my $needs_interpolation = 0;
   for my $arg (@args) {
     # Skip qw() tokens as they never interpolate
     next if $arg->isa("PPI::Token::QuoteLike::Words");
 
     my $content = $arg->string;
     if ($self->would_interpolate($content)) {
-      $needs_interpolation = 1;
-      last;
+      # If interpolation is needed, don't suggest qw() - let normal rules apply
+      return ();
     }
   }
-
-  # If interpolation is needed, don't suggest qw() - let normal rules apply
-  return () if $needs_interpolation;
 
   # Rule 1: All simple strings or q() operators → use qw()
   if (($has_simple_strings || $has_q_operators) && !$has_qw) {
