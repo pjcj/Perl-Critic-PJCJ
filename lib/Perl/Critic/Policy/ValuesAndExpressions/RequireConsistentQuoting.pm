@@ -47,6 +47,32 @@ sub would_interpolate ($self, $string) {
   $would_interpolate
 }
 
+sub would_interpolate_from_single_quotes ($self, $string) {
+  # Test whether a string from single quotes would interpolate if converted
+  # to double quotes. This is used when checking single-quoted strings to
+  # see if they should stay single-quoted to avoid unintended interpolation.
+  #
+  # The challenge is that PPI gives us the decoded content of single-quoted
+  # strings. For example, for the source 'price: \\$5.00', PPI's string()
+  # method returns 'price: \$5.00' (with one backslash). But to test
+  # interpolation properly, we need to reconstruct what the original
+  # escaping would have been.
+  #
+  # In single quotes, only backslash (\) and apostrophe (') are escaped:
+  # - '\' in the source becomes '\\' in the content
+  # - '\'' in the source becomes ''' in the content
+  #
+  # So to reconstruct the original string for interpolation testing:
+  # - Each '\' in content represents '\\' in the original source
+  # - Each ''' in content represents '\'' in the original source
+
+  my $reconstructed = $string;
+  $reconstructed =~ s/\\/\\\\/g;  # \ → \\
+  $reconstructed =~ s/'/\\'/g;    # ' → \'
+
+  $self->would_interpolate($reconstructed)
+}
+
 sub delimiter_preference_order ($self, $delimiter_start) {
   return 0 if $delimiter_start eq "(";
   return 1 if $delimiter_start eq "[";
@@ -206,31 +232,20 @@ sub _choose_optimal_quote_style ($self, $elem, $string, $has_single_quotes,
 
 sub check_single_quoted ($self, $elem) {
   return if $self->_is_in_use_statement($elem);
-  my $string  = $elem->string;
-  my $content = $elem->content;
+  my $string = $elem->string;
 
-  # Special case: strings with newlines don't follow the rules
-  return if $self->_has_newlines($string);
+  return if
+    # Special case: strings with newlines don't follow the rules
+    $self->_has_newlines($string) ||
+    # Keep single quotes if the string contains double quotes
+    index($string, '"') != -1 ||
+    # Check if string contains escape sequences that would have different
+    # meanings between single vs double quotes. If so, preserve single quotes.
+    $self->_has_quote_sensitive_escapes($string) ||
+    # Keep single quotes if double would introduce interpolation
+    $self->would_interpolate_from_single_quotes($string);
 
-  # Rules 1,2: Use double quotes unless string has literal $/@ or double quotes
-  return if index($string, '"') != -1;
-
-  # Escaped single quotes suggest double quotes
-  return $self->violation($Desc, $Expl_double, $elem) if $content =~ /\\'/;
-
-  my $would_interpolate = $self->would_interpolate($string);
-
-  # Check if string contains escape sequences that would have different meanings
-  # between single vs double quotes. If so, preserve single quotes.
-  return if $self->_has_dangerous_escape_sequences($string);
-
-  # Literal \$ and \@ would change meaning in double quotes
-  return if $self->_has_literal_escape_sigils($string);
-
-  return $self->violation($Desc, $Expl_double, $elem)
-    if !$would_interpolate && index($string, '"') == -1;
-
-  return
+  $self->violation($Desc, $Expl_double, $elem)
 }
 
 sub check_double_quoted ($self, $elem) {
@@ -243,9 +258,11 @@ sub check_double_quoted ($self, $elem) {
   return if $self->_has_newlines($string);
 
   # Check for escaped dollar/at signs or double quotes, but only suggest single
-  # quotes if no other interpolation exists
+  # quotes if no other interpolation exists AND no dangerous escape sequences
   return $self->violation($Desc, $Expl_single, $elem)
-    if $content =~ /\\[\$\@\"]/ && !$self->would_interpolate($string);
+    if $content =~ /\\[\$\@\"]/
+    && !$self->_has_quote_sensitive_escapes($string)
+    && !$self->would_interpolate($string);
 
   return
 }
@@ -260,7 +277,7 @@ sub check_q_literal ($self, $elem) {
 
   # Preserve q() for escape sequences, optimize delimiter
   return $self->check_delimiter_optimisation($elem)
-    if $self->_has_dangerous_escape_sequences($string);
+    if $self->_has_quote_sensitive_escapes($string);
 
   # Preserve q() for literal \$ or \@, optimize delimiter
   return $self->check_delimiter_optimisation($elem)
@@ -284,7 +301,7 @@ sub check_qq_interpolate ($self, $elem) {
 
   # Only preserve qq() if escape sequences are actually needed
   return $self->check_delimiter_optimisation($elem)
-    if $self->_has_dangerous_escape_sequences($string);
+    if $self->_has_quote_sensitive_escapes($string);
 
   my $double_quote_suggestion
     = $self->_what_would_double_quotes_suggest($string);
@@ -358,7 +375,7 @@ sub _analyse_argument_types ($self, $elem, @args) {
 }
 
 sub check_use_statement ($self, $elem) {  ## no critic (complexity)
-  # Check "use" and "no" statements, but not "require"
+    # Check "use" and "no" statements, but not "require"
   return unless $elem->type =~ /^(use|no)$/;
 
   my @args = $self->_extract_use_arguments($elem) or return;
@@ -567,7 +584,7 @@ sub _what_would_double_quotes_suggest ($self, $string) {
   undef
 }
 
-sub _has_dangerous_escape_sequences ($self, $string) {
+sub _has_quote_sensitive_escapes ($self, $string) {
   # Check if string contains escape sequences that would have different meanings
   # in single vs double quotes. These should be preserved in their current
   # quote style to maintain their intended meaning.
@@ -582,7 +599,8 @@ sub _has_dangerous_escape_sequences ($self, $string) {
       [0-7]{1,3}          |  # Octal: \033 \377
       o\{[^}]*\}          |  # Octal braces: \o{033}
       c.                  |  # Control chars: \c[ \cA
-      N\{[^}]*\}             # Named chars: \N{name} \N{U+263A}
+      N\{[^}]*\}          |  # Named chars: \N{name} \N{U+263A}
+      [luLUEQ]               # String modification: \l \u \L \U \E \Q
     )
   /x
 }
@@ -898,6 +916,21 @@ consistency.
 
 Uses PPI's authoritative parsing to detect interpolation rather than regex
 patterns, ensuring accurate detection of complex cases like literal variables.
+
+=head2 would_interpolate_from_single_quotes
+
+Tests whether a string from single quotes would interpolate if converted to
+double quotes. This specialised version handles the challenge that PPI provides
+decoded string content rather than the original source text.
+
+When checking single-quoted strings, PPI's C<string()> method returns the
+decoded content. For example, the source C<'price: \\$5.00'> becomes
+C<'price: \$5.00'> in the content (with one backslash). To test interpolation
+properly, this method reconstructs what the original escaping would have been
+by re-escaping backslashes and apostrophes according to single-quote rules.
+
+This ensures accurate detection of whether converting a single-quoted string to
+double quotes would introduce unintended variable interpolation.
 
 =head2 delimiter_preference_order
 

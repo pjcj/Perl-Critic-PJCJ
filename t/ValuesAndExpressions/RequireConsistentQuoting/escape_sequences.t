@@ -74,7 +74,7 @@ subtest "Escape sequences in single quotes should NOT suggest double quotes" =>
     'Literal \t in single quotes should stay single quotes';
 
     # Literal backslash-dollar in single quotes should stay single quotes
-    # (in '' it's literal \$, in "" it would become escaped $)
+    # (nothing to do with the backslash, it's the interpolation of $)
     good $Policy, q(my $literal_dollar = 'price: \\$5.00'),
     'Literal \$ in single quotes should stay single quotes';
 
@@ -252,6 +252,214 @@ subtest "Additional escape sequence tests" => sub {
   # quotes because \n has different meanings: literal in '', newline in ""
   good $Policy, q(my $x = 'text with \n newline but no interpolation'),
     "Single quotes with escape sequences should stay single quotes";
+};
+
+subtest "Double quotes containing only escape sequences" => sub {
+  # Test that double-quoted strings containing ONLY escape sequences
+  # are correctly handled and not suggested to use single quotes
+
+  # Single character escapes
+  good $Policy, q(my $newline = "\n"),
+    "Double quotes with only newline escape should stay double quotes";
+  good $Policy, q(my $tab = "\t"),
+    "Double quotes with only tab escape should stay double quotes";
+  good $Policy, q(my $return = "\r"),
+    "Double quotes with only carriage return escape should stay double quotes";
+  good $Policy, q(my $form = "\f"),
+    "Double quotes with only form feed escape should stay double quotes";
+  good $Policy, q(my $backspace = "\b"),
+    "Double quotes with only backspace escape should stay double quotes";
+  good $Policy, q(my $bell = "\a"),
+    "Double quotes with only bell/alert escape should stay double quotes";
+  good $Policy, q(my $escape = "\e"),
+    "Double quotes with only escape character should stay double quotes";
+
+  # Hex escapes
+  good $Policy, q(my $hex = "\x1b"),
+    "Double quotes with only hex escape should stay double quotes";
+  good $Policy, q(my $hex = "\xff"),
+    "Double quotes with only hex FF escape should stay double quotes";
+  good $Policy, q(my $hex = "\x{263A}"),
+    "Double quotes with only hex unicode escape should stay double quotes";
+
+  # Octal escapes
+  good $Policy, q(my $oct = "\033"),
+    "Double quotes with only octal escape should stay double quotes";
+  good $Policy, q(my $oct = "\377"),
+    "Double quotes with only octal 377 escape should stay double quotes";
+  good $Policy, q(my $oct = "\o{033}"),
+    "Double quotes with only braced octal escape should stay double quotes";
+
+  # Control characters
+  good $Policy, q(my $ctrl = "\c["),
+    "Double quotes with only control escape should stay double quotes";
+  good $Policy, q(my $ctrl = "\cA"),
+    "Double quotes with only control-A escape should stay double quotes";
+  good $Policy, q(my $ctrl = "\c@"),
+    "Double quotes with only control-@ escape should stay double quotes";
+
+  # Named Unicode
+  good $Policy, q(my $named = "\N{LATIN SMALL LETTER A}"),
+    "Double quotes with only named unicode should stay double quotes";
+  good $Policy, q(my $named = "\N{U+263A}"),
+    "Double quotes with only unicode codepoint should stay double quotes";
+};
+
+subtest "String modification escape sequences" => sub {
+  # Test escape sequences that modify how subsequent characters are interpreted
+  # These are not in the current regex pattern but should be tested
+
+  # Case modification escapes
+  good $Policy, q(my $lower = "\lHELLO"),
+    "Double quotes with \\l (lowercase next char) should stay double quotes";
+  good $Policy, q(my $upper = "\uhello"),
+    "Double quotes with \\u (uppercase next char) should stay double quotes";
+  good $Policy, q(my $lower_all = "\LHELLO WORLD\E"),
+    "Double quotes with \\L...\\E (lowercase range) should stay double quotes";
+  good $Policy, q(my $upper_all = "\Uhello world\E"),
+    "Double quotes with \\U...\\E (uppercase range) should stay double quotes";
+
+  # Quote meta escapes
+  good $Policy, q(my $quoted = "\Q[special].chars\E"),
+    "Double quotes with \\Q...\\E (quote meta) should stay double quotes";
+
+  # Only escape sequences
+  good $Policy, q(my $lower_only = "\l"),
+    "Double quotes with only \\l escape should stay double quotes";
+  good $Policy, q(my $upper_only = "\u"),
+    "Double quotes with only \\u escape should stay double quotes";
+  good $Policy, q(my $quote_only = "\Q"),
+    "Double quotes with only \\Q escape should stay double quotes";
+  good $Policy, q(my $end_only = "\E"),
+    "Double quotes with only \\E escape should stay double quotes";
+};
+
+subtest "Incomplete and backslash escape sequences" => sub {
+  # Test incomplete or malformed escape sequences
+
+  # Incomplete hex escapes
+  good $Policy, q(my $incomplete = "\x"),
+    "Double quotes with incomplete \\x escape should stay double quotes";
+  good $Policy, q(my $incomplete = "\x{"),
+    "Double quotes with incomplete \\x{ escape should stay double quotes";
+  good $Policy, q(my $incomplete = "\x{}"),
+    "Double quotes with empty \\x{} escape should stay double quotes";
+
+  # Incomplete octal escapes
+  good $Policy, 'my $incomplete = "\o{"',
+    "Double quotes with incomplete \\o{ escape should stay double quotes";
+  good $Policy, q(my $incomplete = "\o{}"),
+    "Double quotes with empty \\o{} escape should stay double quotes";
+
+  # Incomplete named escapes
+  good $Policy, 'my $incomplete = "\N{"',
+    "Double quotes with incomplete \\N{ escape should stay double quotes";
+  good $Policy, q(my $incomplete = "\N{}"),
+    "Double quotes with empty \\N{} escape should stay double quotes";
+
+  # Backslash at end of string
+  bad $Policy, 'my $trailing = "\\"', "use ''",
+    "Double quotes with only escaped backslash should use single quotes";
+  bad $Policy, 'my $trailing = "text\\"', "use ''",
+    "Double quotes with trailing escaped backslash should use single quotes";
+
+  # Multiple consecutive backslashes
+  bad $Policy, 'my $multiple = "\\\\"', "use ''",
+    "Double quotes with multiple escaped backslashes should use single quotes";
+  bad $Policy, 'my $multiple = "\\\\\\\\"', "use ''",
+    "Double quotes with many escaped backslashes should use single quotes";
+};
+
+subtest "Mixed escape sequences" => sub {
+  # Test strings containing multiple different escape sequences
+
+  good $Policy, q(my $mixed = "\n\t"),
+    "Double quotes with newline and tab should stay double quotes";
+  good $Policy, q(my $mixed = "\r\n"),
+    "Double quotes with CRLF should stay double quotes";
+  good $Policy, q(my $mixed = "\x1b\033"),
+    "Double quotes with hex and octal escapes should stay double quotes";
+  good $Policy, q(my $mixed = "\t\x09"),
+    "Double quotes with tab char and hex tab should stay double quotes";
+  good $Policy, q(my $mixed = "\N{U+263A}\x{263A}"),
+    "Double quotes with named and hex unicode should stay double quotes";
+  good $Policy, q(my $mixed = "\a\b\e\f\n\r\t"),
+    "Double quotes with all single char escapes should stay double quotes";
+};
+
+subtest "Case variations in hex escapes" => sub {
+  # Test that hex escapes work with different case combinations
+
+  good $Policy, q(my $hex = "\xAB"),
+    "Double quotes with uppercase hex escape should stay double quotes";
+  good $Policy, q(my $hex = "\xab"),
+    "Double quotes with lowercase hex escape should stay double quotes";
+  good $Policy, q(my $hex = "\xAb"),
+    "Double quotes with mixed case hex escape should stay double quotes";
+  good $Policy, q(my $hex = "\x{AbCd}"),
+    "Double quotes with mixed case unicode hex should stay double quotes";
+  good $Policy, q(my $hex = "\x{ABCD}"),
+    "Double quotes with uppercase unicode hex should stay double quotes";
+  good $Policy, q(my $hex = "\x{abcd}"),
+    "Double quotes with lowercase unicode hex should stay double quotes";
+};
+
+subtest "Strings with conflicting quoting requirements" => sub {
+  # Test strings that contain both content that would suggest single quotes
+  # AND escape sequences that require double quotes. The escape sequences
+  # should take precedence, keeping the string in double quotes.
+
+  # Double quotes with escape sequences should stay double quotes even if
+  # they contain content that would normally suggest single quotes
+  good $Policy, q(my $mixed = "\"\n"),
+    "Double quotes with quote and newline should stay double quotes";
+  good $Policy, q(my $mixed = "Don't\t"),
+    "Double quotes with apostrophe and tab should stay double quotes";
+  good $Policy, q(my $mixed = "Can't\r"),
+    "Double quotes with apostrophe and CR should stay double quotes";
+
+  # Test with various single character escapes mixed with quote content
+  good $Policy, q(my $mixed = "Quote: \"Hello\"\n"),
+    "Double quotes with quotes and newline should stay double quotes";
+  good $Policy, q(my $mixed = "Path: 'C:\\Program Files'\t"),
+    "Double quotes with single quotes and tab should stay double quotes";
+  good $Policy, q(my $mixed = "Alert!\aEnd"),
+    "Double quotes with content and bell should stay double quotes";
+
+  # Test with hex/octal escapes and quote content
+  good $Policy, q(my $mixed = "Color: 'red'\x1b[0m"),
+    "Double quotes with quotes and hex escape should stay double quotes";
+  good $Policy, q(my $mixed = "Bell\033sound"),
+    "Double quotes with content and octal escape should stay double quotes";
+  good $Policy, q(my $mixed = "Unicode\x{263A}smiley"),
+    "Double quotes with content and unicode should stay double quotes";
+
+  # Test with control and named escapes mixed with content
+  good $Policy, q(my $mixed = "Control\c[sequence"),
+    "Double quotes with content and control escape should stay double quotes";
+  good $Policy, q(my $mixed = "Named\N{SMILEY}char"),
+    "Double quotes with content and named unicode should stay double quotes";
+
+  # Test with string modification escapes and quote content
+  good $Policy, q(my $mixed = "Make 'this'\lLOWER"),
+    "Double quotes with quotes and lowercase escape should stay double quotes";
+  good $Policy, q(my $mixed = "Make 'this'\upper"),
+    "Double quotes with quotes and uppercase escape should stay double quotes";
+  good $Policy, q(my $mixed = "Quote\Q[special]\Echars"),
+    "Double quotes with content and quote meta should stay double quotes";
+
+  # Test with backslash escapes and quote content
+  good $Policy, q(my $mixed = "Path 'C:\\' backslash"),
+    "Double quotes with quotes and backslash should stay double quotes";
+  good $Policy, q(my $mixed = "Multiple\\\\backslashes"),
+    "Double quotes with content and multiple backslashes should stay "
+    . "double quotes";
+
+  # Test edge case: only quote and escape sequence
+  good $Policy, q(my $minimal = "'\n"),
+    "Double quotes with only quote and newline should stay double quotes";
+  good $Policy, q(my $minimal = "\"\t"),
+    "Double quotes with only escaped quote and tab should stay double quotes";
 };
 
 done_testing;
