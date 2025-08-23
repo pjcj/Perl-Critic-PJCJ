@@ -357,7 +357,7 @@ sub _analyse_argument_types ($self, $elem, @args) {
   ($fat_comma, $complex_expr, $version, $simple_strings, $q_operators, $parens)
 }
 
-sub check_use_statement ($self, $elem) {
+sub check_use_statement ($self, $elem) {  ## no critic (complexity)
   # Check "use" and "no" statements, but not "require"
   return unless $elem->type =~ /^(use|no)$/;
 
@@ -401,6 +401,9 @@ sub check_use_statement ($self, $elem) {
   for my $arg (@args) {
     # Skip qw() tokens as they never interpolate
     next if $arg->isa("PPI::Token::QuoteLike::Words");
+
+    # Only check tokens that have a string method (string-like tokens)
+    next unless $arg->can("string");
 
     my $content = $arg->string;
     if ($self->would_interpolate($content)) {
@@ -526,6 +529,9 @@ sub _is_in_use_statement ($self, $elem) {
       for my $arg (@args) {
         # Skip qw() tokens as they never interpolate
         next if $arg->isa("PPI::Token::QuoteLike::Words");
+
+        # Only check tokens that have a string method (string-like tokens)
+        next unless $arg->can("string");
 
         my $content = $arg->string;
         if ($self->would_interpolate($content)) {
