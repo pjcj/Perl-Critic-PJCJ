@@ -134,36 +134,36 @@ subtest "All Perl escape sequences should stay in single quotes" => sub {
     'Literal \N{U+} escape should stay single quotes';
 };
 
-subtest "q() with escape sequences should stay q()" => sub {
+subtest "q() with escape sequences should recommend changes" => sub {
   # q() behaves like single quotes - escape sequences are literal
   # So q() with escape sequences should be preserved to maintain literal meaning
 
   # Single character escapes in q()
-  good $Policy, q[my $text = q(Line with \\n newline)],
-    'q() with literal \n should stay q()';
-  good $Policy, q[my $text = q(Tab \\t here)],
-    'q() with literal \t should stay q()';
-  good $Policy, q[my $text = q(Return \\r here)],
-    "q() with literal \r should stay q()";
+  bad $Policy, q[my $text = q(Line with \\n newline)], 'use ""',
+    'q() with literal \n should suggest double quotes';
+  bad $Policy, q[my $text = q(Tab \\t here)], 'use ""',
+    'q() with literal \t should suggest double quotes';
+  bad $Policy, q[my $text = q(Return \\r here)], 'use ""',
+    'q() with literal \r should suggest double quotes';
 
   # Variable sigils in q() - these are literal backslash-dollar/at
   # Since \$ in q() is literal (two characters), it's preserved
-  good $Policy, q[my $price = q(Cost: \\$5.00)],
-    'q() with literal \$ should stay q()';
-  good $Policy, q[my $email = q(user\\@domain.com)],
-    'q() with literal \@ should stay q()';
+  bad $Policy, q[my $price = q(Cost: \\$5.00)], "use ''",
+    'q() with literal \$ should suggest single quotes';
+  bad $Policy, q[my $email = q(user\\@domain.com)], "use ''",
+    'q() with literal \@ should suggest single quotes';
 
   # Hex/octal escapes in q()
-  good $Policy, q[my $hex = q(Hex \\x1b escape)],
-    'q() with literal \x hex should stay q()';
-  good $Policy, q[my $oct = q(Octal \\033 escape)],
-    'q() with literal \033 should stay q()';
+  bad $Policy, q[my $hex = q(Hex \\x1b escape)], 'use ""',
+    'q() with literal \x hex should suggest double quotes';
+  bad $Policy, q[my $oct = q(Octal \\033 escape)], 'use ""',
+    'q() with literal \033 should suggest double quotes';
 
   # Control and named escapes in q()
-  good $Policy, q<my $ctrl = q(Control \\c[ char)>,
-    'q() with literal \c should stay q()';
-  good $Policy, q[my $named = q(Named \\N{SMILEY} char)],
-    "q() with literal \\N should stay q()";
+  bad $Policy, q<my $ctrl = q(Control \\c[ char)>, 'use ""',
+    'q() with literal \c should suggest double quotes';
+  bad $Policy, q[my $named = q(Named \\N{SMILEY} char)], 'use ""',
+    "q() with literal \\N should suggest double quotes";
 };
 
 subtest "qq() with escape sequences should stay qq()" => sub {

@@ -49,6 +49,7 @@ sub good ($policy, $code, $description) {
 sub bad ($policy, $code, $expected_message, $description) {
   my @violations = find_violations($policy, $code);
   is @violations, 1, "$description - should have one violation";
+  return unless @violations;
 
   # For quoting policies, check explanation instead of description
   my $field

@@ -184,7 +184,7 @@ sub check_delimiter_optimisation ($self, $elem) {
 
   return $self->violation($Desc,
     sprintf($Expl_optimal, $optimal_delim->{display}), $elem)
-    if !$current_is_optimal;
+    unless $current_is_optimal;
 
   undef
 }
@@ -204,30 +204,6 @@ sub violates ($self, $elem, $) {
   my $method     = $dispatch->{$class} or return;
   my @violations = grep { defined } $self->$method($elem);
   @violations
-}
-
-sub _choose_optimal_quote_style ($self, $elem, $string, $has_single_quotes,
-  $has_double_quotes, $would_interpolate,)
-{
-  # Has both quote types - q() handles this cleanly
-  return $self->check_delimiter_optimisation($elem)
-    if $has_single_quotes && $has_double_quotes;
-
-  if ($has_single_quotes) {
-    return $would_interpolate
-      ? $self->check_delimiter_optimisation($elem)
-      : $self->violation($Desc, $Expl_double, $elem);
-  }
-
-  if ($has_double_quotes) {
-    return $would_interpolate
-      ? $self->check_delimiter_optimisation($elem)
-      : $self->violation($Desc, $Expl_single, $elem);
-  }
-
-  return $self->violation($Desc, $Expl_single, $elem) if $would_interpolate;
-
-  $self->violation($Desc, $Expl_double, $elem)
 }
 
 sub check_single_quoted ($self, $elem) {
@@ -275,20 +251,30 @@ sub check_q_literal ($self, $elem) {
   # Special case: strings with newlines don't follow the rules
   return if $self->_has_newlines($string);
 
-  # Preserve q() for escape sequences, optimize delimiter
-  return $self->check_delimiter_optimisation($elem)
-    if $self->_has_quote_sensitive_escapes($string);
-
-  # Preserve q() for literal \$ or \@, optimize delimiter
-  return $self->check_delimiter_optimisation($elem)
-    if $self->_has_literal_escape_sigils($string);
-
   my $has_single_quotes = index($string, "'") != -1;
   my $has_double_quotes = index($string, '"') != -1;
-  my $would_interpolate = $self->would_interpolate($string);
 
-  $self->_choose_optimal_quote_style($elem, $string, $has_single_quotes,
-    $has_double_quotes, $would_interpolate)
+  # Has both quote types - q() handles this cleanly
+  return $self->check_delimiter_optimisation($elem)
+    if $has_single_quotes && $has_double_quotes;
+
+  my $would_interpolate = $self->would_interpolate_from_single_quotes($string);
+
+  if ($has_single_quotes) {
+    return $would_interpolate
+      ? $self->check_delimiter_optimisation($elem)
+      : $self->violation($Desc, $Expl_double, $elem);
+  }
+
+  if ($has_double_quotes) {
+    return $would_interpolate
+      ? $self->check_delimiter_optimisation($elem)
+      : $self->violation($Desc, $Expl_single, $elem);
+  }
+
+  return $self->violation($Desc, $Expl_single, $elem) if $would_interpolate;
+
+  $self->violation($Desc, $Expl_double, $elem)
 }
 
 sub check_qq_interpolate ($self, $elem) {
@@ -603,13 +589,6 @@ sub _has_quote_sensitive_escapes ($self, $string) {
       [luLUEQ]               # String modification: \l \u \L \U \E \Q
     )
   /x
-}
-
-sub _has_literal_escape_sigils ($self, $string) {
-  # Check if string contains literal \$ or \@ that would have different
-  # meanings between single and double quotes when converting FROM
-  # single quotes TO double quotes (not the other direction).
-  $string =~ /\\[\$\@]/
 }
 
 sub _has_newlines ($self, $string) {
