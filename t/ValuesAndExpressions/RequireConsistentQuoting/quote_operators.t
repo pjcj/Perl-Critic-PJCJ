@@ -171,16 +171,16 @@ subtest "Additional q() operator coverage tests" => sub {
   bad $Policy, 'my $x = q((\@));', "use ''",
     q[q() with escaped @ and parens should optimise delimiter to ''];
 
-  bad $Policy, q[my $x = q(\@escaped at sign with "quotes")], "use ''",
+  bad $Policy, 'my $x = q(\@escaped at sign with "quotes")', "use ''",
     'q() with escaped @ should suggest single quotes';
 
   # Test q() with escaped sigils and quotes
   # q() with \$ or \@ is preserved because they would have different
   # meaning in double quotes
-  bad $Policy, q[my $x = q(\$var and "quotes" together)], "use ''",
+  bad $Policy, 'my $x = q(\$var and "quotes" together)', "use ''",
     "q() with escaped dollar should suggest single quotes";
 
-  bad $Policy, q[my $x = q(\@var and "quotes" together)], "use ''",
+  bad $Policy, 'my $x = q(\@var and "quotes" together)', "use ''",
     "q() with escaped at should suggest single quotes";
 
   # Test q() with content that might not be handled by early returns

@@ -86,21 +86,9 @@ sub parse_quote_token ($self, $elem) {
 
   # Handle all possible delimiters, not just bracket pairs
   # Order matters: longer matches first
-  if ($content =~ /\A(qw|qq|qx|q)\s*(.)(.*)\z/s) {
-    my ($op, $start_delim, $rest) = ($1, $2, $3);
-    my $end_delim = $start_delim;
-
-    $end_delim
-      = $start_delim eq "(" ? ")"
-      : $start_delim eq "[" ? "]"
-      : $start_delim eq "{" ? "}"
-      : $start_delim eq "<" ? ">"
-      :                       $start_delim;
-    # Non-bracket delimiters use same char for start/end
-
-    $rest =~ s/\Q$end_delim\E\z//;
-
-    ($start_delim, $end_delim, $rest, $op)
+  if ($content =~ /\A(?:(qw|qq|qx|q)\s*)?(.)(.*)(.)\z/s) {
+    my ($op, $start_delim, $str, $end_delim) = ($1, $2, $3, $4);
+    ($start_delim, $end_delim, $str, $op)
   }
 }
 
@@ -130,12 +118,7 @@ sub _get_supported_delimiters ($self, $operator) {
   );
 }
 
-sub find_optimal_delimiter (
-  $self, $content,
-  $operator      = "qw",
-  $current_start = "",
-  $current_end   = "",
-) {
+sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
   my @delimiters = $self->_get_supported_delimiters($operator);
 
   for my $delim (@delimiters) {
@@ -146,7 +129,7 @@ sub find_optimal_delimiter (
     $delim->{count} = $count;
   }
 
-  my $min_count = (sort { $a <=> $b } map { $_->{count} } @delimiters)[0];
+  my $min_count = (sort { $a <=> $b } map $_->{count}, @delimiters)[0];
 
   # Find optimal delimiter: handle unbalanced content, then preference order
   my ($optimal) = sort {
@@ -158,7 +141,7 @@ sub find_optimal_delimiter (
   my $current_is_bracket = 0;
   my $current_delim;
   for my $delim (@delimiters) {
-    if ($delim->{start} eq $current_start && $delim->{end} eq $current_end) {
+    if ($delim->{start} eq $start && $delim->{end} eq $end) {
       $current_delim      = $delim;
       $current_is_bracket = 1;
       last;
@@ -173,15 +156,12 @@ sub find_optimal_delimiter (
 }
 
 sub check_delimiter_optimisation ($self, $elem) {
-  my ($current_start, $current_end, $content, $operator)
-    = $self->parse_quote_token($elem);
+  my ($start, $end, $content, $operator) = $self->parse_quote_token($elem);
+  return unless defined $start;
 
-  return unless defined $current_start;
-
+  $operator //= "q" if $start eq "'";
   my ($optimal_delim, $current_is_optimal)
-    = $self->find_optimal_delimiter($content, $operator, $current_start,
-      $current_end);
-
+    = $self->find_optimal_delimiter($content, $operator, $start, $end);
   return $self->violation($Desc,
     sprintf($Expl_optimal, $optimal_delim->{display}), $elem)
     unless $current_is_optimal;
@@ -202,7 +182,7 @@ sub violates ($self, $elem, $) {
 
   my $class      = ref $elem;
   my $method     = $dispatch->{$class} or return;
-  my @violations = grep { defined } $self->$method($elem);
+  my @violations = grep defined, $self->$method($elem);
   @violations
 }
 
@@ -210,16 +190,25 @@ sub check_single_quoted ($self, $elem) {
   return if $self->_is_in_use_statement($elem);
   my $string = $elem->string;
 
+  # Special case: strings with newlines don't follow the rules
+  return if $self->_has_newlines($string);
+
+  my $has_single_quotes = index($string, "'") != -1;
+  my $has_double_quotes = index($string, '"') != -1;
+
+  return $self->check_delimiter_optimisation($elem)
+    if $has_single_quotes && $has_double_quotes;
+
   return if
-    # Special case: strings with newlines don't follow the rules
-    $self->_has_newlines($string) ||
     # Keep single quotes if the string contains double quotes
-    index($string, '"') != -1 ||
+    $has_double_quotes ||
     # Check if string contains escape sequences that would have different
     # meanings between single vs double quotes. If so, preserve single quotes.
     $self->_has_quote_sensitive_escapes($string) ||
     # Keep single quotes if double would introduce interpolation
     $self->would_interpolate_from_single_quotes($string);
+
+  my $would_interpolate = $self->would_interpolate_from_single_quotes($string);
 
   $self->violation($Desc, $Expl_double, $elem)
 }
