@@ -2,6 +2,8 @@
 
 {{$NEXT}}
 
+## v0.1.4 - 2025-08-31
+
 ## v0.1.3-TRIAL - 2025-08-31
 
 - Enhance use/no statement handling in RequireConsistentQuoting policy:
