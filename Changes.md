@@ -11,6 +11,7 @@
   - Add complex expression detection
     - Statements with variables, conditionals, etc. have no parentheses
     - Add version number exemption
+- Improve single quote and q() handling
 
 ## v0.1.2 - 2025-07-26
 
