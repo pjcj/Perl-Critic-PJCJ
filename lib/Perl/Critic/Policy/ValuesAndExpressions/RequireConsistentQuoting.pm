@@ -229,9 +229,10 @@ sub check_double_quoted ($self, $elem) {
     && !$self->_has_quote_sensitive_escapes($string)
     && !$self->would_interpolate($string);
 
-  # If has escaped double quotes AND quote-sensitive escapes, suggest qq()
-  # qq() eliminates the quote escaping while preserving escape interpretation
-  if ($content =~ /\\"/ && $self->_has_quote_sensitive_escapes($string)) {
+  # If has escaped double quotes, suggest qq() — by this point, the ''
+  # suggestion was ruled out (escape sequences or interpolation present),
+  # so qq() eliminates the quote escaping while preserving both
+  if ($content =~ /\\"/) {
     my ($optimal) = $self->find_optimal_delimiter($string, "qq", '"', '"');
     return $self->violation($Desc, sprintf($Expl_optimal, $optimal->{display}),
       $elem);
