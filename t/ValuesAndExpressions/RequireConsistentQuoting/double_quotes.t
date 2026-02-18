@@ -34,6 +34,8 @@ subtest "Escaped special characters" => sub {
     "Escaped at-signs should use single quotes";
   bad $Policy, 'my $quote = "\""', "use ''",
     "Escaped double quotes should use single quotes";
+  bad $Policy, 'my $csv = "val1,\"unclosed quote,val3\n"', "use qq()",
+    "Escaped double quotes with escape sequences should use qq()";
 };
 
 subtest "Interpolation with quotes" => sub {
