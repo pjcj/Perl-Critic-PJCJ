@@ -747,6 +747,27 @@ few very special cases, strings with literal newlines are not a good idea.
     line 2
   );
 
+=head2 Scope
+
+This policy covers string literals (C<"">, C<''>), quote operators (C<q()>,
+C<qq()>), word lists (C<qw()>), command execution (C<qx()>), and use/no
+statement import lists.
+
+The following quote-like constructs are B<not> checked, as they have
+fundamentally different quoting semantics:
+
+=over 4
+
+=item * Regular expressions: C<m//>, C<qr//>
+
+=item * Substitutions: C<s///>
+
+=item * Transliterations: C<tr///>, C<y///>
+
+=item * Heredocs: C<< <<EOF >>
+
+=back
+
 =head2 RATIONALE
 
 =over 4

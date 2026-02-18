@@ -109,19 +109,3 @@ only run locally. CI does not verify that all hooks pass.
 Low priority — the existing CI runs `dzil test` which covers
 correctness. Pre-commit enforcement would catch formatting and style
 regressions but is not blocking.
-
-## Document excluded quote-like operators
-
-**Area:** Documentation
-**Policy:** RequireConsistentQuoting
-
-### Problem
-
-The policy does not handle `s///`, `tr///`, `y///`, `m//`, `qr//`, or
-heredocs. This is likely intentional (these have fundamentally different
-quoting semantics) but is not documented.
-
-### Why not implemented
-
-Low priority — the exclusion is sensible and unlikely to confuse users.
-A brief note in the POD would suffice if added.
