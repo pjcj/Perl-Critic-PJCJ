@@ -471,9 +471,7 @@ sub _extract_list_arguments ($self, $list) {
       # Handle other statements and structures (like hash constructors)
       push @args, $child;
     } else {
-      # Handle direct tokens
       next if $child->isa("PPI::Token::Whitespace");
-      next if $child->isa("PPI::Token::Structure");  # Skip ( ) { } etc.
       push @args, $child;
     }
   }
@@ -559,7 +557,7 @@ sub _what_would_double_quotes_suggest ($self, $string) {
 
   if ($has_double_quotes) {
     return "qq()" if $would_interpolate || $has_single_quotes;
-    return "''"   if !$has_single_quotes; # Only double quotes, no interpolation
+    return "''";  # Only double quotes, no interpolation
   }
 
   # Rules 1,2: Otherwise double quotes are fine
