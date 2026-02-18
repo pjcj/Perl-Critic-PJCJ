@@ -208,8 +208,6 @@ sub check_single_quoted ($self, $elem) {
     # Keep single quotes if double would introduce interpolation
     $self->would_interpolate_from_single_quotes($string);
 
-  my $would_interpolate = $self->would_interpolate_from_single_quotes($string);
-
   $self->violation($Desc, $Expl_double, $elem)
 }
 
