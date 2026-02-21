@@ -139,7 +139,7 @@ detect_version() {
   if [[ -z $last_version ]]; then
     pf "Could not find a released version in Changes.md"
   fi
-  ((verbose)) && pi "Last released version: $last_version"
+  if ((verbose)); then pi "Last released version: $last_version"; fi
 
   detected_version=$(
     perl -nE 'if (/^version\s*=\s*(\S+)/) { say $1; exit }' dist.ini
@@ -147,7 +147,7 @@ detect_version() {
   if [[ -z $detected_version ]]; then
     pf "Could not find version in dist.ini"
   fi
-  ((verbose)) && pi "Current version in dist.ini: $detected_version"
+  if ((verbose)); then pi "Current version in dist.ini: $detected_version"; fi
 }
 
 prompt_version_bump() {
