@@ -31,6 +31,7 @@ usage() {
   cat <<EOT
 $script --help
 $script --verbose --dryrun release-ticket
+$script --dryrun release
 $script release
 EOT
   exit 0
@@ -94,10 +95,44 @@ setup() {
   parse_options "$@"
 }
 
-release_ticket() {
-  local last_version current_version
+setup_hooks() {
+  for hook in commit-msg prepare-commit-msg; do
+    local target="../../utils/${hook}-hook"
+    local link=".git/hooks/$hook"
+    if [[ ! -e $link ]]; then
+      ln -s "$target" "$link"
+      pi "Created git $hook hook"
+    fi
+  done
+  if command -v pre-commit >/dev/null 2>&1; then
+    pre-commit install --install-hooks
+  else
+    pi "pre-commit not found, skipping"
+    pi "  Install with: brew install pre-commit"
+    pi "  Then run: pre-commit install --install-hooks"
+  fi
+}
 
-  # Get the last released version from Changes.md
+recipe_setup() {
+  setup_hooks
+}
+
+confirm() {
+  local description="$1"
+  if ((dryrun)); then
+    pi "[dry run] would: $description"
+    return 0
+  fi
+  echo ""
+  pi "About to: $description"
+  local answer
+  read -rp "Continue? [yes/NO] " answer
+  if [[ ${answer,,} != "yes" ]]; then
+    pf "Aborted"
+  fi
+}
+
+detect_version() {
   last_version=$(
     perl -nE 'if (/^## (v\S+)/) { say $1; exit }' Changes.md
   )
@@ -106,134 +141,164 @@ release_ticket() {
   fi
   ((verbose)) && pi "Last released version: $last_version"
 
-  # Get the current version from dist.ini
-  current_version=$(
+  detected_version=$(
     perl -nE 'if (/^version\s*=\s*(\S+)/) { say $1; exit }' dist.ini
   )
-  if [[ -z $current_version ]]; then
+  if [[ -z $detected_version ]]; then
     pf "Could not find version in dist.ini"
   fi
-  ((verbose)) && pi "Current version in dist.ini: $current_version"
+  ((verbose)) && pi "Current version in dist.ini: $detected_version"
+}
 
-  # If versions match, prompt for a bump
-  if [[ $current_version == "$last_version" ]]; then
-    pi "Current version ($current_version) matches last release"
-
-    local major minor patch
-    # Strip leading v for arithmetic
-    local ver="${current_version#v}"
-    IFS='.' read -r major minor patch <<<"$ver"
-
-    local bump_patch="v$major.$minor.$((patch + 1))"
-    local bump_minor="v$major.$((minor + 1)).0"
-    local bump_major="v$((major + 1)).0.0"
-
-    echo ""
-    echo "Choose new version:"
-    echo "  1) patch  $bump_patch"
-    echo "  2) minor  $bump_minor"
-    echo "  3) major  $bump_major"
-    echo "  4) custom"
-    echo ""
-
-    local choice
-    read -rp "Choice [1]: " choice
-    choice="${choice:-1}"
-
-    case "$choice" in
-    1) current_version="$bump_patch" ;;
-    2) current_version="$bump_minor" ;;
-    3) current_version="$bump_major" ;;
-    4)
-      read -rp "Enter version (e.g. v1.2.3): " current_version
-      ;;
-    *) pf "Invalid choice: $choice" ;;
-    esac
-
-    pi "Updating dist.ini to $current_version"
-    if ((dryrun)); then
-      pi "[dry run] would update dist.ini version to $current_version"
-    else
-      perl -pi -e \
-        "s/^version\\s*=\\s*\\S+/version = $current_version/" dist.ini
-    fi
-  else
-    pi "Version already bumped to $current_version"
-  fi
-
-  local title="Release $current_version"
-  local body
-  body=$(
-    cat <<'TICKET'
-## Pre-release checklist
-
-- [ ] All changes committed
-- [ ] Tests pass (`make test`)
-- [ ] Lint passes (`make lint`)
-- [ ] `Changes.md` has entry under `{{$NEXT}}`
-- [ ] Version set in `dist.ini`
-- [ ] On `main` branch
-
-## Release
-
-```bash
-utils/run release
-```
-TICKET
-  )
-
-  if ((dryrun)); then
-    pi "[dry run] would create issue:"
-    echo "  title: $title"
-    echo "  body:"
-    echo "    ${body//$'\n'/$'\n'    }"
+prompt_version_bump() {
+  if [[ $detected_version != "$last_version" ]]; then
+    pi "Version already bumped to $detected_version"
     return
   fi
 
-  local url
-  url=$(gh issue create --title "$title" --body "$body")
-  pi "Created release ticket: $url"
+  pi "Current version ($detected_version) matches last release"
+
+  local major minor patch
+  local ver="${detected_version#v}"
+  IFS='.' read -r major minor patch <<<"$ver"
+
+  local bump_patch="v$major.$minor.$((patch + 1))"
+  local bump_minor="v$major.$((minor + 1)).0"
+  local bump_major="v$((major + 1)).0.0"
+
+  echo ""
+  echo "Choose new version:"
+  echo "  1) patch  $bump_patch"
+  echo "  2) minor  $bump_minor"
+  echo "  3) major  $bump_major"
+  echo "  4) custom"
+  echo ""
+
+  local choice
+  read -rp "Choice [1]: " choice
+  choice="${choice:-1}"
+
+  case "$choice" in
+  1) detected_version="$bump_patch" ;;
+  2) detected_version="$bump_minor" ;;
+  3) detected_version="$bump_major" ;;
+  4)
+    read -rp "Enter version (e.g. v1.2.3): " detected_version
+    ;;
+  *) pf "Invalid choice: $choice" ;;
+  esac
+}
+
+release_ticket_body() {
+  local version="$1"
+  cat <<TICKET
+## Release $version
+
+### Automated steps (\`make release\`)
+
+1. Create this ticket and branch
+2. Commit version bump to \`dist.ini\`
+3. Push branch and create PR
+4. Merge PR to \`main\`
+5. \`dzil release\` (CPAN upload, tag, push)
+
+### Pre-release checklist
+
+- [ ] \`Changes.md\` has entries under \`{{\$NEXT}}\`
+- [ ] Tests pass (\`make test\`)
+- [ ] Lint passes (\`make lint\`)
+
+### Release command
+
+\`\`\`bash
+make release
+\`\`\`
+TICKET
+}
+
+release_ticket() {
+  # Must be on main branch
+  local current_branch
+  current_branch=$(git branch --show-current)
+  if [[ $current_branch != "main" ]]; then
+    pf "Must be on main branch (currently on $current_branch)"
+  fi
+  pi "On main branch"
+
+  # Working tree must be clean (Changes.md excluded — it gets
+  # committed on the release branch)
+  if [[ -n $(git status --porcelain -- ':!Changes.md') ]]; then
+    pf "Working tree is not clean — commit or stash changes first"
+  fi
+  pi "Working tree is clean (excluding Changes.md)"
+
+  # Step 1: Determine version
+  local last_version detected_version
+  detect_version
+  prompt_version_bump
+
+  # Step 2: Create GitHub ticket
+  local title="Release $detected_version"
+  local body
+  body=$(release_ticket_body "$detected_version")
+
+  confirm "create GitHub ticket: $title"
+  local issue_url issue_num
+  if ((dryrun)); then
+    issue_num="NNN"
+  else
+    issue_url=$(gh issue create --title "$title" --body "$body")
+    pi "Created release ticket: $issue_url"
+    issue_num="${issue_url##*/}"
+  fi
+
+  # Step 3: Create release branch
+  local release_branch="GH-${issue_num}-release"
+  confirm "create branch $release_branch from main"
+  if ((!dryrun)); then
+    git checkout -b "$release_branch" main
+  fi
+
+  # Step 4: Commit changelog and version bump (local, no checkpoint)
+  if ((dryrun)); then
+    if [[ $detected_version != "$last_version" ]]; then
+      pi "[dry run] would update dist.ini to $detected_version"
+    fi
+    pi "[dry run] would commit Changes.md and dist.ini"
+  else
+    if [[ $detected_version != "$last_version" ]]; then
+      pi "Updating dist.ini to $detected_version"
+      perl -pi -e \
+        "s/^version\\s*=\\s*\\S+/version = $detected_version/" dist.ini
+    fi
+    git add Changes.md dist.ini
+    git commit -m "Release $detected_version"
+  fi
+
+  # Step 5: Push branch and create PR
+  confirm "push branch and create PR"
+  if ((dryrun)); then
+    release_pr_url="https://github.com/.../pull/NNN"
+    pi "[dry run] would push $release_branch and create PR"
+  else
+    git push -u origin "$release_branch"
+    release_pr_url=$(
+      gh pr create \
+        --title "$title" \
+        --body "$body" \
+        --base main
+    )
+    pi "Created PR: $release_pr_url"
+  fi
 }
 
 recipe_release-ticket() {
   release_ticket
+  echo ""
+  pi "Remaining steps: review PR, merge, then run 'utils/run release'"
 }
 
 release() {
-  pi "Running pre-release checks"
-
-  # Must be on main branch
-  local branch
-  branch=$(git branch --show-current)
-  if [[ $branch != "main" ]]; then
-    pf "Must be on main branch (currently on $branch)"
-  fi
-  pi "On main branch"
-
-  # Working tree must be clean
-  if [[ -n $(git status --porcelain) ]]; then
-    pf "Working tree is not clean — commit or stash changes first"
-  fi
-  pi "Working tree is clean"
-
-  # Tests must pass
-  pi "Running tests"
-  if ((dryrun)); then
-    pi "[dry run] would run: make test"
-  else
-    make test
-  fi
-  pi "Tests passed"
-
-  # Lint must pass
-  pi "Running lint"
-  if ((dryrun)); then
-    pi "[dry run] would run: make lint"
-  else
-    make lint
-  fi
-  pi "Lint passed"
-
   # Changes.md must have content under {{$NEXT}}
   local next_content
   next_content=$(
@@ -248,22 +313,38 @@ release() {
   # shellcheck disable=SC2016
   pi 'Changes.md has entries under {{$NEXT}}'
 
-  # Version in dist.ini must differ from last release
-  local last_version current_version
-  last_version=$(
-    perl -nE 'if (/^## (v\S+)/) { say $1; exit }' Changes.md
-  )
-  current_version=$(
-    perl -nE 'if (/^version\s*=\s*(\S+)/) { say $1; exit }' dist.ini
-  )
-  if [[ $current_version == "$last_version" ]]; then
-    pf "Version in dist.ini ($current_version) has not been bumped from last release"
+  # Steps 1-5: create ticket, branch, push, PR
+  release_ticket
+
+  # Step 6: Pause for PR review
+  echo ""
+  pi "PR ready for review: $release_pr_url"
+  pi "Review the PR, then continue to merge and release."
+  if ((dryrun)); then
+    pi "[dry run] skipping PR review pause"
+  else
+    local answer
+    read -rp "Continue after PR review? [yes/NO] " answer
+    if [[ ${answer,,} != "yes" ]]; then
+      pf "Aborted"
+    fi
   fi
-  pi "Version: $current_version (last release: $last_version)"
 
-  pi "All pre-release checks passed"
+  # Step 7: Merge PR
+  confirm "merge PR"
+  if ((!dryrun)); then
+    gh pr merge --merge "$release_pr_url"
+  fi
 
-  # Run dzil release
+  # Step 8: Check out main and pull (local, no checkpoint)
+  if ((dryrun)); then
+    pi "[dry run] would check out main and pull"
+  else
+    git checkout main
+    git pull
+  fi
+
+  # Step 9: dzil release (ConfirmRelease is the checkpoint)
   if ((dryrun)); then
     pi "[dry run] would run: dzil release"
   else
@@ -271,7 +352,7 @@ release() {
     dzil release
   fi
 
-  # Post-release verification
+  # Step 10: Post-release verification
   pi "Post-release verification:"
   pi "  - Check https://metacpan.org/dist/Perl-Critic-PJCJ for new version"
   pi "  - Verify git tag: git tag -l"
