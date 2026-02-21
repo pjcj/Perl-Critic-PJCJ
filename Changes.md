@@ -2,6 +2,8 @@
 
 {{$NEXT}}
 
+## v0.2.2 - 2026-02-21
+
 - Close release ticket automatically when PR is merged
 
 ## v0.2.1 - 2026-02-21
