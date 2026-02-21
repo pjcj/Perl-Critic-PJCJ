@@ -26,6 +26,7 @@ sub main {
   my ($file, $type) = @ARGV;
   $type //= "";
 
+  return 0 if $ENV{DZIL_RELEASING};
   return 0 if $type !~ /^(?:|message|template|merge)$/;
 
   my $ticket = get_ticket();

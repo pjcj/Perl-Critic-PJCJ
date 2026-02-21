@@ -148,7 +148,7 @@ sub process_msg ($msg) {
 
 sub main {
   my ($file) = @ARGV;
-  # say STDERR "commit-msg hook: [$file]";
+  return 0 if $ENV{DZIL_RELEASING};
 
   open my $fh, "<", $file or die "Can't open $file: $!";
   my @msg = <$fh>;
