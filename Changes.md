@@ -2,7 +2,14 @@
 
 {{$NEXT}}
 
+- Add `allow_lines_matching` parameter to ProhibitLongLines for exempting lines
+  that match regex patterns (e.g. long package declarations, URLs).
+- Add missing List::Util runtime prerequisite.
+- Remove dead code in RequireConsistentQuoting.
+
 ## v0.1.4 - 2025-08-31
+
+- No changes from v0.1.3-TRIAL
 
 ## v0.1.3-TRIAL - 2025-08-31
 

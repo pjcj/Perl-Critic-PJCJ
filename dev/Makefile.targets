@@ -1,7 +1,25 @@
+.PHONY: setup
 .PHONY: show-authordeps install-authordeps reinstall-authordeps
 .PHONY: show-deps install-deps reinstall-deps
 .PHONY: t tv zt test format lint clean build install
 .PHONY: cover cover-html cover-compilation cover-nvim cover-all
+
+setup:
+	@for hook in commit-msg prepare-commit-msg; do \
+		target="../../utils/$$hook-hook"; \
+		link=".git/hooks/$$hook"; \
+		if [ ! -e "$$link" ]; then \
+			ln -s "$$target" "$$link" && \
+			echo "Created git $$hook hook"; \
+		fi; \
+	done
+	@if command -v pre-commit >/dev/null 2>&1; then \
+		pre-commit install --install-hooks; \
+	else \
+		echo "pre-commit not found, skipping"; \
+		echo "  Install with: brew install pre-commit"; \
+		echo "  Then run: pre-commit install --install-hooks"; \
+	fi
 
 show-authordeps:
 	@dzil authordeps
@@ -15,7 +33,7 @@ reinstall-authordeps:
 show-deps:
 	@dzil listdeps --develop
 
-install-deps:
+install-deps: setup
 	dzil listdeps --develop --missing | cpm install -g -
 
 reinstall-deps:

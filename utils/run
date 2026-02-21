@@ -1,0 +1,305 @@
+#!/usr/bin/env bash
+
+# Copyright 2025-2026, Paul Johnson (paul@pjcj.net)
+
+# This software is free.  It is licensed under the same terms as Perl itself.
+
+# The latest version of this software should be available from my homepage:
+# https://pjcj.net
+
+if ((BASH_VERSINFO[0] < 5)); then
+  echo "bash version $BASH_VERSION is too old. Please install v5 or higher."
+  exit 1
+fi
+
+set -eEuo pipefail
+shopt -s inherit_errexit
+
+_p() {
+  __l="$(hostname): $1"
+  shift
+  echo "$__l $script: $*" | tee -a "$LOG_FILE" >&2
+}
+pi() { _p "[INFO]   " "$*"; }
+pe() { _p "[ERROR]  " "$*"; }
+pf() {
+  _p "[FATAL]  " "$*"
+  exit 1
+}
+
+usage() {
+  cat <<EOT
+$script --help
+$script --verbose --dryrun release-ticket
+$script release
+EOT
+  exit 0
+}
+
+cleanup() {
+  declare -r res=$?
+  exit "$res"
+}
+
+parse_options() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -d | --dryrun)
+      dryrun=1
+      shift
+      ;;
+    -h | --help)
+      usage
+      ;;
+    -t | --trace)
+      set -x
+      shift
+      ;;
+    -v | --verbose)
+      verbose=1
+      shift
+      ;;
+    *)
+      recipe="$1"
+      shift
+      args=("$@")
+      break
+      ;;
+    esac
+  done
+}
+
+recipe_options() {
+  echo "-d --dryrun"
+  echo "-h --help"
+  echo "-t --trace"
+  echo "-v --verbose"
+  declare -F | perl -nE 'say $1 if /recipe_(.+)/'
+}
+
+setup() {
+  script=$(basename "$0")
+  readl=readlink
+  if command -v greadlink >&/dev/null; then readl=greadlink; fi
+  srcdir=$("$readl" -f "$(dirname "$0")")
+  readonly LOG_FILE="/tmp/$script.log"
+
+  PATH="$srcdir:$PATH"
+
+  dryrun=0
+  verbose=0
+  recipe=""
+  args=()
+
+  parse_options "$@"
+}
+
+release_ticket() {
+  local last_version current_version
+
+  # Get the last released version from Changes.md
+  last_version=$(
+    perl -nE 'if (/^## (v\S+)/) { say $1; exit }' Changes.md
+  )
+  if [[ -z $last_version ]]; then
+    pf "Could not find a released version in Changes.md"
+  fi
+  ((verbose)) && pi "Last released version: $last_version"
+
+  # Get the current version from dist.ini
+  current_version=$(
+    perl -nE 'if (/^version\s*=\s*(\S+)/) { say $1; exit }' dist.ini
+  )
+  if [[ -z $current_version ]]; then
+    pf "Could not find version in dist.ini"
+  fi
+  ((verbose)) && pi "Current version in dist.ini: $current_version"
+
+  # If versions match, prompt for a bump
+  if [[ $current_version == "$last_version" ]]; then
+    pi "Current version ($current_version) matches last release"
+
+    local major minor patch
+    # Strip leading v for arithmetic
+    local ver="${current_version#v}"
+    IFS='.' read -r major minor patch <<<"$ver"
+
+    local bump_patch="v$major.$minor.$((patch + 1))"
+    local bump_minor="v$major.$((minor + 1)).0"
+    local bump_major="v$((major + 1)).0.0"
+
+    echo ""
+    echo "Choose new version:"
+    echo "  1) patch  $bump_patch"
+    echo "  2) minor  $bump_minor"
+    echo "  3) major  $bump_major"
+    echo "  4) custom"
+    echo ""
+
+    local choice
+    read -rp "Choice [1]: " choice
+    choice="${choice:-1}"
+
+    case "$choice" in
+    1) current_version="$bump_patch" ;;
+    2) current_version="$bump_minor" ;;
+    3) current_version="$bump_major" ;;
+    4)
+      read -rp "Enter version (e.g. v1.2.3): " current_version
+      ;;
+    *) pf "Invalid choice: $choice" ;;
+    esac
+
+    pi "Updating dist.ini to $current_version"
+    if ((dryrun)); then
+      pi "[dry run] would update dist.ini version to $current_version"
+    else
+      perl -pi -e \
+        "s/^version\\s*=\\s*\\S+/version = $current_version/" dist.ini
+    fi
+  else
+    pi "Version already bumped to $current_version"
+  fi
+
+  local title="Release $current_version"
+  local body
+  body=$(
+    cat <<'TICKET'
+## Pre-release checklist
+
+- [ ] All changes committed
+- [ ] Tests pass (`make test`)
+- [ ] Lint passes (`make lint`)
+- [ ] `Changes.md` has entry under `{{$NEXT}}`
+- [ ] Version set in `dist.ini`
+- [ ] On `main` branch
+
+## Release
+
+```bash
+utils/run release
+```
+TICKET
+  )
+
+  if ((dryrun)); then
+    pi "[dry run] would create issue:"
+    echo "  title: $title"
+    echo "  body:"
+    echo "    ${body//$'\n'/$'\n'    }"
+    return
+  fi
+
+  local url
+  url=$(gh issue create --title "$title" --body "$body")
+  pi "Created release ticket: $url"
+}
+
+recipe_release-ticket() {
+  release_ticket
+}
+
+release() {
+  pi "Running pre-release checks"
+
+  # Must be on main branch
+  local branch
+  branch=$(git branch --show-current)
+  if [[ $branch != "main" ]]; then
+    pf "Must be on main branch (currently on $branch)"
+  fi
+  pi "On main branch"
+
+  # Working tree must be clean
+  if [[ -n $(git status --porcelain) ]]; then
+    pf "Working tree is not clean — commit or stash changes first"
+  fi
+  pi "Working tree is clean"
+
+  # Tests must pass
+  pi "Running tests"
+  if ((dryrun)); then
+    pi "[dry run] would run: make test"
+  else
+    make test
+  fi
+  pi "Tests passed"
+
+  # Lint must pass
+  pi "Running lint"
+  if ((dryrun)); then
+    pi "[dry run] would run: make lint"
+  else
+    make lint
+  fi
+  pi "Lint passed"
+
+  # Changes.md must have content under {{$NEXT}}
+  local next_content
+  next_content=$(
+    perl -0777 -nE '
+      if (/\{\{\$NEXT\}\}\n\n(.+?)(?=\n##|\z)/s) { say $1; exit }
+    ' Changes.md
+  )
+  if [[ -z $next_content ]]; then
+    # shellcheck disable=SC2016
+    pf 'Changes.md has no entries under {{$NEXT}}'
+  fi
+  # shellcheck disable=SC2016
+  pi 'Changes.md has entries under {{$NEXT}}'
+
+  # Version in dist.ini must differ from last release
+  local last_version current_version
+  last_version=$(
+    perl -nE 'if (/^## (v\S+)/) { say $1; exit }' Changes.md
+  )
+  current_version=$(
+    perl -nE 'if (/^version\s*=\s*(\S+)/) { say $1; exit }' dist.ini
+  )
+  if [[ $current_version == "$last_version" ]]; then
+    pf "Version in dist.ini ($current_version) has not been bumped from last release"
+  fi
+  pi "Version: $current_version (last release: $last_version)"
+
+  pi "All pre-release checks passed"
+
+  # Run dzil release
+  if ((dryrun)); then
+    pi "[dry run] would run: dzil release"
+  else
+    pi "Running dzil release"
+    dzil release
+  fi
+
+  # Post-release verification
+  pi "Post-release verification:"
+  pi "  - Check https://metacpan.org/dist/Perl-Critic-PJCJ for new version"
+  pi "  - Verify git tag: git tag -l"
+  # shellcheck disable=SC2016
+  pi '  - Confirm Changes.md has version heading and fresh {{$NEXT}}'
+}
+
+recipe_release() {
+  release
+}
+
+run_recipe() {
+  local fn="recipe_$recipe"
+  if declare -F "$fn" >/dev/null 2>&1; then
+    "$fn" "${args[@]:-}"
+  else
+    pf "Unknown recipe: $recipe"
+  fi
+}
+
+main() {
+  setup "$@"
+  ((verbose)) && pi "Running $recipe ${args[*]:-}"
+  [[ -z ${recipe:-} ]] && pf "Missing recipe"
+  run_recipe "${args[@]:-}"
+}
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  trap cleanup EXIT INT
+  main "$@"
+fi
