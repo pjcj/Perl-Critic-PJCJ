@@ -6,6 +6,10 @@
   that match regex patterns (e.g. long package declarations, URLs).
 - Add missing List::Util runtime prerequisite.
 - Remove dead code in RequireConsistentQuoting.
+- Unify release workflow with confirmation checkpoints (`make release`).
+- Move setup recipe into `utils/run`; skip in CI environments.
+- Fix experimental signatures warning in `dev/append_postamble`.
+- Add Perl 5.42 to CI matrix.
 
 ## v0.1.4 - 2025-08-31
 
