@@ -2,6 +2,8 @@
 
 {{$NEXT}}
 
+- Close release ticket automatically when PR is merged
+
 ## v0.2.1 - 2026-02-21
 
 - Fix set -e exit in `detect_version` when verbose is off
