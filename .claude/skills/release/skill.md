@@ -20,12 +20,12 @@ Run each check and confirm it passes before proceeding.
 - [ ] Tests pass: `make test`
 - [ ] Lint passes: `make lint`
 - [ ] `Changes.md` has an entry under the `{{$NEXT}}` heading describing
-      what changed in this release.
+  what changed in this release.
 - [ ] Version is set correctly in `dist.ini` (field `version`).
-      Dist::Zilla injects this into all modules via `[PkgVersion]`.
+  Dist::Zilla injects this into all modules via `[PkgVersion]`.
 - [ ] You are on the `main` branch. Releases are only made from `main`.
-      Any feature branches must have been merged already; they are not part
-      of the release process.
+  Any feature branches must have been merged already; they are not part
+  of the release process.
 
 ## 2. Run `dzil release`
 

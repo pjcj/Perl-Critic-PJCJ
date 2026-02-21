@@ -71,6 +71,7 @@ repos:
         args: [ --number ]
         additional_dependencies:
           - mdformat-gfm
+          - mdformat-frontmatter
 
   - repo: https://github.com/golangci/misspell
     rev: v0.7.0
