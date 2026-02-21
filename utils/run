@@ -95,6 +95,28 @@ setup() {
   parse_options "$@"
 }
 
+setup_hooks() {
+  for hook in commit-msg prepare-commit-msg; do
+    local target="../../utils/${hook}-hook"
+    local link=".git/hooks/$hook"
+    if [[ ! -e $link ]]; then
+      ln -s "$target" "$link"
+      pi "Created git $hook hook"
+    fi
+  done
+  if command -v pre-commit >/dev/null 2>&1; then
+    pre-commit install --install-hooks
+  else
+    pi "pre-commit not found, skipping"
+    pi "  Install with: brew install pre-commit"
+    pi "  Then run: pre-commit install --install-hooks"
+  fi
+}
+
+recipe_setup() {
+  setup_hooks
+}
+
 confirm() {
   local description="$1"
   if ((dryrun)); then
