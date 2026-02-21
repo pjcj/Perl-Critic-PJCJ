@@ -172,7 +172,7 @@ release_ticket_body() {
   cat <<TICKET
 ## Release $version
 
-### Automated steps (\`utils/run release\`)
+### Automated steps (\`make release\`)
 
 1. Create this ticket and branch
 2. Commit version bump to \`dist.ini\`
@@ -189,7 +189,7 @@ release_ticket_body() {
 ### Release command
 
 \`\`\`bash
-utils/run release
+make release
 \`\`\`
 TICKET
 }
