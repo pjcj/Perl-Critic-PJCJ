@@ -193,6 +193,12 @@ TICKET
   local url
   url=$(gh issue create --title "$title" --body "$body")
   pi "Created release ticket: $url"
+
+  local issue_num
+  issue_num="${url##*/}"
+  echo ""
+  echo "To create a release branch:"
+  echo "  git checkout -b GH-${issue_num}-release main"
 }
 
 recipe_release-ticket() {
