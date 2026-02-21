@@ -1,7 +1,7 @@
 .PHONY: setup
 .PHONY: show-authordeps install-authordeps reinstall-authordeps
 .PHONY: show-deps install-deps reinstall-deps
-.PHONY: t tv zt test format lint clean build install
+.PHONY: t tv zt test format lint clean build install release
 .PHONY: cover cover-html cover-compilation cover-nvim cover-all
 
 setup:
@@ -75,6 +75,9 @@ build: clean
 
 install: build
 	dzil install
+
+release:
+	utils/run release
 
 cover: build
 	cover --delete
