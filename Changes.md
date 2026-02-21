@@ -2,16 +2,20 @@
 
 {{$NEXT}}
 
+- Fix set -e exit in `detect_version` when verbose is off
+- Skip git hooks during `dzil release` via `$ENV{DZIL_RELEASING}`
+- Set release commit message to `Release vX.Y.Z`
+
 ## v0.2.0 - 2026-02-21
 
 - Add `allow_lines_matching` parameter to ProhibitLongLines for exempting lines
-  that match regex patterns (e.g. long package declarations, URLs).
-- Add missing List::Util runtime prerequisite.
-- Remove dead code in RequireConsistentQuoting.
-- Unify release workflow with confirmation checkpoints (`make release`).
-- Move setup recipe into `utils/run`; skip in CI environments.
-- Fix experimental signatures warning in `dev/append_postamble`.
-- Add Perl 5.42 to CI matrix.
+  that match regex patterns (e.g. long package declarations, URLs)
+- Add missing List::Util runtime prerequisite
+- Remove dead code in RequireConsistentQuoting
+- Unify release workflow with confirmation checkpoints (`make release`)
+- Move setup recipe into `utils/run`; skip in CI environments
+- Fix experimental signatures warning in `dev/append_postamble`
+- Add Perl 5.42 to CI matrix
 
 ## v0.1.4 - 2025-08-31
 
