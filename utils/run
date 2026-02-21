@@ -277,6 +277,7 @@ release_ticket() {
 
   # Step 5: Push branch and create PR
   confirm "push branch and create PR"
+  local pr_body="${body}"$'\n\n'"Closes #${issue_num}"
   if ((dryrun)); then
     release_pr_url="https://github.com/.../pull/NNN"
     pi "[dry run] would push $release_branch and create PR"
@@ -285,7 +286,7 @@ release_ticket() {
     release_pr_url=$(
       gh pr create \
         --title "$title" \
-        --body "$body" \
+        --body "$pr_body" \
         --base main
     )
     pi "Created PR: $release_pr_url"
