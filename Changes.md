@@ -2,6 +2,8 @@
 
 {{$NEXT}}
 
+## v0.2.3 - 2026-02-22
+
 - Allow quoted strings for single-argument pragmas in use/no statements
   - Pragmas (all-lowercase module names) with a single argument now accept
     quoted strings with normal quoting rules applied
