@@ -68,7 +68,7 @@ subtest "'no' statement argument rules" => sub {
     "no pragma with single-quoted argument should use double quotes";
   good $Policy, "no warnings qw(arg1)", "no with one qw() argument is fine";
 
-  # Module with multiple arguments - all simple strings should use qw()
+  # Pragma with multiple arguments - all simple strings should use qw()
   bad $Policy, 'no warnings "arg1", "arg2"', "use qw()",
     "no with multiple double-quoted arguments should use qw()";
   bad $Policy, "no warnings 'arg1', 'arg2'", "use qw()",
@@ -82,7 +82,7 @@ subtest "'no' statement argument rules" => sub {
   bad $Policy, "no warnings qw(arg1), 'arg2'", "use qw()",
     "mixed qw() and quotes should use qw() for all";
 
-  # No statements with interpolation should not suggest qw()
+  # Interpolation should prevent qw() suggestion
   good $Policy, 'no warnings "$x/d1", "$x/d2"',
     "double quotes with interpolation should not suggest qw()";
   good $Policy, q(no warnings '$x/d1', '$x/d2'),
@@ -131,7 +131,7 @@ subtest "Use statements with multiple quote types" => sub {
   bad $Policy, 'use Foo q(arg1), "arg2"', "use qw()",
     "mixed q() and double quotes trigger use statement rule";
   bad $Policy, 'use Foo qq(arg1), "arg2"', "use qw()",
-    "mixed qq() and single quotes trigger use statement rule";
+    "mixed qq() and double quotes trigger use statement rule";
 };
 
 subtest "Edge cases for coverage" => sub {
@@ -149,7 +149,7 @@ subtest "Edge cases for coverage" => sub {
 };
 
 subtest "Use statement structure parsing coverage" => sub {
-  # With the new behavior, multiple double-quoted strings should use qw()
+  # With the new behaviour, multiple double-quoted strings should use qw()
   bad $Policy, 'use Foo "arg1", "arg2";', "use qw()",
     "use statement with semicolon and multiple double-quoted args "
     . "should use qw()";
