@@ -374,6 +374,9 @@ sub check_use_statement ($self, $elem) {  ## no critic (complexity)
   # Rule 4: Special cases - no violation
   return () if $has_version && @args == 1;  # Single version number
 
+  # Pragmas with a single argument allow quotes
+  return () if @args == 1 && $self->_is_pragma($elem);
+
   # Rule 1: qw() without parens should use qw()
   return $self->violation($Desc, $Expl_use_qw, $elem)
     if $has_qw && !$qw_uses_parens;
@@ -515,14 +518,23 @@ sub _count_use_arguments ($self, $elem, $str_count_ref, $qw_ref, $qw_parens_ref)
   }
 }
 
+sub _is_pragma ($self, $elem) {
+  my $module = $elem->module or return 0;
+  $module =~ /^[a-z][a-z0-9_]*$/
+}
+
 sub _is_in_use_statement ($self, $elem) {
   my $current = $elem;
   while ($current) {
     if ($current->isa("PPI::Statement::Include")
       && ($current->type =~ /^(use|no)$/))
     {
-      # Check if this use statement has any strings that would interpolate
       my @args = $self->_extract_use_arguments($current);
+
+      # Single-arg pragmas follow normal quoting rules
+      return 0 if @args == 1 && $self->_is_pragma($current);
+
+      # Check if this use statement has any strings that would interpolate
       for my $arg (@args) {
         # Skip qw() tokens as they never interpolate
         next if $arg->isa("PPI::Token::QuoteLike::Words");

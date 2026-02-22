@@ -61,11 +61,11 @@ subtest "'no' statement argument rules" => sub {
   good $Policy, "no warnings",    "no with no arguments is fine";
   good $Policy, "no warnings ()", "no with empty parens is fine";
 
-  # Module with one argument - should use qw()
-  bad $Policy, 'no warnings "arg1"', "use qw()",
-    "no with one double-quoted argument should use qw()";
-  bad $Policy, "no warnings 'arg1'", "use qw()",
-    "no with one single-quoted argument should use qw()";
+  # Pragma with one argument - quotes allowed, normal rules apply
+  good $Policy, 'no warnings "arg1"',
+    "no pragma with one double-quoted argument is fine";
+  bad $Policy, "no warnings 'arg1'", 'use ""',
+    "no pragma with single-quoted argument should use double quotes";
   good $Policy, "no warnings qw(arg1)", "no with one qw() argument is fine";
 
   # Module with multiple arguments - all simple strings should use qw()
@@ -144,8 +144,8 @@ subtest "Edge cases for coverage" => sub {
   # logic
   bad $Policy, "require q(file.pl)", 'use ""',
     "require with q() is not processed by use statement logic";
-  bad $Policy, "no warnings qq(experimental)", "use qw()",
-    "no statement qq() is now processed by use statement logic";
+  bad $Policy, "no warnings qq(experimental)", 'use ""',
+    "no pragma qq() with single arg should use double quotes";
 };
 
 subtest "Use statement structure parsing coverage" => sub {
@@ -267,6 +267,34 @@ subtest "Simple strings in parentheses should use qw()" => sub {
 
   bad $Policy, 'use Foo ("arg1"), "arg2"', "use qw()",
     "mixed parentheses and bare simple strings should use qw()";
+};
+
+subtest "Pragma single-argument quoting" => sub {
+  # Pragmas (all-lowercase module names) with a single argument allow quotes
+  good $Policy, 'use feature "class"',
+    "pragma with single double-quoted argument is fine";
+  good $Policy, 'use strict "refs"',
+    "use strict with double-quoted argument is fine";
+  good $Policy, 'no warnings "experimental"',
+    "no pragma with double-quoted argument is fine";
+  good $Policy, "use feature qw(class)",
+    "pragma with single qw() argument is still fine";
+  good $Policy, 'use lib "/some/path"',
+    "use lib with double-quoted path is fine";
+  good $Policy, 'use parent "Foo::Bar"',
+    "use parent with double-quoted module is fine";
+
+  # Single quotes should still get normal Rule 2 violation
+  bad $Policy, "use feature 'class'", 'use ""',
+    "pragma with single-quoted argument should use double quotes";
+
+  # Multiple arguments still require qw()
+  bad $Policy, 'use feature "class", "say"', "use qw()",
+    "pragma with multiple arguments should use qw()";
+
+  # Non-pragmas (uppercase) still require qw()
+  bad $Policy, 'use Foo "bar"', "use qw()",
+    "non-pragma with single argument should use qw()";
 };
 
 done_testing;
