@@ -374,6 +374,9 @@ sub check_use_statement ($self, $elem) {  ## no critic (complexity)
   # Rule 4: Special cases - no violation
   return () if $has_version && @args == 1;  # Single version number
 
+  # Pragmas with a single argument allow quotes
+  return () if @args == 1 && $self->_is_pragma($elem);
+
   # Rule 1: qw() without parens should use qw()
   return $self->violation($Desc, $Expl_use_qw, $elem)
     if $has_qw && !$qw_uses_parens;
@@ -515,14 +518,23 @@ sub _count_use_arguments ($self, $elem, $str_count_ref, $qw_ref, $qw_parens_ref)
   }
 }
 
+sub _is_pragma ($self, $elem) {
+  my $module = $elem->module or return 0;
+  $module =~ /^[a-z][a-z0-9_]*$/
+}
+
 sub _is_in_use_statement ($self, $elem) {
   my $current = $elem;
   while ($current) {
     if ($current->isa("PPI::Statement::Include")
       && ($current->type =~ /^(use|no)$/))
     {
-      # Check if this use statement has any strings that would interpolate
       my @args = $self->_extract_use_arguments($current);
+
+      # Single-arg pragmas follow normal quoting rules
+      return 0 if @args == 1 && $self->_is_pragma($current);
+
+      # Check if this use statement has any strings that would interpolate
       for my $arg (@args) {
         # Skip qw() tokens as they never interpolate
         next if $arg->isa("PPI::Token::QuoteLike::Words");
@@ -695,8 +707,11 @@ no parentheses
 =item * Arguments requiring interpolation follow normal string quoting rules
 individually
 
-=item * Simple string arguments without interpolation should use C<qw( )>
+=item * Simple string arguments without interpolation should use C<qw()>
 with parentheses only
+
+=item * Pragmas (all-lowercase module names) with a single argument also allow
+quoted strings, with normal quoting rules applied
 
 =back
 
@@ -728,6 +743,12 @@ L<perlimports|https://metacpan.org/pod/perlimports>.
   use Foo qw( arg1 arg2 arg3 );           # multiple simple arguments
   no warnings qw( experimental uninitialized );
 
+  # Good - pragmas with a single argument allow quotes
+  use feature "class";                    # pragma, single arg, double quotes
+  use strict "refs";                      # pragma, single arg, double quotes
+  no warnings "experimental";             # no pragma, single arg, double quotes
+  use feature qw( class );                # qw() is still fine too
+
   # Bad - incorrect quoting
   use Foo 'single_arg';                   # single quotes should use qw()
   use Bar "arg1", "arg2";                 # simple strings need qw()
@@ -735,6 +756,7 @@ L<perlimports|https://metacpan.org/pod/perlimports>.
   use Qux ( key => "value" );             # fat comma needs no parentheses
   use Quux ( $VERSION );                  # complex expressions need no
                                           # parentheses
+  use feature 'class';                    # pragma single arg prefers ""
 
 =head2 Special Case: Newlines
 
@@ -856,6 +878,7 @@ This Policy is not configurable except for the standard options.
   use Quux ( $VERSION );                  # complex expressions need no
                                           # parentheses
   no warnings ( "experimental" );         # simple strings should use qw()
+  use feature 'class';                    # pragma single arg prefers ""
 
   # Good
   use Foo;                                # no arguments
@@ -865,6 +888,12 @@ This Policy is not configurable except for the standard options.
   use Quux qw( arg1 arg2 arg3 );          # multiple simple arguments
   no warnings qw( experimental uninitialized ); # no statements follow same
                                                   # rules
+
+  # Pragma single-argument examples
+  use feature "class";                    # pragma, single arg, double quotes
+  use strict "refs";                      # pragma, single arg, double quotes
+  no warnings "experimental";             # no pragma, single arg, double quotes
+  use feature qw( class );                # qw() is still fine too
 
   # Fat comma examples (no parentheses)
   use Data::Printer
