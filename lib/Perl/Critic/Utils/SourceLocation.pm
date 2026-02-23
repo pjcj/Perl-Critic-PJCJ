@@ -3,8 +3,8 @@ package Perl::Critic::Utils::SourceLocation;
 use v5.26.0;
 use strict;
 use warnings;
-use feature      qw( signatures );
-use experimental qw( signatures );
+use feature "signatures";
+use experimental "signatures";
 
 use parent qw( PPI::Element );
 

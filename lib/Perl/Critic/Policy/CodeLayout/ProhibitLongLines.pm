@@ -3,41 +3,38 @@ package Perl::Critic::Policy::CodeLayout::ProhibitLongLines;
 use v5.26.0;
 use strict;
 use warnings;
-use feature      qw( signatures );
-use experimental qw( signatures );
+use feature "signatures";
+use experimental "signatures";
+
+use parent qw( Perl::Critic::Policy );
 
 use File::Basename                      qw( dirname );
 use List::Util                          qw( any );
 use Perl::Critic::Utils                 qw( $SEVERITY_MEDIUM );
-use parent                              qw( Perl::Critic::Policy );
 use Perl::Critic::Utils::SourceLocation ();
 
 my $Desc = "Line exceeds maximum length";
 my $Expl = "Keep lines under the configured maximum for readability";
 
-sub supported_parameters {
-  (
-    {
-      name            => "max_line_length",
-      description     => "Maximum allowed line length in characters",
-      default_string  => "80",
-      behavior        => "integer",
-      integer_minimum => 1,
-    },
-    {
-      name           => "allow_lines_matching",
-      description    => "Regex patterns for lines exempt from length check",
-      default_string => "",
-      behavior       => "string list",
-    },
-    {
-      name           => "gitattributes_line_length",
-      description    => "Git attribute name for per-file line length override",
-      default_string => "custom-line-length",
-      behavior       => "string",
-    },
-  )
-}
+sub supported_parameters { (
+  {
+    name            => "max_line_length",
+    description     => "Maximum allowed line length in characters",
+    default_string  => "80",
+    behavior        => "integer",
+    integer_minimum => 1,
+  }, {
+    name           => "allow_lines_matching",
+    description    => "Regex patterns for lines exempt from length check",
+    default_string => "",
+    behavior       => "string list",
+  }, {
+    name           => "gitattributes_line_length",
+    description    => "Git attribute name for per-file line length override",
+    default_string => "custom-line-length",
+    behavior       => "string",
+  },
+) }
 
 sub default_severity { $SEVERITY_MEDIUM }
 sub default_themes   { qw( cosmetic formatting ) }
@@ -89,8 +86,7 @@ sub _get_gitattr_line_length ($self, $filename) {
 
   my $output = eval {
     my $dir = dirname($filename);
-    open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr, "--",
-      $filename
+    open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr, "--", $filename
       or return;
     my $result = do { local $/ = undef; <$fh> };
     close $fh or return;
