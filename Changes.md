@@ -2,6 +2,8 @@
 
 {{$NEXT}}
 
+## v0.2.4 - 2026-02-23
+
 - Add per-file line length overrides via `.gitattributes` for ProhibitLongLines
   - New `gitattributes_line_length` parameter (default: `custom-line-length`)
   - Set attribute to `ignore` to skip a file, or an integer to override the
