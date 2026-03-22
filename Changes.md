@@ -2,6 +2,8 @@
 
 {{$NEXT}}
 
+## v0.2.5 - 2026-03-22
+
 - Fix false violation for escaped backslashes in double-quoted strings
   - Strings like `"\\"` no longer incorrectly suggest `use ''`
 
