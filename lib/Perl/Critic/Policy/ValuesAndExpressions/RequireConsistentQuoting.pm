@@ -220,17 +220,22 @@ sub check_double_quoted ($self, $elem) {
   # Special case: strings with newlines don't follow the rules
   return if $self->_has_newlines($string);
 
+  # Strip delimiters and remove \\ pairs so escaped backslashes before the
+  # closing delimiter aren't mistaken for escaped specials
+  my $inner = substr $content, 1, -1;
+  (my $cleaned = $inner) =~ s/\\\\//g;
+
   # Check for escaped dollar/at signs or double quotes, but only suggest single
   # quotes if no other interpolation exists AND no dangerous escape sequences
   return $self->violation($Desc, $Expl_single, $elem)
-    if $content =~ /\\[\$\@\"]/
+    if $cleaned =~ /\\[\$\@\"]/
     && !$self->_has_quote_sensitive_escapes($string)
     && !$self->would_interpolate($string);
 
   # If has escaped double quotes, suggest qq() — by this point, the ''
   # suggestion was ruled out (escape sequences or interpolation present),
   # so qq() eliminates the quote escaping while preserving both
-  if ($content =~ /\\"/) {
+  if ($cleaned =~ /\\"/) {
     my ($optimal) = $self->find_optimal_delimiter($string, "qq", '"', '"');
     return $self->violation(
       $Desc, sprintf($Expl_optimal, $optimal->{display}), $elem
