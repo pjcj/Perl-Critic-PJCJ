@@ -2,6 +2,9 @@
 
 {{$NEXT}}
 
+- Fix false violation for escaped backslashes in double-quoted strings
+  - Strings like `"\\"` no longer incorrectly suggest `use ''`
+
 ## v0.2.4 - 2026-02-23
 
 - Add per-file line length overrides via `.gitattributes` for ProhibitLongLines
