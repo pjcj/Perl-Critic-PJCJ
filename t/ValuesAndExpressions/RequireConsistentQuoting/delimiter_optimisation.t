@@ -177,48 +177,13 @@ subtest "Exotic delimiters" => sub {
 };
 
 subtest "Priority: fewer escapes" => sub {
-  # Rule 2: Always prefer fewer escaped characters
+  # q// (as opposed to qq// tested in "Exotic delimiters")
   bad $Policy, 'my $text = q/path\/to\/file/', 'use ""',
     "q// with slashes should use double quotes";
   good $Policy, 'my $text = "path/to/file"',
     '"" optimal when content has slashes';
 
-  # Various quote operators with escaped characters
-  bad $Policy, 'my $text = q|option\|value|', 'use ""',
-    "q|| with pipes should use double quotes";
-  good $Policy, 'my $text = "option|value"',
-    '"" optimal when content has pipes';
-
-  bad $Policy, 'my $text = q#path\#to\#file#', 'use ""',
-    "q## with hashes should use double quotes";
-  good $Policy, 'my $text = "path#to#file"',
-    '"" optimal when content has hashes';
-
-  bad $Policy, 'my $text = q!wow\!amazing!', 'use ""',
-    "q!! with exclamation should use double quotes";
-  good $Policy, 'my $text = "wow!amazing"',
-    '"" optimal when content has exclamation';
-
-  bad $Policy, 'my $text = q%100\%complete%', 'use ""',
-    "q%% with percent should use double quotes";
-  good $Policy, 'my $text = "100%complete"',
-    '"" optimal when content has percent';
-
-  bad $Policy, 'my $text = q&fish\&chips&', 'use ""',
-    "q&& with ampersand should use double quotes";
-  good $Policy, 'my $text = "fish&chips"',
-    '"" optimal when content has ampersand';
-
-  bad $Policy, 'my $text = q~home\~user~', 'use ""',
-    "q~~ with tilde should use double quotes";
-  good $Policy, 'my $text = "home~user"', '"" optimal when content has tilde';
-
-  # qq operators with escaped characters
-  bad $Policy, 'my $text = qq/path\/to\/file/', 'use ""',
-    "qq// with slashes should use double quotes";
-  good $Policy, 'my $text = "path/to/file"',
-    '"" optimal for interpolated strings with slashes';
-
+  # qq|| (qq with exotic delimiter)
   bad $Policy, 'my $text = qq|option\|value|', 'use ""',
     "qq|| with pipes should use double quotes";
   good $Policy, 'my $text = "option|value"',
