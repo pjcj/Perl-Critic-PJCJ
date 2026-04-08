@@ -33,6 +33,9 @@ sub applies_to {
 
 sub would_interpolate ($self, $string) {
   # This is the authoritative way to check - let PPI decide
+  state %cache;
+  return $cache{$string} if exists $cache{$string};
+
   my $test_content = qq("$string");
   my $test_doc     = PPI::Document->new(\$test_content);
 
@@ -45,7 +48,7 @@ sub would_interpolate ($self, $string) {
     }
   );
 
-  $would_interpolate
+  $cache{$string} = $would_interpolate
 }
 
 sub would_interpolate_from_single_quotes ($self, $string) {
