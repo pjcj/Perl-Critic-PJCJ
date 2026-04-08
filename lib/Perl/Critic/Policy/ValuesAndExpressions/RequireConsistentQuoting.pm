@@ -11,11 +11,12 @@ use parent qw( Perl::Critic::Policy );
 use List::Util          qw( any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 
-my $Desc         = "Quoting";
-my $Expl_double  = 'use ""';
-my $Expl_single  = "use ''";
-my $Expl_optimal = "use %s";
-my $Expl_use_qw  = "use qw()";
+my $Desc               = "Quoting";
+my $Expl_double        = 'use ""';
+my $Expl_single        = "use ''";
+my $Expl_optimal       = "use %s";
+my $Expl_use_qw        = "use qw()";
+my $Expl_remove_parens = "remove parentheses";
 
 sub supported_parameters { }
 sub default_severity     { $SEVERITY_MEDIUM }
@@ -85,7 +86,7 @@ sub parse_quote_token ($self, $elem) {
   my $content = $elem->content;
 
   # Handle all possible delimiters, not just bracket pairs
-  # Order matters: longer matches first
+  # q must be last so qw/qq/qx aren't consumed as q + letter
   if ($content =~ /\A(?:(qw|qq|qx|q)\s*)?(.)(.*)(.)\z/s) {
     my ($op, $start_delim, $str, $end_delim) = ($1, $2, $3, $4);
     ($start_delim, $end_delim, $str, $op)
@@ -94,27 +95,10 @@ sub parse_quote_token ($self, $elem) {
 
 sub _get_supported_delimiters ($self, $operator) {
   return (
-    {
-      start   => "(",
-      end     => ")",
-      display => "${operator}()",
-      chars   => [ "(", ")" ],
-    }, {
-      start   => "[",
-      end     => "]",
-      display => "${operator}[]",
-      chars   => [ "[", "]" ],
-    }, {
-      start   => "<",
-      end     => ">",
-      display => "${operator}<>",
-      chars   => [ "<", ">" ],
-    }, {
-      start   => "{",
-      end     => "}",
-      display => "${operator}{}",
-      chars   => [ "{", "}" ],
-    }
+    { start => "(", end => ")", display => "${operator}()" },
+    { start => "[", end => "]", display => "${operator}[]" },
+    { start => "<", end => ">", display => "${operator}<>" },
+    { start => "{", end => "}", display => "${operator}{}" }
   );
 }
 
@@ -123,13 +107,11 @@ sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
 
   for my $delim (@delimiters) {
     my $count = 0;
-    for my $char ($delim->{chars}->@*) {
+    for my $char ($delim->{start}, $delim->{end}) {
       $count += () = $content =~ /\Q$char\E/g;
     }
     $delim->{count} = $count;
   }
-
-  my $min_count = (sort { $a <=> $b } map $_->{count}, @delimiters)[0];
 
   # Find optimal delimiter: handle unbalanced content, then preference order
   my ($optimal) = sort {
@@ -149,8 +131,7 @@ sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
   }
 
   my $current_is_optimal = 0;
-  $current_is_optimal = ($current_delim eq $optimal)
-    if $current_is_bracket && $current_delim;
+  $current_is_optimal = ($current_delim eq $optimal) if $current_is_bracket;
 
   ($optimal, $current_is_optimal)
 }
@@ -166,7 +147,7 @@ sub check_delimiter_optimisation ($self, $elem) {
     $Desc, sprintf($Expl_optimal, $optimal_delim->{display}), $elem
   ) unless $current_is_optimal;
 
-  undef
+  return
 }
 
 sub violates ($self, $elem, $) {
@@ -180,10 +161,9 @@ sub violates ($self, $elem, $) {
     "PPI::Statement::Include"        => "check_use_statement",
   };
 
-  my $class      = ref $elem;
-  my $method     = $dispatch->{$class} or return;
-  my @violations = grep defined, $self->$method($elem);
-  @violations
+  my $class  = ref $elem;
+  my $method = $dispatch->{$class} or return;
+  $self->$method($elem)
 }
 
 sub check_single_quoted ($self, $elem) {
@@ -362,8 +342,8 @@ sub _analyse_argument_types ($self, $elem, @args) {
   ($fat_comma, $complex_expr, $version, $simple_strings, $q_operators, $parens)
 }
 
-sub check_use_statement ($self, $elem) {  ## no critic (complexity)
-    # Check "use" and "no" statements, but not "require"
+sub check_use_statement ($self, $elem) {
+  # Check "use" and "no" statements, but not "require"
   return unless $elem->type =~ /^(use|no)$/;
 
   my @args = $self->_extract_use_arguments($elem) or return;
@@ -390,8 +370,7 @@ sub check_use_statement ($self, $elem) {  ## no critic (complexity)
   # Rule 2: Any => operator anywhere → should have no parentheses
   if ($has_fat_comma) {
     if ($has_parens) {
-      state $expl_remove_parens = "remove parentheses";
-      return $self->violation($Desc, $expl_remove_parens, $elem);
+      return $self->violation($Desc, $Expl_remove_parens, $elem);
     }
     return ();
   }
@@ -399,26 +378,13 @@ sub check_use_statement ($self, $elem) {  ## no critic (complexity)
   # Rule 3: Complex expressions → should have no parentheses
   if ($has_complex_expr) {
     if ($has_parens) {
-      state $expl_remove_parens_complex = "remove parentheses";
-      return $self->violation($Desc, $expl_remove_parens_complex, $elem);
+      return $self->violation($Desc, $Expl_remove_parens, $elem);
     }
     return ();
   }
 
-  # Check if any string would interpolate (works for all quote types)
-  for my $arg (@args) {
-    # Skip qw() tokens as they never interpolate
-    next if $arg->isa("PPI::Token::QuoteLike::Words");
-
-    # Only check tokens that have a string method (string-like tokens)
-    next unless $arg->can("string");
-
-    my $content = $arg->string;
-    if ($self->would_interpolate($content)) {
-      # If interpolation is needed, don't suggest qw() - let normal rules apply
-      return ();
-    }
-  }
+  # If interpolation is needed, don't suggest qw() - let normal rules apply
+  return () if $self->_any_arg_interpolates(@args);
 
   # Rule 1: All simple strings or q() operators → use qw()
   if (($has_simple_strings || $has_q_operators) && !$has_qw) {
@@ -527,6 +493,15 @@ sub _count_use_arguments (
   }
 }
 
+sub _any_arg_interpolates ($self, @args) {
+  for my $arg (@args) {
+    next if $arg->isa("PPI::Token::QuoteLike::Words");
+    next unless $arg->can("string");
+    return 1 if $self->would_interpolate($arg->string);
+  }
+  0
+}
+
 sub _is_pragma ($self, $elem) {
   my $module = $elem->module or return 0;
   $module =~ /^[a-z][a-z0-9_]*$/
@@ -544,21 +519,9 @@ sub _is_in_use_statement ($self, $elem) {
       # Single-arg pragmas follow normal quoting rules
       return 0 if @args == 1 && $self->_is_pragma($current);
 
-      # Check if this use statement has any strings that would interpolate
-      for my $arg (@args) {
-        # Skip qw() tokens as they never interpolate
-        next if $arg->isa("PPI::Token::QuoteLike::Words");
-
-        # Only check tokens that have a string method (string-like tokens)
-        next unless $arg->can("string");
-
-        my $content = $arg->string;
-        if ($self->would_interpolate($content)) {
-          # If interpolation is needed, don't treat this as a use statement
-          # so individual strings get checked normally
-          return 0;
-        }
-      }
+      # If interpolation is needed, don't treat this as a use statement
+      # so individual strings get checked normally
+      return 0 if $self->_any_arg_interpolates(@args);
       return 1;
     }
     $current = $current->parent;
@@ -1070,6 +1033,14 @@ argument types:
 
 This promotes consistency and clarity whilst supporting modern Perl idioms
 and maintaining compatibility with tools like perlimports.
+
+=head2 _any_arg_interpolates
+
+Checks whether any string argument in a list would interpolate if placed in
+double quotes. Used by both C<check_use_statement> and C<_is_in_use_statement>
+to determine whether a use/no statement's arguments require interpolation,
+which affects whether C<qw()> can be suggested and whether individual tokens
+should be checked under normal quoting rules.
 
 =head2 _analyse_argument_types
 
