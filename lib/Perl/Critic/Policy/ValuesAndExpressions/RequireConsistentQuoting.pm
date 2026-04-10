@@ -23,12 +23,17 @@ sub default_severity     { $SEVERITY_MEDIUM }
 sub default_themes       { qw( cosmetic ) }
 
 sub applies_to {
+  #<<<
   qw(
-    PPI::Token::Quote::Single    PPI::Token::Quote::Double
-    PPI::Token::Quote::Literal   PPI::Token::Quote::Interpolate
-    PPI::Token::QuoteLike::Words PPI::Token::QuoteLike::Command
     PPI::Statement::Include
+    PPI::Token::Quote::Double
+    PPI::Token::Quote::Interpolate
+    PPI::Token::Quote::Literal
+    PPI::Token::Quote::Single
+    PPI::Token::QuoteLike::Command
+    PPI::Token::QuoteLike::Words
   )
+  #>>>
 }
 
 sub would_interpolate ($self, $string) {
