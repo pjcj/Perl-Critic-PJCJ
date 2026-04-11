@@ -144,8 +144,8 @@ subtest "Equal bracket counts" => sub {
 subtest "Exotic delimiters" => sub {
   bad $Policy, 'my $text = qq/path\/to\/file/', 'use ""',
     "qq// with slashes should use double quotes";
-  good $Policy, 'my $text = qq(path"to"file)',
-    "qq() optimal when content has double quotes";
+  bad $Policy, 'my $text = qq(path"to"file)', "use ''",
+    "qq() with only double quotes should use single quotes";
   bad $Policy, 'my $text = q|option\|value|', 'use ""',
     "q|| with pipes should use double quotes";
   good $Policy, 'my $text = "option|value"',
@@ -216,17 +216,17 @@ subtest "q() delimiter optimisation path coverage" => sub {
   bad $Policy, q(my $text = q|can't use $var|), "use q()",
     "q| with single quotes and interpolation should use q()";
 
-  # Test: q() with double quotes and interpolation - justified,
-  # optimise delimiter
-  bad $Policy, q(my $text = q|Hello "there" $name|), "use q()",
-    "q| with double quotes and interpolation should use q()";
+  # Test: q() with double quotes and interpolation - single quotes handle both
+  bad $Policy, 'my $text = q|Hello "there" $name|', "use ''",
+    "q| with double quotes and interpolation should use single quotes";
 
   # Test: q() already using optimal delimiter should not violate
   good $Policy, q[my $text = q(mix 'single' and "double")],
     "q() with mixed quotes and optimal delimiter is justified";
 
-  good $Policy, q[my $text = q(Hello "there" $name)],
-    "q() with double quotes and interpolation is justified";
+  # q() with double quotes and interpolation should use single quotes
+  bad $Policy, 'my $text = q(Hello "there" $name)', "use ''",
+    "q() with double quotes and interpolation should use single quotes";
 };
 
 done_testing;

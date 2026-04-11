@@ -41,7 +41,9 @@ sub would_interpolate ($self, $string) {
   state %cache;
   return $cache{$string} if exists $cache{$string};
 
-  my $test_content = qq("$string");
+  # Neutralise embedded double quotes so wrapping in "..." is valid PPI
+  my $safe         = $string =~ s/"/ /gr;
+  my $test_content = qq("$safe");
   my $test_doc     = PPI::Document->new(\$test_content);
 
   my $would_interpolate = 0;
@@ -256,11 +258,9 @@ sub check_q_literal ($self, $elem) {
       : $self->violation($Desc, $Expl_double, $elem);
   }
 
-  if ($has_double_quotes) {
-    return $would_interpolate
-      ? $self->check_delimiter_optimisation($elem)
-      : $self->violation($Desc, $Expl_single, $elem);
-  }
+  # Only double quotes (no single quotes) - single quotes always work:
+  # they don't interpolate and can hold " without escaping
+  return $self->violation($Desc, $Expl_single, $elem) if $has_double_quotes;
 
   return $self->violation($Desc, $Expl_single, $elem) if $would_interpolate;
 
@@ -284,8 +284,6 @@ sub check_qq_interpolate ($self, $elem) {
 
   # Rules 1,2: If double quotes would suggest single quotes, use single quotes
   if ($double_quote_suggestion && $double_quote_suggestion eq "''") {
-    # qq() is only justified if it handles double quotes cleanly
-    return if index($string, '"') != -1;
     return $self->violation($Desc, $Expl_single, $elem);
   }
 
