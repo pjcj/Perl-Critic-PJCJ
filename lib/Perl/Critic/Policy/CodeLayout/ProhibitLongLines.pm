@@ -8,6 +8,7 @@ use experimental "signatures";
 
 use parent qw( Perl::Critic::Policy );
 
+use Encode                              qw( decode FB_CROAK );
 use File::Basename                      qw( dirname );
 use List::Util                          qw( any );
 use Perl::Critic::Utils                 qw( $SEVERITY_MEDIUM );
@@ -48,7 +49,13 @@ sub violates ($self, $elem, $doc) {
   my $max_length = $override // $self->{_max_line_length};
   my @patterns   = keys $self->{_allow_lines_matching}->%*;
   my $source     = $doc->serialize;
-  my @lines      = split /\n/, $source;
+
+  # PPI serializes source as octets, so decode to characters before measuring
+  # line lengths.  Keep the octets if the source is not valid UTF-8.
+  my $decoded = eval { decode("UTF-8", $source, FB_CROAK) };
+  $source = $decoded if defined $decoded;
+
+  my @lines = split /\n/, $source;
 
   my @violations;
 
