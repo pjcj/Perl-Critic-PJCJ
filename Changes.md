@@ -2,6 +2,8 @@
 
 {{$NEXT}}
 
+## v0.2.7 - 2026-06-25
+
 - Count ProhibitLongLines line length in characters, not octets
   - Lines with multi-byte UTF-8 characters are no longer wrongly flagged as
     too long
