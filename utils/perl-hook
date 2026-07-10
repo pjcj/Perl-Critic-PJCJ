@@ -8,7 +8,7 @@ use experimental qw( signatures );
 
 sub is_perl ($file) {
   return 1 if $file =~ /\.(?:pm|pl|t|psgi)\z/;
-  open my $fh, "<", $file or return;
+  open my $fh, "<", $file or die "Cannot read $file: $!\n";
   my $first = <$fh> // "";
   $first =~ /\A#!.*\bperl\b/
 }
@@ -16,9 +16,19 @@ sub is_perl ($file) {
 sub check_tidy ($files) {
   my $status = 0;
   for my $file (@$files) {
-    my $tidied = qx(perltidy --profile=.perltidyrc -st \Q$file\E 2>/dev/null);
-    open my $fh, "<", $file or next;
+    my $fh;
+    unless (open $fh, "<", $file) {
+      say "Cannot read $file: $!";
+      $status = 1;
+      next;
+    }
     my $source = do { local $/; <$fh> };
+    my $tidied = qx(perltidy --profile=.perltidyrc -st \Q$file\E);
+    if ($?) {
+      say "perltidy failed: $file";
+      $status = 1;
+      next;
+    }
     next if $tidied eq $source;
     say "Not tidy: $file";
     $status = 1;
