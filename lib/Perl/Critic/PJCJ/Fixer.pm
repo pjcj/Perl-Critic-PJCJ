@@ -285,6 +285,7 @@ sub _fix_once ($self, $source, $lines) {
       0
     }
   );
+  return $source unless @fixes;
   for my $fix (@fixes) {
     my ($elem, $expl) = @$fix;
     my $before = $elem->content =~ tr/\n//;

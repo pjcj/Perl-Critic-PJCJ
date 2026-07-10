@@ -13,6 +13,10 @@ subtest "Unparsable and empty sources pass through" => sub {
   unchanged "", "empty source is returned as is";
 };
 
+subtest "Line endings are preserved in accepted source" => sub {
+  unchanged qq(my \$x = 1;\r\n), "clean CRLF source is byte-identical";
+};
+
 subtest "Unsafe fixes are declined" => sub {
   unchanged 'my @w = qw/( [ < { \\\\/;',
     "content with a backslash and every delimiter is left alone";
