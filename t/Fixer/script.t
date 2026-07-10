@@ -17,7 +17,7 @@ sub run_script ($source, @args) {
   print {$fh} $source;
   close $fh or die "Cannot close $file: $!";
   my $args = join " ", @args;
-  qx($^X -Ilib $Script $args < $file)
+  qx($^X -Ilib $Script $args < \Q$file\E)
 }
 
 subtest "Source is fixed from stdin to stdout" => sub {
