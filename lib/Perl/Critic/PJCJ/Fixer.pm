@@ -243,7 +243,7 @@ sub _fix_once ($self, $source, $lines) {
   $doc->find(
     sub ($top, $elem) {
       my ($violation) = $self->{policy}->violates($elem, $doc);
-      push @fixes, [ $elem, $violation->explanation ]
+      push @fixes, [$elem, $violation->explanation]
         if $violation && $self->_in_range($elem, $lines);
       0
     }

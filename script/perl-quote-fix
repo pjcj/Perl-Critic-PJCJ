@@ -13,11 +13,11 @@ use Perl::Critic::PJCJ::Fixer ();
 sub parse_lines ($spec) {
   return unless defined $spec;
   if ($spec =~ /\A(\d+)-(\d+)\z/) {
-    return [ $1, $2 ];
+    return [$1, $2];
   }
   pod2usage(
     -message => "--lines requires a range such as 10-20",
-    -exitval => 2
+    -exitval => 2,
   );
 }
 

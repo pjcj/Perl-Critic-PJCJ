@@ -25,7 +25,7 @@ sub new ($class, %args) {
 sub location ($self) {
   my $line = $self->{line_number};
   my $col  = $self->{column_number};
-  [ $line, $col, $col, $line, $self->{filename} ]
+  [$line, $col, $col, $line, $self->{filename}]
 }
 
 # Standard PPI::Element interface

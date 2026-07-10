@@ -75,7 +75,7 @@ sub violates ($self, $elem, $doc) {
           line_number   => $line_num + 1,
           column_number => 1,
           content       => $lines[$line_num],
-          filename      => $doc->filename
+          filename      => $doc->filename,
         );
       }
 

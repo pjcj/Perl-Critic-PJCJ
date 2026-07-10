@@ -74,8 +74,8 @@ EOCODE
 
   my @violations = line_numbers(
     $mixed_code,
-    [ 2, 7, 11 ],
-    "Mixed code and POD violations should report correct line numbers"
+    [2, 7, 11],
+    "Mixed code and POD violations should report correct line numbers",
   );
 
   # Check specific messages
@@ -109,9 +109,8 @@ my $end = 3;
 EOCODE
 
   line_numbers(
-    $multi_pod_code,
-    [ 5, 13 ],
-    "Multiple POD sections should report correct line numbers"
+    $multi_pod_code, [5, 13],
+    "Multiple POD sections should report correct line numbers",
   );
 };
 
@@ -129,8 +128,8 @@ EOCODE
 
   my @violations = line_numbers(
     $pod_with_code,
-    [ 5, 6 ],
-    "Long lines within POD code examples should report correct line numbers"
+    [5, 6],
+    "Long lines within POD code examples should report correct line numbers",
   );
 
   # Check specific line lengths
@@ -149,7 +148,7 @@ EOCODE
 
   my @violations = line_numbers(
     $comment_code, [2],
-    "Comment long lines should report correct line numbers"
+    "Comment long lines should report correct line numbers",
   );
 
   is $violations[0]->description, "Line is 73 characters long (exceeds 72)",
@@ -169,7 +168,7 @@ EOCODE
 
   my @violations = line_numbers(
     $empty_pod_code, [7],
-    "Code after empty POD should report correct line numbers"
+    "Code after empty POD should report correct line numbers",
   );
 
   is $violations[0]->description, "Line is 80 characters long (exceeds 72)",

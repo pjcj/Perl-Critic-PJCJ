@@ -21,9 +21,9 @@ subtest "Fixes cascade to a fixed point" => sub {
 
 subtest "Line ranges restrict fixes" => sub {
   my $in = qq(my \$a = 'one';\nmy \$b = 'two';\n);
-  is $Fixer->fix($in, lines => [ 2, 2 ]),
+  is $Fixer->fix($in, lines => [2, 2]),
     qq(my \$a = 'one';\nmy \$b = "two";\n), "only the requested line is fixed";
-  is $Fixer->fix($in, lines => [ 1, 1 ]),
+  is $Fixer->fix($in, lines => [1, 1]),
     qq(my \$a = "one";\nmy \$b = 'two';\n),
     "a different range fixes the other line";
   is $Fixer->fix($in), qq(my \$a = "one";\nmy \$b = "two";\n),
