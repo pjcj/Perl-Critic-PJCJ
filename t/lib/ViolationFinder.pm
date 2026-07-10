@@ -8,9 +8,17 @@ use experimental "signatures";
 
 use Exporter  qw( import );
 use PPI       ();
-use Test2::V0 qw( fail is like );
+use Test2::V0 qw( diag fail is like );
+
+use Perl::Critic::PJCJ::Fixer ();
 
 our @EXPORT_OK = qw( find_violations count_violations good bad );
+
+my $Fixer = Perl::Critic::PJCJ::Fixer->new;
+
+sub _is_quoting_policy ($policy) {
+  ref($policy) =~ /RequireConsistentQuoting/
+}
 
 sub find_violations ($policy, $code) {
   my $doc = PPI::Document->new(\$code);
@@ -44,11 +52,11 @@ sub count_violations ($policy, $code, $expected_violations, $description) {
 
 sub good ($policy, $code, $description) {
   my @violations = count_violations($policy, $code, 0, $description);
-  my $field
-    = ref($policy) =~ /RequireConsistentQuoting/
-    ? "explanation"
-    : "description";
+  my $field      = _is_quoting_policy($policy) ? "explanation" : "description";
   fail join " --- ", (map $_ // "*undef*", $_->$field, $code) for @violations;
+
+  is $Fixer->fix($code), $code, "$description - fixer leaves it alone"
+    if _is_quoting_policy($policy);
 }
 
 sub bad ($policy, $code, $expected_message, $description) {
@@ -57,12 +65,16 @@ sub bad ($policy, $code, $expected_message, $description) {
   return unless @violations;
 
   # For quoting policies, check explanation instead of description
-  my $field
-    = ref($policy) =~ /RequireConsistentQuoting/
-    ? "explanation"
-    : "description";
+  my $field = _is_quoting_policy($policy) ? "explanation" : "description";
   like $violations[0]->$field, qr/\Q$expected_message\E/,
     "$description - should suggest $expected_message";
+
+  if (_is_quoting_policy($policy)) {
+    my $fixed     = $Fixer->fix($code);
+    my @remaining = find_violations($policy, $fixed);
+    is @remaining, 0, "$description - fixer resolves the violation"
+      or diag "fixed source: $fixed";
+  }
 }
 
 "
@@ -159,6 +171,8 @@ Parameters:
 =back
 
 This is a convenience function that verifies the code passes the policy check.
+For the RequireConsistentQuoting policy it also asserts that
+L<Perl::Critic::PJCJ::Fixer> leaves the code unchanged.
 
 =head2 bad
 
@@ -183,7 +197,8 @@ Parameters:
 This function verifies that the code violates the policy exactly once and that
 the violation message contains the expected text. For most policies, it checks
 the description field. For the RequireConsistentQuoting policy, it checks the
-explanation field instead.
+explanation field instead, and also asserts that L<Perl::Critic::PJCJ::Fixer>
+resolves the violation.
 
 =head1 AUTHOR
 

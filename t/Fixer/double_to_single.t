@@ -1,0 +1,50 @@
+#!/usr/bin/env perl
+
+use v5.26.0;
+use strict;
+use warnings;
+
+use Test2::V0    qw( done_testing is subtest );
+use feature      qw( signatures );
+use experimental qw( signatures );
+
+use lib                       qw( lib t/lib );
+use Perl::Critic::PJCJ::Fixer ();
+
+my $Fixer = Perl::Critic::PJCJ::Fixer->new;
+
+sub fixes ($in, $out, $desc) {
+  is $Fixer->fix($in), $out, $desc;
+}
+
+sub unchanged ($in, $desc) {
+  is $Fixer->fix($in), $in, $desc;
+}
+
+subtest "Escaped sigils become literal in single quotes" => sub {
+  fixes 'my $x = "user\@domain.com";', q(my $x = 'user@domain.com';),
+    'escaped @ becomes literal';
+  fixes 'my $x = "literal\$var";', q(my $x = 'literal$var';),
+    'escaped $ becomes literal';
+  fixes 'my $x = "\$5.00";', q(my $x = '$5.00';),
+    'leading escaped $ becomes literal';
+};
+
+subtest "Escaped double quotes become literal" => sub {
+  fixes 'my $x = "He said \"hello\"";', q(my $x = 'He said "hello"';),
+    "escaped double quotes become literal";
+};
+
+subtest "Backslashes are re-encoded" => sub {
+  fixes 'my $x = "price \$x\\\\y";', q(my $x = 'price $x\\\\y';),
+    "escaped backslash stays escaped in single quotes";
+};
+
+subtest "Double-quoted strings the policy accepts are untouched" => sub {
+  unchanged 'my $x = "Hello $name";', "interpolating string stays";
+  unchanged 'my $x = "tab\there";',   "quote-sensitive escape stays";
+  unchanged 'my $x = "simple";',      "simple double-quoted string stays";
+  unchanged q(my $x = "don\'t";),     "escaped single quote is not flagged";
+};
+
+done_testing

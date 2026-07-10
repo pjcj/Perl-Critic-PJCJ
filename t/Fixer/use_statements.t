@@ -1,0 +1,65 @@
+#!/usr/bin/env perl
+
+use v5.26.0;
+use strict;
+use warnings;
+
+use Test2::V0    qw( done_testing is subtest );
+use feature      qw( signatures );
+use experimental qw( signatures );
+
+use lib                       qw( lib t/lib );
+use Perl::Critic::PJCJ::Fixer ();
+
+my $Fixer = Perl::Critic::PJCJ::Fixer->new;
+
+sub fixes ($in, $out, $desc) {
+  is $Fixer->fix($in), $out, $desc;
+}
+
+sub unchanged ($in, $desc) {
+  is $Fixer->fix($in), $in, $desc;
+}
+
+subtest "String import lists become qw()" => sub {
+  fixes "use Foo 'single_arg';", "use Foo qw( single_arg );",
+    "single quoted argument becomes qw()";
+  fixes 'use Bar "arg1", "arg2";', "use Bar qw( arg1 arg2 );",
+    "multiple string arguments become qw()";
+};
+
+subtest "qw with wrong delimiters is re-delimited" => sub {
+  fixes "use Baz qw[ arg1 arg2 ];", "use Baz qw( arg1 arg2 );",
+    "square brackets become parentheses";
+  fixes "use Baz qw{arg1 arg2};", "use Baz qw( arg1 arg2 );",
+    "braces become parentheses";
+  fixes 'use Foo qw[ a ], $v;', 'use Foo qw( a ), $v;',
+    "qw is re-delimited even when other arguments are complex";
+};
+
+subtest "Mixed qw and strings are merged" => sub {
+  fixes "use Foo qw( a ), 'b';", "use Foo qw( a b );",
+    "qw and string arguments merge in order";
+};
+
+subtest "Parentheses are removed" => sub {
+  fixes 'use Qux ( key => "value" );', 'use Qux key => "value";',
+    "fat comma arguments lose parentheses";
+  fixes 'use Quux ( $VERSION );', 'use Quux $VERSION;',
+    "complex expressions lose parentheses";
+};
+
+subtest "Acceptable use statements are untouched" => sub {
+  unchanged "use Foo;",      "bare use stays";
+  unchanged "use Bar ();",   "empty parentheses stay";
+  unchanged "use Baz 1.23;", "version number stays";
+  unchanged 'no warnings ( "experimental" );',
+    "single-argument pragma is exempt";
+  unchanged 'use feature "class";', "pragma single argument stays";
+  unchanged "use Data::Printer deparse => 0;",
+    "fat comma without parentheses stays";
+  unchanged 'use Mod $VERSION;',
+    "complex expression without parentheses stays";
+};
+
+done_testing
