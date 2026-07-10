@@ -262,7 +262,7 @@ This Policy is part of the Perl::Critic::PJCJ distribution.
 
 =head1 AUTHOR
 
-Paul Johnson C<< <paul@pjcj.net> >>
+Paul Johnson <paul@pjcj.net>
 
 =head1 COPYRIGHT
 

@@ -107,7 +107,7 @@ Returns the filename associated with this location, or undef if none was set.
 
 =head1 AUTHOR
 
-Paul Johnson C<< <paul@pjcj.net> >>
+Paul Johnson <paul@pjcj.net>
 
 =head1 COPYRIGHT
 
