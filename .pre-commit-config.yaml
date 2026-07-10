@@ -49,7 +49,7 @@ repos:
         args: [ --config-file=.yamllint ]
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.45.0
+    rev: v0.49.0
     hooks:
       - id: markdownlint
 
@@ -59,7 +59,7 @@ repos:
       - id: hadolint
 
   - repo: https://github.com/crate-ci/typos
-    rev: v1
+    rev: v1.47.2
     hooks:
       - id: typos
         args: [ --force-exclude ]
@@ -88,7 +88,7 @@ repos:
       - id: perlcritic
         name: perlcritic
         description: Ensure perl files adhere to standards
-        language: perl
+        language: system
         entry: perl -Ilib -S perlcritic lib t dev
         pass_filenames: false
       - id: jscpd
@@ -96,4 +96,6 @@ repos:
         description: Ensure we don't have large sections of duplicated code
         language: node
         entry: jscpd
-        pass_filenames: true
+        pass_filenames: false
+        additional_dependencies:
+          - jscpd@5.0.11
