@@ -43,8 +43,13 @@ format:
 		cp "$$file" "$$file.tdybak"; \
 		perlimports --inplace-edit --no-preserve-unused \
 			"$$file" 2>/dev/null || true; \
-		perl -Ilib script/perl-quote-fix < "$$file" > "$$file.pqf" \
-			&& mv "$$file.pqf" "$$file"; \
+		if perl -Ilib script/perl-quote-fix < "$$file" > "$$file.pqf"; then \
+			mv "$$file.pqf" "$$file"; \
+		else \
+			rm -f "$$file.pqf"; \
+			echo "perl-quote-fix failed: $$file" >&2; \
+			exit 1; \
+		fi; \
 		perltidy -b "$$file" >/dev/null 2>&1; \
 		if ! diff -q "$$file.tdybak" "$$file" >/dev/null 2>&1; then \
 			echo "Formatted $$file"; \
