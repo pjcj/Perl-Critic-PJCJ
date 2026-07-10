@@ -259,6 +259,10 @@ sub _in_range ($self, $elem, $lines) {
   $line >= $lines->[0] && $line <= $lines->[1]
 }
 
+sub _shift_range ($self, $lines, $delta) {
+  $lines->[1] += $delta if $lines;
+}
+
 sub _fix_once ($self, $source, $lines) {
   my $doc = PPI::Document->new(\$source) or return $source;
 
@@ -271,18 +275,24 @@ sub _fix_once ($self, $source, $lines) {
       0
     }
   );
-  $self->_apply_fix(@$_) for @fixes;
+  for my $fix (@fixes) {
+    my ($elem, $expl) = @$fix;
+    my $before = $elem->content =~ tr/\n//;
+    $self->_apply_fix($elem, $expl);
+    $self->_shift_range($lines, ($elem->content =~ tr/\n//) - $before);
+  }
 
   $doc->serialize
 }
 
 sub fix ($self, $source, %opts) {
+  my $lines    = $opts{lines} ? [$opts{lines}->@*] : undef;
   my $previous = "";
   my $current  = $source;
   for (1 .. $Max_passes) {
     last if $current eq $previous;
     $previous = $current;
-    $current  = $self->_fix_once($current, $opts{lines});
+    $current  = $self->_fix_once($current, $lines);
   }
   $current
 }

@@ -30,6 +30,16 @@ subtest "Line ranges restrict fixes" => sub {
     "no range fixes everything";
 };
 
+subtest "Line ranges do not drift when fixes shorten the document" => sub {
+  my $in = qq(use Foo "a",\n  "b";\nmy \$x = 'zzz';\n);
+  is $Fixer->fix($in, lines => [1, 2]),
+    qq[use Foo qw( a b );\nmy \$x = 'zzz';\n],
+    "a line outside the original range is not fixed";
+  my $range = [1, 2];
+  $Fixer->fix($in, lines => $range);
+  is $range, [1, 2], "the caller's range is not modified";
+};
+
 subtest "Fixing is idempotent" => sub {
   my @sources = (
     q(my $x = 'hello';),
