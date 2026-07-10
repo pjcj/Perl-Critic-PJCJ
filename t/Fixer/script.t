@@ -16,8 +16,11 @@ sub run_script ($source, @args) {
   my ($fh, $file) = tempfile(UNLINK => 1);
   print {$fh} $source;
   close $fh or die "Cannot close $file: $!";
-  my $args = join " ", @args;
-  qx($^X -Ilib $Script $args < \Q$file\E)
+  open my $out, "-|", $^X, "-Ilib", $Script, @args, $file
+    or die "Cannot run $Script: $!";
+  my $output = do { local $/ = undef; <$out> };
+  close $out or $! == 0 or die "Cannot close pipe from $Script: $!";
+  $output
 }
 
 subtest "Source is fixed from stdin to stdout" => sub {
