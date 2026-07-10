@@ -13,6 +13,9 @@ repos:
       - id: check-case-conflict
       - id: check-executables-have-shebangs
       - id: check-json
+      - id: check-shebang-scripts-are-executable
+        # Test files have shebangs by convention but the harness runs them
+        exclude: \.t$
       - id: check-merge-conflict
       - id: check-symlinks
       - id: check-toml
@@ -83,12 +86,21 @@ repos:
 
   - repo: local
     hooks:
+      # perl-hook selects Perl files itself, by extension or shebang, so
+      # coverage doesn't depend on paths or the executable bit.
+      - id: perltidy-check
+        name: perltidy (check only)
+        description: Check Perl files are formatted with perltidy
+        language: system
+        entry: utils/perl-hook tidy
+        types: [ text ]
+
       - id: perlcritic
         name: perlcritic
-        description: Ensure perl files adhere to standards
+        description: Check Perl files with perlcritic
         language: system
-        entry: perl -Ilib -S perlcritic lib t dev
-        pass_filenames: false
+        entry: utils/perl-hook critic
+        types: [ text ]
 
       - id: jscpd
         name: Check for duplicated code
