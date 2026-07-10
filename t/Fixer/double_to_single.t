@@ -4,22 +4,10 @@ use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is subtest );
-use feature      qw( signatures );
-use experimental qw( signatures );
+use Test2::V0 qw( done_testing subtest );
 
-use lib                       qw( lib t/lib );
-use Perl::Critic::PJCJ::Fixer ();
-
-my $Fixer = Perl::Critic::PJCJ::Fixer->new;
-
-sub fixes ($in, $out, $desc) {
-  is $Fixer->fix($in), $out, $desc;
-}
-
-sub unchanged ($in, $desc) {
-  is $Fixer->fix($in), $in, $desc;
-}
+use lib             qw( lib t/lib );
+use ViolationFinder qw( fixes unchanged );
 
 subtest "Escaped sigils become literal in single quotes" => sub {
   fixes 'my $x = "user\@domain.com";', q(my $x = 'user@domain.com';),

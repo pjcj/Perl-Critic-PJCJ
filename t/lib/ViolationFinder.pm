@@ -12,7 +12,8 @@ use Test2::V0 qw( diag fail is like );
 
 use Perl::Critic::PJCJ::Fixer ();
 
-our @EXPORT_OK = qw( find_violations count_violations good bad );
+our @EXPORT_OK = qw( find_violations count_violations good bad fixes
+  unchanged );
 
 my $Fixer = Perl::Critic::PJCJ::Fixer->new;
 
@@ -75,6 +76,14 @@ sub bad ($policy, $code, $expected_message, $description) {
     is @remaining, 0, "$description - fixer resolves the violation"
       or diag "fixed source: $fixed";
   }
+}
+
+sub fixes ($in, $out, $desc) {
+  is $Fixer->fix($in), $out, $desc;
+}
+
+sub unchanged ($in, $desc) {
+  is $Fixer->fix($in), $in, $desc;
 }
 
 "
@@ -199,6 +208,18 @@ the violation message contains the expected text. For most policies, it checks
 the description field. For the RequireConsistentQuoting policy, it checks the
 explanation field instead, and also asserts that L<Perl::Critic::PJCJ::Fixer>
 resolves the violation.
+
+=head2 fixes
+
+  fixes $code, $expected, $description;
+
+Tests that L<Perl::Critic::PJCJ::Fixer> rewrites C<$code> to C<$expected>.
+
+=head2 unchanged
+
+  unchanged $code, $description;
+
+Tests that L<Perl::Critic::PJCJ::Fixer> leaves C<$code> unchanged.
 
 =head1 AUTHOR
 
