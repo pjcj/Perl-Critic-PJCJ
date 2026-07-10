@@ -209,6 +209,8 @@ sub _collect_use_words ($self, $words, @elements) {
       my ($start, $end, $raw) = $self->{policy}->parse_quote_token($el);
       my $content = $raw =~ s/\\([\Q$start$end\E])/$1/gr;
       push @$words, grep length, split /\s+/, $content;
+    } elsif ($class eq "PPI::Token::Word" && $el->content =~ /\A-\w+\z/) {
+      push @$words, $el->content;
     } elsif ($class eq "PPI::Token::Operator" && $el->content eq ",") {
       next;
     } elsif (

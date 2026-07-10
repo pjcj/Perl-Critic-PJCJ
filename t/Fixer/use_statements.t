@@ -30,6 +30,11 @@ subtest "Mixed qw and strings are merged" => sub {
     "qw and string arguments merge in order";
 };
 
+subtest "Leading-hyphen barewords become qw words" => sub {
+  fixes 'use parent -norequire, "Foo";', "use parent qw( -norequire Foo );",
+    "-norequire merges into qw()";
+};
+
 subtest "Escapes in string arguments are decoded faithfully" => sub {
   fixes 'use Foo "a\"b";', 'use Foo qw( a"b );',
     "escaped double quote decodes to the plain character";
