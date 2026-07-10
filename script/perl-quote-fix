@@ -1,0 +1,77 @@
+#!/usr/bin/env perl
+
+use v5.26.0;
+use strict;
+use warnings;
+use feature      qw( signatures );
+use experimental qw( signatures );
+
+use Getopt::Long              qw( GetOptions );
+use Pod::Usage                qw( pod2usage );
+use Perl::Critic::PJCJ::Fixer ();
+
+sub parse_lines ($spec) {
+  return unless defined $spec;
+  if ($spec =~ /\A(\d+)-(\d+)\z/) {
+    return [ $1, $2 ];
+  }
+  pod2usage(
+    -message => "--lines requires a range such as 10-20",
+    -exitval => 2
+  );
+}
+
+sub main () {
+  my %opt;
+  GetOptions(\%opt, "lines=s", "help|h") or pod2usage(2);
+  pod2usage(0) if $opt{help};
+
+  my $lines  = parse_lines($opt{lines});
+  my $source = do { local $/ = undef; <> };
+  print Perl::Critic::PJCJ::Fixer->new->fix(
+    $source, ($lines ? (lines => $lines) : ())
+  );
+}
+
+main
+
+__END__
+
+=head1 NAME
+
+perl-quote-fix - fix RequireConsistentQuoting violations in Perl source
+
+=head1 SYNOPSIS
+
+  perl-quote-fix [--lines START-END] < input.pl > output.pl
+
+  Options:
+    --lines START-END  only fix violations within this line range
+    --help             show this help
+
+=head1 DESCRIPTION
+
+Reads Perl source on standard input and writes it to standard output with
+all violations of
+L<Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting>
+fixed. The runtime value of every string is preserved; anything that cannot
+be fixed safely is left unchanged. Source that the policy already accepts
+passes through byte for byte.
+
+With C<--lines>, the whole document is still parsed but only violations
+starting within the inclusive line range are fixed. This suits editor
+integrations that format a selection.
+
+The fixer does not tidy layout. Run L<perltidy> afterwards if a fix has
+disturbed alignment.
+
+=head1 AUTHOR
+
+Paul Johnson <paul@pjcj.net>
+
+=head1 LICENCE
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=cut

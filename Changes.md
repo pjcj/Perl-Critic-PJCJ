@@ -2,6 +2,14 @@
 
 {{$NEXT}}
 
+- Add perl-quote-fix, a stdin to stdout filter fixing
+  RequireConsistentQuoting violations
+  - Fixes are decided by the policy itself, preserve the runtime value of
+    every string, and repeat until the source is clean
+  - `--lines START-END` restricts fixes to a line range for editor
+    integrations
+  - Perl::Critic::PJCJ::Fixer provides the same rewriting as a module
+
 ## v0.2.7 - 2026-06-25
 
 - Count ProhibitLongLines line length in characters, not octets
