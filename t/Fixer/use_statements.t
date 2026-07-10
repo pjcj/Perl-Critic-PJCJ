@@ -30,6 +30,13 @@ subtest "Mixed qw and strings are merged" => sub {
     "qw and string arguments merge in order";
 };
 
+subtest "Escapes in string arguments are decoded faithfully" => sub {
+  fixes 'use Foo "a\"b";', 'use Foo qw( a"b );',
+    "escaped double quote decodes to the plain character";
+  unchanged 'use Foo "a\tb", "c";', "escape sequence cannot become a qw word";
+  unchanged 'use Foo "\x41", "b";', "hex escape cannot become a qw word";
+};
+
 subtest "Parentheses are removed" => sub {
   fixes 'use Qux ( key => "value" );', 'use Qux key => "value";',
     "fat comma arguments lose parentheses";

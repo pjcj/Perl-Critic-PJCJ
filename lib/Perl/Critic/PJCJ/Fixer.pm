@@ -180,8 +180,10 @@ sub _collect_use_words ($self, $words, @elements) {
       $class eq "PPI::Token::Quote::Double"
       || $class eq "PPI::Token::Quote::Interpolate"
     ) {
-      return 0 if $self->{policy}->would_interpolate($el->string);
-      push @$words, $self->_normalised_value($el);
+      my $raw = $el->string;
+      return 0 if $self->{policy}->would_interpolate($raw);
+      return 0 if $raw =~ /\\(?![\\"])/;
+      push @$words, $raw =~ s/\\([\\"])/$1/gr;
     } elsif ($class eq "PPI::Token::QuoteLike::Words") {
       my ($start, $end, $raw) = $self->{policy}->parse_quote_token($el);
       my $content = $raw =~ s/\\([\Q$start$end\E])/$1/gr;
