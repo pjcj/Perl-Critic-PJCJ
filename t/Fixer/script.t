@@ -35,6 +35,8 @@ subtest "Line ranges are honoured" => sub {
 subtest "Bad arguments fail" => sub {
   run_script("", "--lines", "nonsense");
   isnt $?, 0, "invalid --lines exits non-zero";
+  run_script("", "--lines", "9-1");
+  isnt $?, 0, "reversed --lines exits non-zero";
 };
 
 done_testing
