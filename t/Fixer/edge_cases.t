@@ -10,11 +10,17 @@ use lib             qw( lib t/lib );
 use ViolationFinder qw( fixes unchanged );
 
 subtest "Unparsable and empty sources pass through" => sub {
-  unchanged "", "empty source is returned as is";
+  unchanged "",   "empty source is returned as is";
+  unchanged "\0", "unparsable source is returned as is";
 };
 
 subtest "Line endings are preserved in accepted source" => sub {
   unchanged qq(my \$x = 1;\r\n), "clean CRLF source is byte-identical";
+};
+
+subtest "Delimiters are escaped when no clean delimiter exists" => sub {
+  fixes 'my @w = qw/) ( ] > }/;', 'my @w = qw[) ( \] > }];',
+    "unbalanced content is escaped for the best delimiter";
 };
 
 subtest "Unsafe fixes are declined" => sub {

@@ -104,7 +104,7 @@ sub _operator_replacement ($self, $elem, $op, $start, $end) {
 sub _replacement ($self, $elem, $expl) {
   my $class = ref $elem;
 
-  if ($elem->isa("PPI::Token") && $expl =~ /\Ause (qw|qq|qx|q)([(\[<{])/) {
+  if ($expl =~ /\Ause (qw|qq|qx|q)([(\[<{])/) {
     return $self->_operator_replacement($elem, $1, $2, $End_delimiter{$2});
   }
 
@@ -180,6 +180,7 @@ sub _include_argument_span ($self, $elem) {
         && $child->content !~ /\A(?:use|no)\z/;
       next;
     }
+    # uncoverable condition right note:a structure token here is always ;
     last if $child->isa("PPI::Token::Structure") && $child->content eq ";";
     next if !@span                               && !$child->significant;
     push @span, $child;

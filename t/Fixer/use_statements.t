@@ -35,6 +35,17 @@ subtest "Leading-hyphen barewords become qw words" => sub {
     "-norequire merges into qw()";
 };
 
+subtest "Arguments which cannot become qw words are declined" => sub {
+  unchanged 'use Foo bar, "baz";', "a plain bareword is not a string";
+  unchanged 'use Foo "a" . "b";',  "an expression is not a list of words";
+  unchanged 'use Foo (), "a";',    "an empty list yields no words";
+};
+
+subtest "Only wrongly delimited qw tokens are re-delimited" => sub {
+  fixes 'use Foo qw( a ), qw[ b ], $v;', 'use Foo qw( a ), qw( b ), $v;',
+    "a qw token with parentheses is left alone";
+};
+
 subtest "Escapes in string arguments are decoded faithfully" => sub {
   fixes 'use Foo "a\"b";', 'use Foo qw( a"b );',
     "escaped double quote decodes to the plain character";
