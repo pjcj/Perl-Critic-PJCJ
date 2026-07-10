@@ -44,6 +44,13 @@ subtest "Parentheses are removed" => sub {
     "complex expressions lose parentheses";
 };
 
+subtest "Comments in argument lists survive" => sub {
+  unchanged qq(use Foo "a", # keep me\n  "b";),
+    "a commented argument list is left alone";
+  unchanged qq[use Foo ("a", # keep me\n  "b");],
+    "a comment nested in parentheses is left alone";
+};
+
 subtest "Acceptable use statements are untouched" => sub {
   unchanged "use Foo;",      "bare use stays";
   unchanged "use Bar ();",   "empty parentheses stay";

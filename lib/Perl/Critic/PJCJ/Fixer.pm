@@ -6,7 +6,7 @@ use warnings;
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use List::Util qw( all );
+use List::Util qw( all any );
 use PPI        ();
 use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 
@@ -223,6 +223,13 @@ sub _collect_use_words ($self, $words, @elements) {
   @$words ? 1 : 0
 }
 
+sub _span_has_comment ($self, @span) {
+  any {
+    $_->isa("PPI::Token::Comment")
+      || ($_->isa("PPI::Node") && $_->find_any("PPI::Token::Comment"))
+  } @span
+}
+
 sub _fix_include ($self, $elem, $expl) {
   return $self->_remove_include_parens($elem) if $expl eq "remove parentheses";
   return unless $expl eq "use qw()";
@@ -232,8 +239,9 @@ sub _fix_include ($self, $elem, $expl) {
 
   my @words;
   if (
-    $self->_collect_use_words(\@words, @span) && all { /\A[^\s()\\]+\z/ }
-    @words
+      !$self->_span_has_comment(@span)
+    && $self->_collect_use_words(\@words, @span)
+    && all { /\A[^\s()\\]+\z/ } @words
   ) {
     $span[0]->insert_before(PPI::Token->new("qw( @words )"));
     $_->delete for @span;
