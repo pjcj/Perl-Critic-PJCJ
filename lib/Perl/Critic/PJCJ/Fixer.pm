@@ -12,6 +12,11 @@ use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 
 my $Max_passes    = 10;
 my %End_delimiter = ("(" => ")", "[" => "]", "<" => ">", "{" => "}");
+my %Interpolating = map { $_ => 1 } qw(
+  PPI::Token::Quote::Double
+  PPI::Token::Quote::Interpolate
+  PPI::Token::QuoteLike::Command
+);
 
 sub new ($class) {
   my $policy
@@ -25,6 +30,10 @@ sub _decode_double ($self, $raw) { $raw =~ s/\\(.)/$1/gsr }
 
 sub _decode_q ($self, $raw, $start, $end) {
   $raw =~ s/\\([\\\Q$start$end\E])/$1/gr
+}
+
+sub _decode_delimiters ($self, $raw, $start, $end) {
+  $raw =~ s/\\(.)/$1 eq $start || $1 eq $end ? $1 : "\\$1"/gser
 }
 
 sub _encode_single ($self, $value) {
@@ -46,8 +55,7 @@ sub _normalised_value ($self, $elem) {
   return $self->_decode_q($raw, $start, $end)
     if $class eq "PPI::Token::Quote::Literal";
   return $self->_decode_double($raw)
-    if $class eq "PPI::Token::Quote::Interpolate"
-    || $class eq "PPI::Token::QuoteLike::Command";
+    if $class eq "PPI::Token::Quote::Interpolate";
 
   my $content = $raw =~ s/\\([\Q$start$end\E])/$1/gr;
   join "\0", grep length, split /\s+/, $content
@@ -112,8 +120,9 @@ sub _replacement ($self, $elem, $expl) {
     return $self->_encode_double($value) if $expl eq 'use ""';
     return $self->_encode_single($value) if $expl eq "use ''";
   } elsif ($class eq "PPI::Token::Quote::Interpolate") {
-    my $raw = $elem->string;
-    return qq("$raw") if $expl eq 'use ""';
+    my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
+    return '"' . $self->_decode_delimiters($raw, $start, $end) . '"'
+      if $expl eq 'use ""';
     return $self->_encode_single($self->_decode_double($raw))
       if $expl eq "use ''";
   }
@@ -121,15 +130,27 @@ sub _replacement ($self, $elem, $expl) {
   undef
 }
 
+sub _canonical ($self, $elem) {
+  my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
+  $self->_decode_delimiters($raw, $start, $end)
+}
+
 sub _value_preserved ($self, $elem, $new_source) {
-  my $code    = "$new_source;";
-  my $doc     = PPI::Document->new(\$code) or return 0;
+  my $code = "$new_source;";
+
+  # uncoverable branch true note:code is never empty so PPI always parses
+  my $doc = PPI::Document->new(\$code) or return 0;
   my ($token) = grep {
     $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike")
   } $doc->tokens;
-  $token
-    && $doc->serialize eq $code
-    && $self->_normalised_value($token) eq $self->_normalised_value($elem)
+
+  # uncoverable branch true
+  # uncoverable condition left note:every replacement contains a quote token
+  # uncoverable condition right note:PPI serialisation is faithful
+  return 0 unless $token && $doc->serialize eq $code;
+  return $self->_canonical($token) eq $self->_canonical($elem)
+    if $Interpolating{ ref $token } && $Interpolating{ ref $elem };
+  $self->_normalised_value($token) eq $self->_normalised_value($elem)
 }
 
 sub _apply_replacement ($self, $elem, $expl) {

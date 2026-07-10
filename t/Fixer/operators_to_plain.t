@@ -27,6 +27,12 @@ subtest "qq() becomes double quotes" => sub {
   fixes 'my $x = qq(hello $name);', 'my $x = "hello $name";',
     "interpolating qq() is re-quoted";
   fixes 'my $x = qq(plain);', 'my $x = "plain";', "simple qq() is re-quoted";
+  fixes 'my $x = qq($\();', 'my $x = "$(";',
+    "escaped delimiter after a sigil keeps the punctuation variable";
+  fixes 'my $x = qq(a\(b);', 'my $x = "a(b";',
+    "escaped delimiter is unescaped for double quotes";
+  fixes 'my $x = qq(a\)b);', 'my $x = "a)b";',
+    "escaped end delimiter is unescaped for double quotes";
 };
 
 subtest "qq() becomes single quotes" => sub {
