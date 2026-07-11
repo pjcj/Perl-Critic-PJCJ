@@ -21,10 +21,46 @@ sub parse_lines ($spec) {
   );
 }
 
+sub fix_in_place ($fixer, $file) {
+  my $fh;
+  unless (open $fh, "<", $file) {
+    warn "Cannot read $file: $!\n";
+    return 0;
+  }
+  my $source = do { local $/ = undef; <$fh> };
+  my $fixed  = $fixer->fix($source);
+  return 1 if $fixed eq $source;
+  my $out;
+  unless (open $out, ">", $file) {
+    warn "Cannot write $file: $!\n";
+    return 0;
+  }
+  print {$out} $fixed;
+  1
+}
+
+sub run_in_place ($lines) {
+  pod2usage(
+    -message => "--inplace cannot be combined with --lines",
+    -exitval => 2,
+  ) if defined $lines;
+  pod2usage(-message => "--inplace requires file arguments", -exitval => 2)
+    unless @ARGV;
+
+  my $fixer  = Perl::Critic::PJCJ::Fixer->new;
+  my $status = 0;
+  for my $file (@ARGV) {
+    $status = 1 unless fix_in_place($fixer, $file);
+  }
+  exit $status;
+}
+
 sub main () {
   my %opt;
-  GetOptions(\%opt, "lines=s", "help|h") or pod2usage(2);
+  GetOptions(\%opt, "lines=s", "inplace", "help|h") or pod2usage(2);
   pod2usage(0) if $opt{help};
+
+  run_in_place($opt{lines}) if $opt{inplace};
 
   my $lines  = parse_lines($opt{lines});
   my $source = do { local $/ = undef; <> };
@@ -42,9 +78,11 @@ perl-quote-fix - fix RequireConsistentQuoting violations in Perl source
 =head1 SYNOPSIS
 
   perl-quote-fix [--lines START-END] < input.pl > output.pl
+  perl-quote-fix --inplace file ...
 
   Options:
     --lines START-END  only fix violations within this line range
+    --inplace          fix the named files in place
     --help             show this help
 
 =head1 DESCRIPTION
@@ -59,6 +97,12 @@ passes through byte for byte.
 With C<--lines>, the whole document is still parsed but only violations
 starting within the inclusive line range are fixed. This suits editor
 integrations that format a selection.
+
+With C<--inplace>, the named files are fixed in place in a single process,
+which is much faster than one invocation per file. Files needing no fix are
+left untouched and file modes are preserved. A file which cannot be read or
+written is reported and the exit status is non-zero, but the remaining
+files are still fixed. C<--inplace> cannot be combined with C<--lines>.
 
 The fixer does not tidy layout. Run L<perltidy> afterwards if a fix has
 disturbed alignment.
