@@ -14,6 +14,8 @@ subtest "String import lists become qw()" => sub {
     "single quoted argument becomes qw()";
   fixes 'use Bar "arg1", "arg2";', "use Bar qw( arg1 arg2 );",
     "multiple string arguments become qw()";
+  fixes 'use foo_bar "x";', "use foo_bar qw( x );",
+    "underscore module import list becomes qw()";
 };
 
 subtest "qw with wrong delimiters is re-delimited" => sub {

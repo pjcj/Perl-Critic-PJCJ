@@ -569,8 +569,7 @@ sub _any_arg_interpolates ($self, @args) {
 }
 
 sub _is_pragma ($self, $elem) {
-  my $module = $elem->module or return 0;
-  $module =~ /^[a-z][a-z0-9_]*$/
+  !!$elem->pragma
 }
 
 sub prepare_to_scan_document ($self, $) {
@@ -776,8 +775,8 @@ individually
 =item * Simple string arguments without interpolation should use C<qw()>
 with parentheses only
 
-=item * Pragmas (all-lowercase module names) with a single argument also allow
-quoted strings, with normal quoting rules applied
+=item * Pragmas (lowercase module names, as PPI defines them) with a single
+argument also allow quoted strings, with normal quoting rules applied
 
 =back
 

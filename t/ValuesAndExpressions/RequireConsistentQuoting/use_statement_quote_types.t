@@ -349,6 +349,15 @@ subtest "Pragma single-argument quoting" => sub {
   # Non-pragmas (uppercase) still require qw()
   bad $Policy, 'use Foo "bar"', desc_use_qw,
     "non-pragma with single argument should use qw()";
+
+  # Digits count as pragma characters, matching PPI
+  good $Policy, 'use foo1 "x"', "digits still count as pragma characters";
+
+  # A lowercase module with an underscore is not a pragma to PPI
+  bad $Policy, 'use foo_bar "x";', desc_use_qw,
+    "lowercase module with an underscore is not a pragma";
+  bad $Policy, "use foo_bar 'x';", desc_use_qw,
+    "underscore module gets the statement rule, not the string rule";
 };
 
 subtest "use statement verdict is per document" => sub {
