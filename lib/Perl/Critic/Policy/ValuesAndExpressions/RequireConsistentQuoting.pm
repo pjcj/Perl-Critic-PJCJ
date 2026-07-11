@@ -307,10 +307,8 @@ sub check_q_literal ($self, $elem) {
   return $self->check_delimiter_optimisation($elem)
     if $has_single_quotes && $has_double_quotes;
 
-  my $would_interpolate = $self->would_interpolate_from_single_quotes($string);
-
   if ($has_single_quotes) {
-    return $would_interpolate
+    return $self->would_interpolate_from_single_quotes($string)
       ? $self->check_delimiter_optimisation($elem)
       : $self->_fix_violation($Fix_double, $elem);
   }
@@ -319,7 +317,8 @@ sub check_q_literal ($self, $elem) {
   # they don't interpolate and can hold " without escaping
   return $self->_fix_violation($Fix_single, $elem) if $has_double_quotes;
 
-  return $self->_fix_violation($Fix_single, $elem) if $would_interpolate;
+  return $self->_fix_violation($Fix_single, $elem)
+    if $self->would_interpolate_from_single_quotes($string);
 
   $self->_fix_violation($Fix_double, $elem)
 }
