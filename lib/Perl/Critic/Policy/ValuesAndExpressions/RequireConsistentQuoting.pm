@@ -107,14 +107,6 @@ sub would_interpolate_from_single_quotes ($self, $string) {
   $self->would_interpolate($self->escape_single_quoted($string))
 }
 
-sub delimiter_preference_order ($self, $delimiter_start) {
-  return 0 if $delimiter_start eq "(";
-  return 1 if $delimiter_start eq "[";
-  return 2 if $delimiter_start eq "<";
-  return 3 if $delimiter_start eq "{";
-  99
-}
-
 sub parse_quote_token ($self, $elem) {
   my $content = $elem->content;
 
@@ -148,12 +140,13 @@ sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
     "{" => $content =~ tr/{}//,
   );
 
-  # Find optimal delimiter: handle unbalanced content, then preference order
-  my ($optimal) = sort {
-         $count{ $a->{start} } <=> $count{ $b->{start} }
-      || $self->delimiter_preference_order($a->{start})
-      <=> $self->delimiter_preference_order($b->{start})
-  } @delimiters;
+  # Fewest delimiter occurrences in the content wins; ties are broken by the
+  # order of @delimiters, which encodes the preference () > [] > <> > {}
+  my $optimal = $delimiters[0];
+  for my $delim (@delimiters) {
+    $optimal = $delim
+      if $count{ $delim->{start} } < $count{ $optimal->{start} };
+  }
 
   my $current_is_optimal
     = $optimal->{start} eq $start && $optimal->{end} eq $end ? 1 : 0;
@@ -1067,16 +1060,6 @@ by re-escaping backslashes and apostrophes according to single-quote rules.
 This ensures accurate detection of whether converting a single-quoted string to
 double quotes would introduce unintended variable interpolation.
 
-=head2 delimiter_preference_order
-
-Establishes the preference hierarchy for bracket delimiters when multiple
-options handle the content equally well. The policy prefers
-delimiters in this order: C<()> > C<[]> > C<< <> >> > C<{}>.
-
-This ordering balances readability and convention - parentheses are most
-familiar and commonly used, while braces are often reserved for hash
-references and blocks.
-
 =head2 parse_quote_token
 
 Extracts delimiter and content information from quote-like operators such as
@@ -1095,7 +1078,8 @@ delimiters.
 
 Only considers bracket delimiters C<()>, C<[]>, C<< <> >>, C<{}> as valid
 options, rejecting exotic delimiters like C</>, C<|>, C<#>. When multiple
-delimiters work equally well, uses the preference order to break ties.
+delimiters work equally well, ties are broken by the preference order
+C<()> > C<[]> > C<< <> >> > C<{}>.
 
 =head2 _operator_fix ($op, $delim)
 

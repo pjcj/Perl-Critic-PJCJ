@@ -28,12 +28,14 @@ subtest "Policy methods" => sub {
   is @types,                  7, "applies_to returns 7 token types";
   is +(grep /Quote/, @types), 6, "applies_to returns 6 quote token types";
 
-  is $Policy->delimiter_preference_order("("), 0, "() has preference 0";
-  is $Policy->delimiter_preference_order("["), 1, "[] has preference 1";
-  is $Policy->delimiter_preference_order("<"), 2, "<> has preference 2";
-  is $Policy->delimiter_preference_order("{"), 3, "{} has preference 3";
-  is $Policy->delimiter_preference_order("x"), 99,
-    "invalid delimiter returns 99";
+  my $optimal = sub ($content) {
+    my ($delim) = $Policy->find_optimal_delimiter($content, "qw", "(", ")");
+    $delim->{start}
+  };
+  is $optimal->(""),        "(", "empty content prefers ()";
+  is $optimal->("a(b"),     "[", "parens in content fall back to []";
+  is $optimal->("a(b)[c]"), "<", "parens and brackets fall back to <>";
+  is $optimal->("()[]<>"),  "{", "all lower preferences fall back to {}";
   ok !$Policy->would_interpolate("simple"),
     "Simple string doesn't interpolate";
   ok $Policy->would_interpolate('$var'),   "Variable interpolates";
