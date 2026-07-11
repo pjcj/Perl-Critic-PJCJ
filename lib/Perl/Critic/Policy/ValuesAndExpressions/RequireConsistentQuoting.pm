@@ -20,7 +20,7 @@ my $Expl_remove_parens = "remove parentheses";
 
 sub supported_parameters { }
 sub default_severity     { $SEVERITY_MEDIUM }
-sub default_themes       { qw( cosmetic ) }
+sub default_themes       { qw( cosmetic pjcj ) }
 
 sub applies_to {
   #<<<

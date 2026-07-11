@@ -61,7 +61,7 @@ sub supported_parameters { (
 ) }
 
 sub default_severity { $SEVERITY_MEDIUM }
-sub default_themes   { qw( cosmetic formatting ) }
+sub default_themes   { qw( cosmetic formatting pjcj ) }
 
 sub applies_to { "PPI::Document" }
 

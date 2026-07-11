@@ -189,16 +189,26 @@ make install
 
 ## Usage
 
-Add individual policies to your `.perlcriticrc` file:
+Activate both policies in your `.perlcriticrc` file with an `include` line, then
+configure them with the usual policy blocks:
 
 ```ini
-[ValuesAndExpressions::RequireConsistentQuoting]
+include = RequireConsistentQuoting ProhibitLongLines
 
 [CodeLayout::ProhibitLongLines]
 max_line_length = 72
 ```
 
+Both policies also carry the `pjcj` theme, so `perlcritic --theme pjcj` selects
+them.
+
 Then run perlcritic on your code:
+
+```bash
+perlcritic --theme pjcj MyScript.pl
+```
+
+Or run a single policy directly:
 
 ```bash
 perlcritic --single-policy \

@@ -18,8 +18,9 @@ my $Policy
 
 subtest "Policy methods" => sub {
   my @themes = $Policy->default_themes;
-  is @themes,    1,          "default_themes returns one theme";
-  is $themes[0], "cosmetic", "default theme is cosmetic";
+  is @themes,    2,          "default_themes returns two themes";
+  is $themes[0], "cosmetic", "first theme is cosmetic";
+  is $themes[1], "pjcj",     "second theme is pjcj";
 
   my @types = $Policy->applies_to;
   is @types,                  7, "applies_to returns 7 token types";
