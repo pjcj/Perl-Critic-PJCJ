@@ -26,10 +26,11 @@ reinstall-deps:
 	dzil listdeps --develop | cpm install -g --reinstall --no-prebuilt -
 
 t:
-	yath test -j20 --qvf -T --term-width=$(tput cols)
+	yath test -j20 --qvf -T --term-width=$$(tput cols 2>/dev/null || echo 80)
 
 tv:
-	yath test -j20 --qvf -T --term-width=$(tput cols) -v
+	yath test -j20 --qvf -T \
+		--term-width=$$(tput cols 2>/dev/null || echo 80) -v
 
 zt: clean
 	dzil test -j20
