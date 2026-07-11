@@ -51,6 +51,8 @@ subtest "Module versions stay in place" => sub {
 subtest "Only wrongly delimited qw tokens are re-delimited" => sub {
   fixes 'use Foo qw( a ), qw[ b ], $v;', 'use Foo qw( a ), qw( b ), $v;',
     "a qw token with parentheses is left alone";
+  fixes 'use Foo qw[ a ], "b c";', 'use Foo qw( a ), "b c";',
+    "the qw token is re-delimited, the unrepresentable string left alone";
 };
 
 subtest "Escapes in string arguments are decoded faithfully" => sub {

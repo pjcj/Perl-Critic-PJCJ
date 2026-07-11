@@ -232,6 +232,16 @@ subtest "Expressions among use arguments are complex" => sub {
     "a leading-hyphen bareword still merges into qw()";
 };
 
+subtest "qw() is only suggested for representable words" => sub {
+  good $Policy, 'use Foo "hello world"', "a space cannot survive qw";
+  good $Policy, 'use Foo ""',            "an empty string would be dropped";
+  good $Policy, 'use Foo "a(b"',
+    "an unbalanced parenthesis would break qw( )";
+  good $Policy, "use Foo 'a b', 'c'", "one bad word poisons the list";
+  good $Policy, 'use Foo qw( a ), "b c"',
+    "mixed qw and unrepresentable strings are left alone";
+};
+
 subtest "Special cases should not trigger violations" => sub {
   # Version numbers
   good $Policy, "use Module 1.23",

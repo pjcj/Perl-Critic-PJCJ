@@ -8,7 +8,7 @@ use experimental "signatures";
 
 use parent qw( Perl::Critic::Policy );
 
-use List::Util          qw( any );
+use List::Util          qw( all any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 
 my $Desc               = "Quoting";
@@ -407,6 +407,58 @@ sub _analyse_argument_types ($self, $elem, @args) {
   ($fat_comma, $complex_expr, $version, $simple_strings, $q_operators, $parens)
 }
 
+sub collect_qw_words ($self, $words, @elements) {
+  for my $el (@elements) {
+    next unless $el->significant;
+    my $class = ref $el;
+    if ($class eq "PPI::Token::Quote::Single") {
+      push @$words, $el->literal;
+    } elsif ($class eq "PPI::Token::Quote::Literal") {
+      my ($start, $end, $raw) = $self->parse_quote_token($el);
+      push @$words, $raw =~ s/\\([\\\Q$start$end\E])/$1/gr;
+    } elsif (
+      $class eq "PPI::Token::Quote::Double"
+      || $class eq "PPI::Token::Quote::Interpolate"
+    ) {
+      my $raw = $el->string;
+      return 0 if $self->would_interpolate($raw);
+      return 0 if $raw =~ /\\(?![\\"])/;
+      push @$words, $raw =~ s/\\([\\"])/$1/gr;
+    } elsif ($class eq "PPI::Token::QuoteLike::Words") {
+      my ($start, $end, $raw) = $self->parse_quote_token($el);
+      my $content = $raw =~ s/\\([\Q$start$end\E])/$1/gr;
+      push @$words, grep length, split /\s+/, $content;
+    } elsif ($class eq "PPI::Token::Word" && $el->content =~ /\A-\w+\z/) {
+      push @$words, $el->content;
+    } elsif ($class eq "PPI::Token::Operator" && $el->content eq ",") {
+      next;
+    } elsif (
+      $el->isa("PPI::Structure::List")
+      || $el->isa("PPI::Statement::Expression")
+    ) {
+      return 0 unless $self->collect_qw_words($words, $el->children);
+    } else {
+      return 0;
+    }
+  }
+  @$words ? 1 : 0
+}
+
+sub qw_word_ok ($self, $word) {
+  $word =~ /\A[^\s()\\]+\z/
+}
+
+sub _use_args_qw_representable ($self, @args) {
+  my @words;
+  return 0 unless $self->collect_qw_words(\@words, @args);
+  all { $self->qw_word_ok($_) } @words
+}
+
+sub _use_qw_violation ($self, $elem, @args) {
+  return () unless $self->_use_args_qw_representable(@args);
+  $self->violation($Desc, $Expl_use_qw, $elem)
+}
+
 sub check_use_statement ($self, $elem) {
   # Check "use" and "no" statements, but not "require"
   return unless $elem->type =~ /^(use|no)$/;
@@ -452,14 +504,12 @@ sub check_use_statement ($self, $elem) {
   return () if $self->_any_arg_interpolates(@args);
 
   # Rule 1: All simple strings or q() operators → use qw()
-  if (($has_simple_strings || $has_q_operators) && !$has_qw) {
-    return $self->violation($Desc, $Expl_use_qw, $elem);
-  }
+  return $self->_use_qw_violation($elem, @args)
+    if ($has_simple_strings || $has_q_operators) && !$has_qw;
 
   # Mixed qw() and other things
-  if ($has_qw && ($string_count > 0 || $has_q_operators)) {
-    return $self->violation($Desc, $Expl_use_qw, $elem);
-  }
+  return $self->_use_qw_violation($elem, @args)
+    if $has_qw && ($string_count > 0 || $has_q_operators);
 
   ()
 }
@@ -1093,6 +1143,33 @@ Handles C<qw()> and C<qx()> operators, focusing purely on delimiter
 optimisation according to Rules 1 and 3. These operators don't have simpler
 alternatives, so the policy only ensures they use the most appropriate
 delimiters to handle unbalanced content gracefully.
+
+=head2 collect_qw_words ($words, @elements)
+
+Decodes the values of use/no statement arguments into C<$words>, recursing
+into parenthesised lists. Returns false when any element cannot become a
+C<qw()> word: an interpolating or escape-bearing string, a plain bareword,
+an operator other than a comma, or any other expression. Shared with
+L<Perl::Critic::PJCJ::Fixer>, so the policy suggests C<use qw()> exactly
+when the fixer can rewrite the statement.
+
+=head2 qw_word_ok ($word)
+
+Tests whether a single decoded word can be written inside C<qw( )>: it must
+be non-empty and free of whitespace, parentheses and backslashes. This is
+the single word-representability predicate, shared with
+L<Perl::Critic::PJCJ::Fixer>.
+
+=head2 _use_args_qw_representable
+
+Tests whether every use/no statement argument can be represented as a word
+inside C<qw( )>, combining C<collect_qw_words> and C<qw_word_ok>. The
+C<use qw()> suggestion is only emitted when this holds.
+
+=head2 _use_qw_violation
+
+Emits the C<use qw()> violation for a use/no statement, or nothing when the
+arguments are not qw-representable.
 
 =head2 check_use_statement
 

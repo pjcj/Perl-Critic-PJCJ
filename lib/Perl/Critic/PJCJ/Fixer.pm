@@ -197,43 +197,6 @@ sub _include_argument_span ($self, $elem) {
   @span
 }
 
-sub _collect_use_words ($self, $words, @elements) {
-  for my $el (@elements) {
-    next unless $el->significant;
-    my $class = ref $el;
-    if (
-         $class eq "PPI::Token::Quote::Single"
-      || $class eq "PPI::Token::Quote::Literal"
-    ) {
-      push @$words, $self->_normalised_value($el);
-    } elsif (
-      $class eq "PPI::Token::Quote::Double"
-      || $class eq "PPI::Token::Quote::Interpolate"
-    ) {
-      my $raw = $el->string;
-      return 0 if $self->{policy}->would_interpolate($raw);
-      return 0 if $raw =~ /\\(?![\\"])/;
-      push @$words, $raw =~ s/\\([\\"])/$1/gr;
-    } elsif ($class eq "PPI::Token::QuoteLike::Words") {
-      my ($start, $end, $raw) = $self->{policy}->parse_quote_token($el);
-      my $content = $raw =~ s/\\([\Q$start$end\E])/$1/gr;
-      push @$words, grep length, split /\s+/, $content;
-    } elsif ($class eq "PPI::Token::Word" && $el->content =~ /\A-\w+\z/) {
-      push @$words, $el->content;
-    } elsif ($class eq "PPI::Token::Operator" && $el->content eq ",") {
-      next;
-    } elsif (
-      $el->isa("PPI::Structure::List")
-      || $el->isa("PPI::Statement::Expression")
-    ) {
-      return 0 unless $self->_collect_use_words($words, $el->children);
-    } else {
-      return 0;
-    }
-  }
-  @$words ? 1 : 0
-}
-
 sub _span_has_comment ($self, @span) {
   any {
     $_->isa("PPI::Token::Comment")
@@ -252,8 +215,8 @@ sub _fix_include ($self, $elem, $fix) {
   my @words;
   if (
       !$self->_span_has_comment(@span)
-    && $self->_collect_use_words(\@words, @span)
-    && all { /\A[^\s()\\]+\z/ } @words
+    && $self->{policy}->collect_qw_words(\@words, @span)
+    && all { $self->{policy}->qw_word_ok($_) } @words
   ) {
     $span[0]->insert_before(PPI::Token->new("qw( @words )"));
     $_->delete for @span;
