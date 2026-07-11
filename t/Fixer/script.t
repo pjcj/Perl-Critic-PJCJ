@@ -41,6 +41,10 @@ sub run_inplace (@files) {
   ($out, $? >> 8)
 }
 
+sub skip_on_windows ($reason) {
+  skip_all $reason if $^O eq "MSWin32";
+}
+
 subtest "Source is fixed from stdin to stdout" => sub {
   is run_script(q(my $x = 'hello';)), 'my $x = "hello";', "quoting is fixed";
   is run_script('my $n = 42;'), 'my $n = 42;', "clean source passes through";
@@ -61,6 +65,7 @@ subtest "Bad arguments fail" => sub {
 };
 
 subtest "Multiple files are fixed in place" => sub {
+  skip_on_windows "shell quoting in the test helper is POSIX-specific";
   my $one   = write_file(q(my $x = 'hello';));
   my $two   = write_file(q(my $y = 'world';));
   my $clean = write_file('my $n = 42;');
@@ -73,6 +78,7 @@ subtest "Multiple files are fixed in place" => sub {
 };
 
 subtest "File modes are preserved" => sub {
+  skip_on_windows "file modes are not enforced on Windows";
   my $file = write_file(q(my $x = 'hello';), 0755);
   my ($out, $exit) = run_inplace($file);
   is $exit,                      0,    "the script succeeds";
