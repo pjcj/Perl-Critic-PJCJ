@@ -263,6 +263,8 @@ subtest "Use statements with interpolation should not suggest qw()" => sub {
     "double quotes with interpolation should not suggest qw()";
   good $Policy, 'use lib "$HOME/perl", "$HOME/lib"',
     "multiple interpolations should not suggest qw()";
+  good $Policy, 'use lib ( "$HOME/perl" );',
+    "single interpolating pragma argument in parens is exempt";
 
   # Single quotes with $ or @ should not suggest qw() because it would change
   # meaning

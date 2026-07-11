@@ -699,7 +699,7 @@ consistent and optimal quoting
   my $text     = qq(simple);              # use "" instead of qq()
   my $file     = q!path/to/file!;         # use "" instead of q()
   use Config 'arg1', 'arg2';              # simple strings should use qw()
-  use lib ( "$HOME/perl" );               # complex expressions need no
+  use Quux ( $VERSION );                  # complex expressions need no
                                           # parentheses
 
   # Good examples:
@@ -708,7 +708,8 @@ consistent and optimal quoting
   my $text     = "simple";                # "" preferred over qq()
   my $file     = "path/to/file";          # "" reduces punctuation
   use Config qw( arg1 arg2 );             # simple use arguments use qw()
-  use lib "$HOME/perl";                   # interpolation uses normal rules
+  use Quux $VERSION;                      # no parentheses for complex
+                                          # expressions
 
 =head1 DESCRIPTION
 
