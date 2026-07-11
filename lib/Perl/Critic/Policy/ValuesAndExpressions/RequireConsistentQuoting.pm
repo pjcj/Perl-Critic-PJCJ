@@ -126,30 +126,32 @@ sub parse_quote_token ($self, $elem) {
 }
 
 sub _get_supported_delimiters ($self, $operator) {
-  return (
-    { start => "(", end => ")", display => "${operator}()" },
-    { start => "[", end => "]", display => "${operator}[]" },
-    { start => "<", end => ">", display => "${operator}<>" },
-    { start => "{", end => "}", display => "${operator}{}" },
-  );
+  state %tables;
+  (
+    $tables{$operator} //= [
+      { start => "(", end => ")", display => "${operator}()" },
+      { start => "[", end => "]", display => "${operator}[]" },
+      { start => "<", end => ">", display => "${operator}<>" },
+      { start => "{", end => "}", display => "${operator}{}" },
+    ]
+  )->@*
 }
 
 sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
   my @delimiters = $self->_get_supported_delimiters($operator);
 
-  for my $delim (@delimiters) {
-    my $count = 0;
-    for my $char ($delim->{start}, $delim->{end}) {
-      $count += () = $content =~ /\Q$char\E/g;
-    }
-    $delim->{count} = $count;
-  }
+  my %count = (
+    "(" => $content =~ tr/()//,
+    "[" => $content =~ tr/[]//,
+    "<" => $content =~ tr/<>//,
+    "{" => $content =~ tr/{}//,
+  );
 
   # Find optimal delimiter: handle unbalanced content, then preference order
   my ($optimal) = sort {
-    $a->{count} <=> $b->{count} ||  # Handle unbalanced first
-      $self->delimiter_preference_order($a->{start}) <=>  # Then prefer by order
-      $self->delimiter_preference_order($b->{start})
+         $count{ $a->{start} } <=> $count{ $b->{start} }
+      || $self->delimiter_preference_order($a->{start})
+      <=> $self->delimiter_preference_order($b->{start})
   } @delimiters;
 
   my $current_is_optimal
