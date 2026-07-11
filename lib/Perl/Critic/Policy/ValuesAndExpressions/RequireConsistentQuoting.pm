@@ -600,7 +600,7 @@ sub _has_quote_sensitive_escapes ($self, $string) {
       o\{[^}]*\}          |  # Octal braces: \o{033}
       c.                  |  # Control chars: \c[ \cA
       N\{[^}]*\}          |  # Named chars: \N{name} \N{U+263A}
-      [luLUEQ]               # String modification: \l \u \L \U \E \Q
+      [luLUEQF]              # String modification: \l \u \L \U \E \Q \F
     )
   /x
 }

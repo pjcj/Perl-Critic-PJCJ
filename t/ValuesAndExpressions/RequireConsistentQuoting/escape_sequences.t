@@ -334,6 +334,18 @@ subtest "String modification escape sequences" => sub {
     "Double quotes with only \\E escape should stay double quotes";
 };
 
+subtest "Foldcase escape sequences" => sub {
+  good $Policy, 'my $x = "\$a\FBAR";',
+    "Foldcase escape must not become a literal F in single quotes";
+  good $Policy, 'my $x = qq(a\Fb);',
+    "Foldcase escape keeps qq() like the other case escapes";
+  good $Policy, q(my $x = 'a\Fb';),
+    "Foldcase escape would change meaning in double quotes";
+
+  bad $Policy, 'my $x = "\$aFBAR";', "use ''",
+    "An unescaped F is not a quote-sensitive escape";
+};
+
 subtest "Incomplete and backslash escape sequences" => sub {
   # Test incomplete or malformed escape sequences
 
