@@ -7,6 +7,7 @@ use feature "signatures";
 use experimental "signatures";
 use lib qw( lib t/lib );
 
+use Cwd        qw( getcwd );
 use File::Temp qw( tempdir );
 use PPI        ();
 use Test2::V0  qw( done_testing is ok skip_all subtest );
@@ -34,7 +35,10 @@ sub setup_git_repo () {
   open my $fh, ">", "$dir/.gitattributes" or die "open: $!";
   print $fh "ignore.t custom-line-length=ignore\n";
   print $fh "wide.t custom-line-length=200\n";
+  print $fh "deep/nested.t custom-line-length=200\n";
   close $fh or die "close: $!";
+
+  mkdir "$dir/deep" or die "mkdir: $!";
 
   $dir
 }
@@ -138,11 +142,29 @@ sub test_get_gitattr_line_length () {
     "empty filename returns undef";
 }
 
+sub test_relative_path () {
+  my $dir  = require_git();
+  my $path = write_perl_file($dir, "deep/nested.t", "$Long_line\n");
+
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
+  is $policy->_get_gitattr_line_length($path), 200,
+    "absolute path matches slash-containing pattern";
+
+  my $orig = getcwd();
+  chdir $dir or die "chdir $dir: $!";
+  is $policy->_get_gitattr_line_length("deep/nested.t"), 200,
+    "relative path matches slash-containing pattern";
+  my @v = violations_for_file($policy, "deep/nested.t");
+  is scalar @v, 0, "81-char line within 200-char override via relative path";
+  chdir $orig or die "chdir $orig: $!";
+}
+
 subtest "ignore attribute suppresses violations" => \&test_ignore_attribute;
 subtest "numeric attribute overrides limit"      => \&test_numeric_attribute;
 subtest "unspecified attribute uses default"    => \&test_unspecified_attribute;
 subtest "no filename falls back to default"     => \&test_no_filename;
 subtest "feature disabled when parameter empty" => \&test_feature_disabled;
-subtest "_get_gitattr_line_length values" => \&test_get_gitattr_line_length;
+subtest "_get_gitattr_line_length values"     => \&test_get_gitattr_line_length;
+subtest "relative paths honour gitattributes" => \&test_relative_path;
 
 done_testing;

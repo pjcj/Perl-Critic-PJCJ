@@ -9,7 +9,7 @@ use experimental "signatures";
 use parent qw( Perl::Critic::Policy );
 
 use Encode              qw( decode FB_CROAK );
-use File::Basename      qw( dirname );
+use File::Basename      qw( basename dirname );
 use List::Util          qw( any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM words_from_string );
 use Perl::Critic::Utils::SourceLocation ();
@@ -111,8 +111,9 @@ sub _get_gitattr_line_length ($self, $filename) {
   return unless defined $attr && length $attr;
 
   my $output = eval {
-    my $dir = dirname($filename);
-    open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr, "--", $filename
+    my $dir  = dirname($filename);
+    my $base = basename($filename);
+    open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr, "--", $base
       or return;
     my $result = do { local $/ = undef; <$fh> };
     close $fh or return;
