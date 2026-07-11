@@ -1,16 +1,19 @@
 #!/usr/bin/env perl
 
-use v5.28.0;
+use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is like subtest unlike );
+use Test2::V0    qw( done_testing is like skip_all subtest unlike );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
 use Cwd        qw( abs_path );
 use File::Temp qw( tempdir );
-use POSIX      qw( setsid );
+
+skip_all "the commit-msg hook needs POSIX process control" if $^O eq "MSWin32";
+
+use POSIX qw( setsid );
 
 my $Hook = abs_path("utils/commit-msg-hook");
 my $Work = tempdir(CLEANUP => 1);

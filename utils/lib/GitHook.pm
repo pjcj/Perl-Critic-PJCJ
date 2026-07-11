@@ -1,6 +1,6 @@
 package GitHook;
 
-use 5.28.0;
+use v5.26.0;
 use warnings;
 use experimental "signatures";
 

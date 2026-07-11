@@ -1,15 +1,17 @@
 #!/usr/bin/env perl
 
-use v5.28.0;
+use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is subtest );
+use Test2::V0    qw( done_testing is skip_all subtest );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
 use Cwd        qw( abs_path );
 use File::Temp qw( tempdir );
+
+skip_all "the prepare-commit-msg hook needs a POSIX shell" if $^O eq "MSWin32";
 
 my $Hook = abs_path("utils/prepare-commit-msg-hook");
 my $Work = tempdir(CLEANUP => 1);

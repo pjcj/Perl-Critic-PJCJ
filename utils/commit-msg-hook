@@ -2,7 +2,7 @@
 
 # Git commit message hook to check for some of our standards.
 
-use 5.28.0;
+use v5.26.0;
 use warnings;
 use warnings FATAL => qw( recursion );
 use utf8;

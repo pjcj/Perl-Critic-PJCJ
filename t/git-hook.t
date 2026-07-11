@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use v5.28.0;
+use v5.26.0;
 use strict;
 use warnings;
 
@@ -47,6 +47,7 @@ subtest "Branch detection outside a repository" => sub {
 };
 
 subtest "A symlinked hook finds the shared library" => sub {
+  skip_all "the hook runs only under a POSIX shell" if $^O eq "MSWin32";
   my $dir  = tempdir(CLEANUP => 1);
   my $link = "$dir/commit-msg";
   symlink abs_path("utils/commit-msg-hook"), $link
