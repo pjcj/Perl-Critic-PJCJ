@@ -15,7 +15,11 @@ sub new ($class, %args) {
 }
 
 sub violates ($self, $elem, $doc) {
-  ref $elem eq $self->{flags} ? $self : ()
+  my $flags = $self->{flags};
+  return ref $elem eq $flags ? $self : () unless ref $flags eq "HASH";
+  my $explanation = $flags->{ ref $elem } or return ();
+  $self->{explanation} = $explanation;
+  $self
 }
 
 sub explanation ($self) { $self->{explanation} }
@@ -77,12 +81,15 @@ fixer down those defensive paths and assert that unsafe fixes are declined.
 =head2 new (%args)
 
 Create a policy double. C<flags> is the PPI class to flag and C<explanation>
-is the explanation each violation carries.
+is the explanation each violation carries. Alternatively C<flags> may be a
+hashref mapping PPI classes to explanations, so different classes can carry
+different explanations.
 
 =head2 violates ($elem, $doc)
 
 Return the double itself as the violation for every element whose class
-matches C<flags>.
+matches C<flags>. When C<flags> is a hashref, the element's class selects
+the explanation.
 
 =head2 explanation
 

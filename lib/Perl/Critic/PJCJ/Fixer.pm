@@ -282,17 +282,29 @@ sub _restore_crlf ($self, $source, $fixed) {
   $fixed                       =~ s/\n/\r\n/gr
 }
 
-sub fix ($self, $source, %opts) {
-  my $lines    = $opts{lines} ? [$opts{lines}->@*] : undef;
-  my $previous = "";
-  my $current  = $source;
-  for (1 .. $Max_passes) {
-    last if $current eq $previous;
-    $previous = $current;
-    $current  = $self->_fix_once($current, $lines);
-  }
+sub _finish ($self, $source, $current) {
   return $current if $current eq $source;
   $self->_restore_crlf($source, $current)
+}
+
+sub fix ($self, $source, %opts) {
+  my $lines   = $opts{lines} ? [$opts{lines}->@*] : undef;
+  my $current = $source;
+  my %seen;
+  for (1 .. $Max_passes) {
+    $seen{$current} = 1;
+    my $next = $self->_fix_once($current, $lines);
+    return $self->_finish($source, $next) if $next eq $current;
+    if ($seen{$next}) {
+      warn "Perl::Critic::PJCJ::Fixer: fixes oscillate without "
+        . "converging; the result may still violate the policy\n";
+      return $self->_finish($source, $next);
+    }
+    $current = $next;
+  }
+  warn "Perl::Critic::PJCJ::Fixer: fixes still changing after "
+    . "$Max_passes passes; giving up\n";
+  $self->_finish($source, $current)
 }
 
 "
@@ -343,6 +355,9 @@ needed, since one fix can enable the next suggestion.
 Source receiving no applied fix is returned byte for byte, and a file using
 CRLF line endings throughout keeps them. A file with mixed line endings is
 normalised to LF when a fix applies.
+
+A repeating or non-converging sequence of fixes is reported on standard
+error and the current state returned.
 
 The C<lines> option restricts fixes to elements starting within an inclusive
 line range, while still parsing the whole document:
