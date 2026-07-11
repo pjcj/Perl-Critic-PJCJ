@@ -40,22 +40,6 @@ Add a hash attribute `_interpolation_cache` to the policy object, keyed on
 string content. Clear it in `prepare_to_scan_document` (called by Perl::Critic
 before each file). Look up before calling `PPI::Document->new`.
 
-## Enable perlcritic in CI test suite
-
-**Area:** CI / testing
-
-### Problem
-
-`[Test::Perl::Critic]` is commented out in `dist.ini` with the note "package
-name and version is too long". This means the distribution does not run its own
-policies during `dzil test`.
-
-### Why not implemented
-
-The underlying problem (package name length) needs investigation to determine
-whether it is a Perl::Critic limitation or a configuration matter. Enabling it
-without resolving the root cause would break the build.
-
 ## Add coverage reporting to CI
 
 **Area:** CI
