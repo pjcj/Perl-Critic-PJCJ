@@ -152,18 +152,8 @@ sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
       $self->delimiter_preference_order($b->{start})
   } @delimiters;
 
-  my $current_is_bracket = 0;
-  my $current_delim;
-  for my $delim (@delimiters) {
-    if ($delim->{start} eq $start && $delim->{end} eq $end) {
-      $current_delim      = $delim;
-      $current_is_bracket = 1;
-      last;
-    }
-  }
-
-  my $current_is_optimal = 0;
-  $current_is_optimal = ($current_delim eq $optimal) if $current_is_bracket;
+  my $current_is_optimal
+    = $optimal->{start} eq $start && $optimal->{end} eq $end ? 1 : 0;
 
   ($optimal, $current_is_optimal)
 }
