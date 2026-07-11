@@ -61,6 +61,16 @@ sub default_themes   { qw( cosmetic formatting ) }
 
 sub applies_to { "PPI::Document" }
 
+sub _first_tokens_by_line ($self, $doc) {
+  my %first;
+  for my $token ($doc->tokens) {
+    my $line = $token->line_number;
+    next unless defined $line;
+    $first{$line} //= $token;
+  }
+  \%first
+}
+
 sub violates ($self, $elem, $doc) {
   my $override = $self->_get_gitattr_line_length($doc->filename);
   return if defined $override && $override eq "ignore";
@@ -77,6 +87,7 @@ sub violates ($self, $elem, $doc) {
   my @lines = split /\n/, $source;
 
   my @violations;
+  my $token_map;
 
   for my $line_num (0 .. $#lines) {
     my $length = length $lines[$line_num];
@@ -85,8 +96,9 @@ sub violates ($self, $elem, $doc) {
       my $violation_desc
         = "Line is $length characters long (exceeds $max_length)";
 
-      # Find a token on this line for accurate line number reporting
-      my $line_token = $self->_find_token_on_line($doc, $line_num + 1);
+      # Anchor at the first token on this line for accurate reporting
+      $token_map //= $self->_first_tokens_by_line($doc);
+      my $line_token = $token_map->{ $line_num + 1 };
 
       # If no token found, create synthetic element with correct line number
       if (!$line_token) {
@@ -125,25 +137,6 @@ sub _get_gitattr_line_length ($self, $filename) {
   return "ignore" if $value eq "ignore";
   return $value   if $value =~ /^\d+$/;
   return
-}
-
-sub _find_token_on_line ($self, $doc, $target_line) {
-  my $found_token;
-
-  $doc->find(
-    sub ($top, $elem) {
-      return 0 unless $elem->isa("PPI::Token");
-
-      my $line = $elem->line_number;
-      if (defined $line && $line == $target_line) {
-        $found_token = $elem;
-        return 1;
-      }
-      return 0;
-    }
-  );
-
-  $found_token
 }
 
 "
