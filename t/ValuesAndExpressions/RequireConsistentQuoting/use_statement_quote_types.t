@@ -306,6 +306,13 @@ subtest "Degenerate and version-only use statements" => sub {
   good $Policy, "use Baz 1.23", "a lone version number is exempt";
   bad $Policy, 'use POSIX 1.23 "floor";', "use qw()",
     "version plus import list uses qw for the strings";
+  bad $Policy, 'use POSIX 1.23 "floor", "ceil"', "use qw()",
+    "version plus several imports uses qw for the strings";
+  good $Policy, "use POSIX 1.23 qw( floor )", "the target form is accepted";
+  good $Policy, 'use Foo "a", 1.23',
+    "a number inside the import list is complex";
+  bad $Policy, 'use Foo (1.23, "a")', "remove parentheses",
+    "a parenthesised list holding a number is complex";
 };
 
 subtest "Pragma single-argument quoting" => sub {

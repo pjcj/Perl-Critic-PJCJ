@@ -44,8 +44,13 @@ subtest "Arguments which cannot become qw words are declined" => sub {
 subtest "Module versions stay in place" => sub {
   fixes 'use POSIX 1.23 "floor";', "use POSIX 1.23 qw( floor );",
     "a leading module version survives the qw rewrite";
+  fixes 'use POSIX 1.23 "floor", "ceil";', "use POSIX 1.23 qw( floor ceil );",
+    "several imports after a version merge into one qw";
+  fixes 'use Mod v1.2.3 "floor";', "use Mod v1.2.3 qw( floor );",
+    "a v-string version survives the qw rewrite";
   unchanged 'use Foo 1.23, "bar";',
     "a number in the import list still declines the rewrite";
+  unchanged 'use Foo "a", 1.23;', "a trailing number declines the rewrite";
 };
 
 subtest "Only wrongly delimited qw tokens are re-delimited" => sub {

@@ -380,11 +380,12 @@ sub _analyse_argument_types ($self, $elem, @args) {
 
   my $fat_comma
     = any { $_->isa("PPI::Token::Operator") && $_->content eq "=>" } @args;
-  # Anything the qw rewrite doesn't understand makes the statement complex
+  # Anything the qw rewrite doesn't understand makes the statement
+  # complex. A real module version never gets here: ->arguments excludes
+  # it, so any number is part of the import list itself.
   my $complex_expr = any {
     !(   $_->isa("PPI::Token::Quote")
       || $_->isa("PPI::Token::QuoteLike::Words")
-      || $_->isa("PPI::Token::Number")
       || ($_->isa("PPI::Token::Operator") && $_->content eq "=>")
       || ($_->isa("PPI::Token::Word")     && $_->content =~ /\A-\w+\z/))
   } @args;
