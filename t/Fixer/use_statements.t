@@ -67,6 +67,12 @@ subtest "Parentheses are removed" => sub {
     "complex expressions lose parentheses";
 };
 
+subtest "Call parentheses are left alone" => sub {
+  unchanged 'use lib File::Spec->catdir($dir, "lib");',
+    "method call parentheses survive";
+  unchanged "use constant N => calc();", "function call parentheses survive";
+};
+
 subtest "Comments in argument lists survive" => sub {
   unchanged qq(use Foo "a", # keep me\n  "b";),
     "a commented argument list is left alone";

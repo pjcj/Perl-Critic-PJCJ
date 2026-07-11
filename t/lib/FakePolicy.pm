@@ -40,6 +40,10 @@ sub has_quote_sensitive_escapes ($self, $string) {
   $self->{real}->has_quote_sensitive_escapes($string)
 }
 
+sub statement_level_list ($self, $elem) {
+  $self->{real}->statement_level_list($elem)
+}
+
 "
 And if I only could
 I'd make a deal with God
@@ -101,6 +105,10 @@ Delegated to the real policy.
 Delegated to the real policy.
 
 =head2 has_quote_sensitive_escapes ($string)
+
+Delegated to the real policy.
+
+=head2 statement_level_list ($elem)
 
 Delegated to the real policy.
 

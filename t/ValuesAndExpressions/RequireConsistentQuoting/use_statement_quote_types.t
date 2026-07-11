@@ -210,6 +210,17 @@ subtest "Complex expressions should have no parentheses" => sub {
     "hash reference with parentheses should remove parentheses";
 };
 
+subtest "Call parentheses are not statement parentheses" => sub {
+  good $Policy, 'use lib File::Spec->catdir($dir, "lib");',
+    "method call parentheses do not count as statement parentheses";
+  good $Policy, "use constant N => calc();",
+    "function call parentheses do not count as statement parentheses";
+  good $Policy, "use constant PI => atan2(1, 1) * 4;",
+    "call parentheses inside an expression are left alone";
+  bad $Policy, 'use Foo 1.23 ($x)', "remove parentheses",
+    "a wrapper list after a version number is still statement-level";
+};
+
 subtest "Special cases should not trigger violations" => sub {
   # Version numbers
   good $Policy, "use Module 1.23",

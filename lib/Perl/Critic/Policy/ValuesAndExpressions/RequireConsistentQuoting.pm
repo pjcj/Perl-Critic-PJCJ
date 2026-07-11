@@ -369,6 +369,13 @@ sub check_quote_operators ($self, $elem) {
   return
 }
 
+sub statement_level_list ($self, $elem) {
+  # No module means no arguments; ->arguments dies on a bare "use"
+  return unless $elem->module;
+  my ($first) = $elem->arguments;
+  $first && $first->isa("PPI::Structure::List") ? $first : undef
+}
+
 sub _analyse_argument_types ($self, $elem, @args) {
 
   my $fat_comma
@@ -391,9 +398,8 @@ sub _analyse_argument_types ($self, $elem, @args) {
       || $_->isa("PPI::Token::Quote::Interpolate")
   } @args;
 
-  # Check if the original use statement has parentheses
-  my @children = $elem->children;
-  my $parens   = any { $_->isa("PPI::Structure::List") } @children;
+  # Statement-level parentheses: a list wrapping the whole argument list
+  my $parens = defined $self->statement_level_list($elem);
 
   ($fat_comma, $complex_expr, $version, $simple_strings, $q_operators, $parens)
 }
@@ -1123,6 +1129,15 @@ double quotes. Used by both C<check_use_statement> and C<_is_in_use_statement>
 to determine whether a use/no statement's arguments require interpolation,
 which affects whether C<qw()> can be suggested and whether individual tokens
 should be checked under normal quoting rules.
+
+=head2 statement_level_list ($elem)
+
+Returns the C<PPI::Structure::List> wrapping a use/no statement's whole
+argument list (the parentheses in C<use Foo ( ... );>), or C<undef> when
+there is none. A list nested inside the arguments, such as the parentheses
+of a function or method call, does not qualify. Shared with
+L<Perl::Critic::PJCJ::Fixer> so the policy and the fixer can never disagree
+about which parentheses a "remove parentheses" violation means.
 
 =head2 _analyse_argument_types
 

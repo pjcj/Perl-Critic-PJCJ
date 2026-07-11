@@ -174,7 +174,7 @@ sub _apply_replacement ($self, $elem, $fix) {
 }
 
 sub _remove_include_parens ($self, $elem) {
-  my ($list) = grep $_->isa("PPI::Structure::List"), $elem->children;
+  my $list = $self->{policy}->statement_level_list($elem);
   return unless $list;
 
   my @kids = $list->children;
