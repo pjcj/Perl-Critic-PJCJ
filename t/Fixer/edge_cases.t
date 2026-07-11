@@ -16,6 +16,19 @@ subtest "Unparsable and empty sources pass through" => sub {
 
 subtest "Line endings are preserved in accepted source" => sub {
   unchanged qq(my \$x = 1;\r\n), "clean CRLF source is byte-identical";
+  unchanged "my \@w = qw/( [ < { \\\\/;\r\n",
+    "CRLF source whose only fix is declined is byte-identical";
+};
+
+subtest "Line endings are preserved in fixed source" => sub {
+  fixes qq(my \$x = 'hello';\r\n), qq(my \$x = "hello";\r\n),
+    "a fixed CRLF file keeps CRLF endings";
+  fixes qq(my \$a = 'one';\r\nmy \$b = 'two';\r\n),
+    qq(my \$a = "one";\r\nmy \$b = "two";\r\n),
+    "every line keeps CRLF when any line is fixed";
+  fixes qq(my \$x = 'a';\nmy \$y = 'b';\r\n),
+    qq(my \$x = "a";\nmy \$y = "b";\n),
+    "mixed endings are normalised to LF when a fix applies";
 };
 
 subtest "Delimiters are escaped when no clean delimiter exists" => sub {
@@ -35,6 +48,8 @@ subtest "Fallback re-delimiting inside use statements" => sub {
     "interpolating argument restricts the fix to the qw token";
   fixes 'use Foo qw[ a ], qw{ b }, $v;', 'use Foo qw( a ), qw( b ), $v;',
     "every qw token is re-delimited when a full rewrite is unsafe";
+  unchanged 'use Foo qw[ a\( ], $v;',
+    "a qw token whose re-delimiting is unsafe is left alone";
 };
 
 subtest "Unterminated quote tokens pass through" => sub {

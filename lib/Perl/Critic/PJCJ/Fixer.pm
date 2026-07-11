@@ -169,19 +169,21 @@ sub _value_preserved ($self, $elem, $new_source) {
 
 sub _apply_replacement ($self, $elem, $fix) {
   my $new = $self->_replacement($elem, $fix);
-  return unless defined $new;
-  $elem->set_content($new) if $self->_value_preserved($elem, $new);
+  return 0 unless defined $new && $self->_value_preserved($elem, $new);
+  $elem->set_content($new);
+  1
 }
 
 sub _remove_include_parens ($self, $elem) {
   my $list = $self->{policy}->statement_level_list($elem);
-  return unless $list;
+  return 0 unless $list;
 
   my @kids = $list->children;
   while (@kids && !$kids[0]->significant)  { (shift @kids)->delete }
   while (@kids && !$kids[-1]->significant) { (pop @kids)->delete }
   $list->start->set_content("");
   $list->finish->set_content("");
+  1
 }
 
 sub _include_argument_span ($self, $elem) {
@@ -207,10 +209,10 @@ sub _span_has_comment ($self, @span) {
 sub _fix_include ($self, $elem, $fix) {
   return $self->_remove_include_parens($elem)
     if $fix->{type} eq "remove_parens";
-  return unless $fix->{type} eq "operator" && $fix->{op} eq "qw";
+  return 0 unless $fix->{type} eq "operator" && $fix->{op} eq "qw";
 
   my @span = $self->_include_argument_span($elem);
-  return unless @span;
+  return 0 unless @span;
 
   my @words;
   if (
@@ -220,14 +222,16 @@ sub _fix_include ($self, $elem, $fix) {
   ) {
     $span[0]->insert_before(PPI::Token->new("qw( @words )"));
     $_->delete for @span;
-    return;
+    return 1;
   }
 
-  my $qw_tokens = $elem->find("PPI::Token::QuoteLike::Words") or return;
+  my $qw_tokens = $elem->find("PPI::Token::QuoteLike::Words") or return 0;
+  my $applied   = 0;
   for my $token (@$qw_tokens) {
-    $self->_apply_replacement($token, $fix)
-      if $token->content !~ /\Aqw\s*\Q$fix->{start}\E/;
+    next         if $token->content =~ /\Aqw\s*\Q$fix->{start}\E/;
+    $applied = 1 if $self->_apply_replacement($token, $fix);
   }
+  $applied
 }
 
 sub _apply_fix ($self, $elem, $fix) {
@@ -260,14 +264,22 @@ sub _fix_once ($self, $source, $lines) {
     }
   );
   return $source unless @fixes;
+  my $applied = 0;
   for my $entry (@fixes) {
     my ($elem, $fix) = @$entry;
     my $before = $elem->content =~ tr/\n//;
-    $self->_apply_fix($elem, $fix);
+    $applied = 1 if $self->_apply_fix($elem, $fix);
     $self->_shift_range($lines, ($elem->content =~ tr/\n//) - $before);
   }
+  return $source unless $applied;
 
   $doc->serialize
+}
+
+sub _restore_crlf ($self, $source, $fixed) {
+  return $fixed unless $source =~ /\r\n/;
+  return $fixed if $source     =~ /\r(?!\n)|(?<!\r)\n/;
+  $fixed                       =~ s/\n/\r\n/gr
 }
 
 sub fix ($self, $source, %opts) {
@@ -279,7 +291,8 @@ sub fix ($self, $source, %opts) {
     $previous = $current;
     $current  = $self->_fix_once($current, $lines);
   }
-  $current
+  return $current if $current eq $source;
+  $self->_restore_crlf($source, $current)
 }
 
 "
@@ -326,6 +339,10 @@ Create a new fixer.
 Take Perl source as a string and return the fixed source. Source that cannot be
 parsed is returned unchanged. Fixing repeats until no further changes are
 needed, since one fix can enable the next suggestion.
+
+Source receiving no applied fix is returned byte for byte, and a file using
+CRLF line endings throughout keeps them. A file with mixed line endings is
+normalised to LF when a fix applies.
 
 The C<lines> option restricts fixes to elements starting within an inclusive
 line range, while still parsing the whole document:
