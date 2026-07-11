@@ -11,6 +11,10 @@ use experimental qw( signatures );
 use lib                       qw( lib t/lib );
 use FakePolicy                ();
 use Perl::Critic::PJCJ::Fixer ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting qw(
+  desc_double
+  desc_single
+);
 
 my $Fixer = Perl::Critic::PJCJ::Fixer->new;
 
@@ -44,8 +48,8 @@ subtest "Line ranges do not drift when fixes shorten the document" => sub {
 subtest "Oscillating fixes warn and stop early" => sub {
   my $fixer = Perl::Critic::PJCJ::Fixer->new;
   $fixer->{policy} = FakePolicy->new(flags => {
-    "PPI::Token::Quote::Single" => 'use ""',
-    "PPI::Token::Quote::Double" => "use ''",
+    "PPI::Token::Quote::Single" => desc_double,
+    "PPI::Token::Quote::Double" => desc_single,
   });
   my $in = q(my $x = 'a';);
   my $out;

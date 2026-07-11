@@ -10,35 +10,41 @@ use experimental qw( signatures );
 
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting qw(
+  desc_double
+  desc_optimal
+  desc_remove_parens
+  desc_single
+  desc_use_qw
+);
 use ViolationFinder qw( find_violations );
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
 subtest "Plain quote explanations" => sub {
-  is $Policy->fix_data('use ""'), { type => "double" },
+  is $Policy->fix_data(desc_double), { type => "double" },
     'use "" maps to double';
-  is $Policy->fix_data("use ''"), { type => "single" },
+  is $Policy->fix_data(desc_single), { type => "single" },
     "use '' maps to single";
 };
 
 subtest "Use statement explanations" => sub {
-  is $Policy->fix_data("remove parentheses"), { type => "remove_parens" },
+  is $Policy->fix_data(desc_remove_parens), { type => "remove_parens" },
     "remove parentheses maps to remove_parens";
 };
 
 subtest "Operator explanations" => sub {
-  is $Policy->fix_data("use qw()"),
+  is $Policy->fix_data(desc_use_qw),
     { type => "operator", op => "qw", start => "(", end => ")" },
     "use qw() carries operator and delimiters";
-  is $Policy->fix_data("use q[]"),
+  is $Policy->fix_data(desc_optimal("q[]")),
     { type => "operator", op => "q", start => "[", end => "]" },
     "use q[] carries operator and delimiters";
-  is $Policy->fix_data("use qq<>"),
+  is $Policy->fix_data(desc_optimal("qq<>")),
     { type => "operator", op => "qq", start => "<", end => ">" },
     "use qq<> carries operator and delimiters";
-  is $Policy->fix_data("use qx{}"),
+  is $Policy->fix_data(desc_optimal("qx{}")),
     { type => "operator", op => "qx", start => "{", end => "}" },
     "use qx{} carries operator and delimiters";
 };

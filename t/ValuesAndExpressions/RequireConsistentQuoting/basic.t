@@ -10,7 +10,9 @@ use experimental qw( signatures );
 
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting qw(
+  desc_double
+);
 use ViolationFinder qw( bad count_violations good );
 
 my $Policy
@@ -41,7 +43,7 @@ subtest "Policy methods" => sub {
 };
 
 subtest "Basic functionality" => sub {
-  bad $Policy, q(my $x = 'hello'), 'use ""',
+  bad $Policy, q(my $x = 'hello'), desc_double,
     "Single quoted simple string should use double quotes";
   good $Policy, 'my $x = "hello"', "Double quoted simple string";
 

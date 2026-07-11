@@ -10,7 +10,8 @@ use experimental qw( signatures );
 
 # Test that unterminated quote tokens are left alone
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting
+  qw( desc_double desc_use_qw );
 use ViolationFinder qw( bad good );
 
 my $Policy
@@ -28,9 +29,9 @@ subtest "Unterminated quote tokens are not flagged" => sub {
 subtest "Complete final tokens are still flagged" => sub {
   # No trailing newline or semicolon: the quote is the final token, so
   # these exercise the reparse probe's complete path
-  bad $Policy, q(my $x = 'ab'), 'use ""',
+  bad $Policy, q(my $x = 'ab'), desc_double,
     "terminated single quote at end of file";
-  bad $Policy, 'my @w = qw/ a b /', "use qw()",
+  bad $Policy, 'my @w = qw/ a b /', desc_use_qw,
     "terminated qw at end of file";
 };
 
