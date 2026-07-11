@@ -238,15 +238,20 @@ sub violates ($self, $elem, $) {
     if ($last->isa("PPI::Token::Quote") || $last->isa("PPI::Token::QuoteLike"))
     && !$self->_quote_token_complete($last);
 
+  # Two shared guards apply to token classes before dispatch: tokens inside
+  # a use/no statement are handled by check_use_statement, and string tokens
+  # with literal newlines are exempt (see the Newlines POD section)
+  if ($elem->isa("PPI::Token")) {
+    return if $self->_is_in_use_statement($elem);
+    return
+      if $elem->isa("PPI::Token::Quote") && $self->_has_newlines($elem->string);
+  }
+
   $self->$method($elem)
 }
 
 sub check_single_quoted ($self, $elem) {
-  return if $self->_is_in_use_statement($elem);
   my $string = $elem->string;
-
-  # Special case: strings with newlines don't follow the rules
-  return if $self->_has_newlines($string);
 
   my $has_single_quotes = index($string, "'") != -1;
   my $has_double_quotes = index($string, '"') != -1;
@@ -267,13 +272,8 @@ sub check_single_quoted ($self, $elem) {
 }
 
 sub check_double_quoted ($self, $elem) {
-  return if $self->_is_in_use_statement($elem);
-
   my $string  = $elem->string;
   my $content = $elem->content;
-
-  # Special case: strings with newlines don't follow the rules
-  return if $self->_has_newlines($string);
 
   # Strip delimiters and remove \\ pairs so escaped backslashes before the
   # closing delimiter aren't mistaken for escaped specials
@@ -308,12 +308,7 @@ sub check_double_quoted ($self, $elem) {
 }
 
 sub check_q_literal ($self, $elem) {
-  return if $self->_is_in_use_statement($elem);
-
   my $string = $elem->string;
-
-  # Special case: strings with newlines don't follow the rules
-  return if $self->_has_newlines($string);
 
   my $has_single_quotes = index($string, "'") != -1;
   my $has_double_quotes = index($string, '"') != -1;
@@ -340,12 +335,7 @@ sub check_q_literal ($self, $elem) {
 }
 
 sub check_qq_interpolate ($self, $elem) {
-  return if $self->_is_in_use_statement($elem);
-
   my $string = $elem->string;
-
-  # Special case: strings with newlines don't follow the rules
-  return if $self->_has_newlines($string);
 
   # Only preserve qq() if escape sequences are actually needed
   return $self->check_delimiter_optimisation($elem)
@@ -370,8 +360,6 @@ sub check_qq_interpolate ($self, $elem) {
 }
 
 sub check_quote_operators ($self, $elem) {
-  return if $self->_is_in_use_statement($elem);
-
   my ($current_start, $current_end, $content, $operator)
     = $self->parse_quote_token($elem);
   return unless defined $current_start;
@@ -871,6 +859,11 @@ L<perlimports|https://metacpan.org/pod/perlimports>.
 Strings containing newlines do not follow the rules.  But note that outside of a
 few very special cases, strings with literal newlines are not a good idea.
 
+This exemption applies to string tokens only (C<''>, C<"">, C<q()>, C<qq()>).
+C<qw()> and C<qx()> keep their delimiter checks, because there a newline is
+merely a word separator or command formatting and does not affect the delimiter
+choice.
+
   # Allowed
   my $text = qq(
     line 1
@@ -1052,6 +1045,11 @@ The main entry point for policy violation checking. Uses a dispatch table to
 route different quote token types to their appropriate checking methods. This
 design allows for efficient handling of the six different PPI token types that
 represent quoted strings and quote-like operators.
+
+Two shared guards are applied here, before dispatch, rather than in each
+checking method: tokens inside a C<use>/C<no> statement (handled instead by
+C<check_use_statement>) and string tokens containing literal newlines are both
+left alone.
 
 =head2 would_interpolate
 

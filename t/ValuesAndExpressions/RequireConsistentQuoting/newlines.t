@@ -12,6 +12,8 @@ use experimental qw( signatures );
 use lib qw( lib t/lib );
 use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting qw(
   desc_double
+  desc_optimal
+  desc_use_qw
 );
 use ViolationFinder qw( bad good );
 
@@ -139,6 +141,30 @@ subtest "Edge cases" => sub {
   # String without escape sequences or newlines should still be checked
   bad $Policy, <<~'EOCODE', desc_double, "simple string without newlines";
     my $text = 'hello world';
+    EOCODE
+};
+
+subtest "qw and qx with newlines keep delimiter checks" => sub {
+  # Newlines exempt string tokens only; qw()/qx() keep their delimiter checks
+  bad $Policy, <<~'EOCODE', desc_use_qw, "multi-line qw{} still flagged";
+    my @w = qw{
+      alpha
+      beta
+    };
+    EOCODE
+
+  good $Policy, <<~'EOCODE', "multi-line qw() is fine";
+    my @w = qw(
+      alpha
+      beta
+    );
+    EOCODE
+
+  bad $Policy,
+    <<~'EOCODE', desc_optimal("qx()"), "multi-line qx{} still flagged";
+    my $out = qx{
+      ls
+    };
     EOCODE
 };
 
