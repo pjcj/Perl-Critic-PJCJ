@@ -146,6 +146,35 @@ sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
   ($optimal, $current_is_optimal)
 }
 
+sub fix_data ($self, $explanation) {
+  state $map = do {
+    my %map = (
+      $Expl_double        => { type => "double" },
+      $Expl_single        => { type => "single" },
+      $Expl_remove_parens => { type => "remove_parens" },
+    );
+    for my $op (qw( q qq qw qx )) {
+      for my $delim ($self->_get_supported_delimiters($op)) {
+        $map{ sprintf $Expl_optimal, $delim->{display} } = {
+          type  => "operator",
+          op    => $op,
+          start => $delim->{start},
+          end   => $delim->{end},
+        };
+      }
+    }
+    my ($qw_delim) = $self->_get_supported_delimiters("qw");
+    $map{$Expl_use_qw} = {
+      type  => "operator",
+      op    => "qw",
+      start => $qw_delim->{start},
+      end   => $qw_delim->{end},
+    };
+    \%map
+  };
+  $map->{$explanation}
+}
+
 sub check_delimiter_optimisation ($self, $elem) {
   my ($start, $end, $content, $operator) = $self->parse_quote_token($elem);
   return unless defined $start;
@@ -856,7 +885,6 @@ This Policy is not configurable except for the standard options.
   use Qux ( key => "value" );             # fat comma should have no parentheses
   use Quux ( $VERSION );                  # complex expressions need no
                                           # parentheses
-  no warnings ( "experimental" );         # simple strings should use qw()
   use feature 'class';                    # pragma single arg prefers ""
 
   # Good
@@ -872,6 +900,7 @@ This Policy is not configurable except for the standard options.
   use feature "class";                    # pragma, single arg, double quotes
   use strict "refs";                      # pragma, single arg, double quotes
   no warnings "experimental";             # no pragma, single arg, double quotes
+  no warnings ( "experimental" );         # parentheses are also exempt here
   use feature qw( class );                # qw() is still fine too
 
   # Fat comma examples (no parentheses)
@@ -963,6 +992,24 @@ delimiters.
 Only considers bracket delimiters C<()>, C<[]>, C<< <> >>, C<{}> as valid
 options, rejecting exotic delimiters like C</>, C<|>, C<#>. When multiple
 delimiters work equally well, uses the preference order to break ties.
+
+=head2 fix_data
+
+Maps a violation's explanation string to structured fix data, so that tools
+such as L<Perl::Critic::PJCJ::Fixer> need not parse the explanation wording
+themselves. The mapping is built from the same constants used to create the
+violations, so the two cannot drift apart.
+
+Returns a hashref describing the fix, or C<undef> for an unknown explanation:
+
+  { type => "double" }         # use ""
+  { type => "single" }         # use ''
+  { type => "remove_parens" }  # remove parentheses
+  { type  => "operator",       # use qw(), use q[], use qq<> ...
+    op    => "qw",
+    start => "(",
+    end   => ")",
+  }
 
 =head2 check_delimiter_optimisation
 

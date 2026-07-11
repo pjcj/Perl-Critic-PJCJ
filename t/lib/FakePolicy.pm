@@ -20,6 +20,10 @@ sub violates ($self, $elem, $doc) {
 
 sub explanation ($self) { $self->{explanation} }
 
+sub fix_data ($self, $explanation) {
+  $self->{real}->fix_data($explanation)
+}
+
 sub parse_quote_token ($self, $elem) {
   $self->{real}->parse_quote_token($elem)
 }
@@ -71,6 +75,10 @@ matches C<flags>.
 =head2 explanation
 
 The configured explanation.
+
+=head2 fix_data ($explanation)
+
+Delegated to the real policy.
 
 =head2 parse_quote_token ($elem)
 

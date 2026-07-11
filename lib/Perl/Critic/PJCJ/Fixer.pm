@@ -11,7 +11,6 @@ use PPI        ();
 use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 
 my $Max_passes    = 10;
-my %End_delimiter = ("(" => ")", "[" => "]", "<" => ">", "{" => "}");
 my %Interpolating = map { $_ => 1 } qw(
   PPI::Token::Quote::Double
   PPI::Token::Quote::Interpolate
@@ -101,30 +100,31 @@ sub _operator_replacement ($self, $elem, $op, $start, $end) {
   defined $content ? "$op$start$content$end" : undef
 }
 
-sub _replacement ($self, $elem, $expl) {
+sub _replacement ($self, $elem, $fix) {
   my $class = ref $elem;
+  my $type  = $fix->{type};
 
-  if ($expl =~ /\Ause (qw|qq|qx|q)([(\[<{])/) {
-    return $self->_operator_replacement($elem, $1, $2, $End_delimiter{$2});
-  }
+  return $self->_operator_replacement($elem, $fix->{op}, $fix->{start},
+    $fix->{end})
+    if $type eq "operator";
 
   if ($class eq "PPI::Token::Quote::Single") {
     return $self->_encode_double($self->_decode_single($elem->string))
-      if $expl eq 'use ""';
+      if $type eq "double";
   } elsif ($class eq "PPI::Token::Quote::Double") {
     return $self->_encode_single($self->_decode_double($elem->string))
-      if $expl eq "use ''";
+      if $type eq "single";
   } elsif ($class eq "PPI::Token::Quote::Literal") {
     my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
     my $value = $self->_decode_q($raw, $start, $end);
-    return $self->_encode_double($value) if $expl eq 'use ""';
-    return $self->_encode_single($value) if $expl eq "use ''";
+    return $self->_encode_double($value) if $type eq "double";
+    return $self->_encode_single($value) if $type eq "single";
   } elsif ($class eq "PPI::Token::Quote::Interpolate") {
     my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
     return '"' . $self->_decode_delimiters($raw, $start, $end) . '"'
-      if $expl eq 'use ""';
+      if $type eq "double";
     return $self->_encode_single($self->_decode_double($raw))
-      if $expl eq "use ''";
+      if $type eq "single";
   }
 
   undef
@@ -153,8 +153,8 @@ sub _value_preserved ($self, $elem, $new_source) {
   $self->_normalised_value($token) eq $self->_normalised_value($elem)
 }
 
-sub _apply_replacement ($self, $elem, $expl) {
-  my $new = $self->_replacement($elem, $expl);
+sub _apply_replacement ($self, $elem, $fix) {
+  my $new = $self->_replacement($elem, $fix);
   return unless defined $new;
   $elem->set_content($new) if $self->_value_preserved($elem, $new);
 }
@@ -233,9 +233,10 @@ sub _span_has_comment ($self, @span) {
   } @span
 }
 
-sub _fix_include ($self, $elem, $expl) {
-  return $self->_remove_include_parens($elem) if $expl eq "remove parentheses";
-  return unless $expl eq "use qw()";
+sub _fix_include ($self, $elem, $fix) {
+  return $self->_remove_include_parens($elem)
+    if $fix->{type} eq "remove_parens";
+  return unless $fix->{type} eq "operator" && $fix->{op} eq "qw";
 
   my @span = $self->_include_argument_span($elem);
   return unless @span;
@@ -253,15 +254,15 @@ sub _fix_include ($self, $elem, $expl) {
 
   my $qw_tokens = $elem->find("PPI::Token::QuoteLike::Words") or return;
   for my $token (@$qw_tokens) {
-    $self->_apply_replacement($token, "use qw()")
-      if $token->content !~ /\Aqw\s*\(/;
+    $self->_apply_replacement($token, $fix)
+      if $token->content !~ /\Aqw\s*\Q$fix->{start}\E/;
   }
 }
 
-sub _apply_fix ($self, $elem, $explanation) {
+sub _apply_fix ($self, $elem, $fix) {
   $elem->isa("PPI::Statement::Include")
-    ? $self->_fix_include($elem, $explanation)
-    : $self->_apply_replacement($elem, $explanation)
+    ? $self->_fix_include($elem, $fix)
+    : $self->_apply_replacement($elem, $fix)
 }
 
 sub _in_range ($self, $elem, $lines) {
@@ -281,16 +282,17 @@ sub _fix_once ($self, $source, $lines) {
   $doc->find(
     sub ($top, $elem) {
       my ($violation) = $self->{policy}->violates($elem, $doc);
-      push @fixes, [$elem, $violation->explanation]
-        if $violation && $self->_in_range($elem, $lines);
+      return 0 unless $violation && $self->_in_range($elem, $lines);
+      my $fix = $self->{policy}->fix_data($violation->explanation);
+      push @fixes, [$elem, $fix] if $fix;
       0
     }
   );
   return $source unless @fixes;
-  for my $fix (@fixes) {
-    my ($elem, $expl) = @$fix;
+  for my $entry (@fixes) {
+    my ($elem, $fix) = @$entry;
     my $before = $elem->content =~ tr/\n//;
-    $self->_apply_fix($elem, $expl);
+    $self->_apply_fix($elem, $fix);
     $self->_shift_range($lines, ($elem->content =~ tr/\n//) - $before);
   }
 

@@ -40,6 +40,10 @@ subtest "Class and explanation pairs the policy cannot produce" => sub {
 subtest "Include explanations without matching structure" => sub {
   is fixer("PPI::Statement::Include", "use say")->fix('use Foo "a";'),
     'use Foo "a";', "an unknown include explanation declines";
+  is fixer("PPI::Statement::Include", "use ''")->fix('use Foo "a";'),
+    'use Foo "a";', "a non-operator include explanation declines";
+  is fixer("PPI::Statement::Include", "use q()")->fix('use Foo "a";'),
+    'use Foo "a";', "a non-qw operator include explanation declines";
   is fixer("PPI::Statement::Include", "use qw()")->fix("use Foo;"),
     "use Foo;", "a use statement without arguments declines";
   is fixer("PPI::Statement::Include", "remove parentheses")->fix("use Foo;"),
