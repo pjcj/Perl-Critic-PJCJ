@@ -276,6 +276,8 @@ subtest "Pragma single-argument quoting" => sub {
     "use strict with double-quoted argument is fine";
   good $Policy, 'no warnings "experimental"',
     "no pragma with double-quoted argument is fine";
+  good $Policy, 'no warnings ( "experimental" )',
+    "no pragma with parenthesised single argument is fine";
   good $Policy, "use feature qw(class)",
     "pragma with single qw() argument is still fine";
   good $Policy, 'use lib "/some/path"',

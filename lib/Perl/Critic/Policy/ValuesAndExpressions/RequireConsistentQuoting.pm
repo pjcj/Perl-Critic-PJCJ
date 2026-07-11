@@ -885,7 +885,6 @@ This Policy is not configurable except for the standard options.
   use Qux ( key => "value" );             # fat comma should have no parentheses
   use Quux ( $VERSION );                  # complex expressions need no
                                           # parentheses
-  no warnings ( "experimental" );         # simple strings should use qw()
   use feature 'class';                    # pragma single arg prefers ""
 
   # Good
@@ -901,6 +900,7 @@ This Policy is not configurable except for the standard options.
   use feature "class";                    # pragma, single arg, double quotes
   use strict "refs";                      # pragma, single arg, double quotes
   no warnings "experimental";             # no pragma, single arg, double quotes
+  no warnings ( "experimental" );         # parentheses are also exempt here
   use feature qw( class );                # qw() is still fine too
 
   # Fat comma examples (no parentheses)
