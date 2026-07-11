@@ -6,9 +6,10 @@ use warnings;
 use feature "signatures";
 use experimental "signatures";
 
-use Exporter  qw( import );
-use PPI       ();
-use Test2::V0 qw( diag fail is like );
+use Exporter   qw( import );
+use List::Util qw( any );
+use PPI        ();
+use Test2::V0  qw( diag fail is like );
 
 use Perl::Critic::PJCJ::Fixer ();
 
@@ -33,14 +34,13 @@ sub find_violations ($policy, $code) {
   }
 
   # Handle policies that apply to specific element types
-  for my $type (@applies_to) {
-    $doc->find(
-      sub ($top, $elem) {
-        push @violations, $policy->violates($elem, $doc) if $elem->isa($type);
-        0
-      }
-    );
-  }
+  $doc->find(
+    sub ($top, $elem) {
+      push @violations, $policy->violates($elem, $doc)
+        if any { $elem->isa($_) } @applies_to;
+      0
+    }
+  );
 
   @violations
 }
