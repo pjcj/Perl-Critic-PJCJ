@@ -380,10 +380,13 @@ sub _analyse_argument_types ($self, $elem, @args) {
 
   my $fat_comma
     = any { $_->isa("PPI::Token::Operator") && $_->content eq "=>" } @args;
+  # Anything the qw rewrite doesn't understand makes the statement complex
   my $complex_expr = any {
-         $_->isa("PPI::Token::Symbol")
-      || $_->isa("PPI::Structure")
-      || $_->isa("PPI::Statement")
+    !(   $_->isa("PPI::Token::Quote")
+      || $_->isa("PPI::Token::QuoteLike::Words")
+      || $_->isa("PPI::Token::Number")
+      || ($_->isa("PPI::Token::Operator") && $_->content eq "=>")
+      || ($_->isa("PPI::Token::Word")     && $_->content =~ /\A-\w+\z/))
   } @args;
   my $version = any {
          $_->isa("PPI::Token::Number::Version")
@@ -484,7 +487,7 @@ sub _extract_list_arguments ($self, $list) {
   for my $child ($list->children) {
     if ($child->isa("PPI::Statement::Expression")) {
       for my $expr_child ($child->children) {
-        next if $expr_child->isa("PPI::Token::Whitespace");
+        next unless $expr_child->significant;
         # Skip commas but keep fat comma (=>) and other significant operators
         next
           if $expr_child->isa("PPI::Token::Operator")
@@ -495,7 +498,7 @@ sub _extract_list_arguments ($self, $list) {
       # Handle other statements and structures (like hash constructors)
       push @args, $child;
     } else {
-      next if $child->isa("PPI::Token::Whitespace");
+      next unless $child->significant;
       push @args, $child;
     }
   }

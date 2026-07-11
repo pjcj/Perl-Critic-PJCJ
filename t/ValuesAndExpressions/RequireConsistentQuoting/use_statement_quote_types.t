@@ -221,6 +221,17 @@ subtest "Call parentheses are not statement parentheses" => sub {
     "a wrapper list after a version number is still statement-level";
 };
 
+subtest "Expressions among use arguments are complex" => sub {
+  good $Policy, 'use lib dirname(__FILE__) . "/lib";',
+    "a concatenation of a call and a string is not an import list";
+  good $Policy, 'use Foo "a" . "b";',
+    "concatenated strings are an expression, not an import list";
+  good $Policy, 'use Foo bar, "baz";',
+    "a plain bareword is not a qw-able word";
+  bad $Policy, 'use parent -norequire, "Foo"', "use qw()",
+    "a leading-hyphen bareword still merges into qw()";
+};
+
 subtest "Special cases should not trigger violations" => sub {
   # Version numbers
   good $Policy, "use Module 1.23",
