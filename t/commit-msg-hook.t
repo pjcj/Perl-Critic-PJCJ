@@ -64,4 +64,25 @@ subtest "An empty message is reported without printf warnings" => sub {
   is $exit, 1, "the commit is rejected";
 };
 
+subtest "A message with invalid UTF-8 is reported, not fatal" => sub {
+  my ($out, $exit)
+    = run_hook("Improve the widget\xE9 handling\n\nTicket GH-1234\n");
+  like $out,   qr/not valid UTF-8/,         "the encoding is reported";
+  unlike $out, qr/does not map to Unicode/, "the hook does not die";
+  is $exit, 1, "the commit is rejected";
+};
+
+subtest "A valid UTF-8 message with multibyte characters passes" => sub {
+  my ($out, $exit)
+    = run_hook("Improve the widget\xC3\xA9 handling\n\nTicket GH-1234\n");
+  is $out,  "", "no output";
+  is $exit, 0,  "the commit is accepted";
+};
+
+subtest "Subject length is counted in characters, not bytes" => sub {
+  my $subject = "Improve " . "\xC3\xA9" x 42;  # 50 characters, 92 bytes
+  my ($out, $exit) = run_hook("$subject\n\nTicket GH-1234\n");
+  is $exit, 0, "a 50-character multibyte subject is accepted";
+};
+
 done_testing

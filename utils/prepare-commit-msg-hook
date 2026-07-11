@@ -5,9 +5,8 @@
 
 use 5.28.0;
 use warnings;
-use warnings FATAL => qw( utf8 recursion );
+use warnings FATAL => qw( recursion );
 use experimental "signatures";
-use open ":encoding(UTF-8)";
 use feature "unicode_strings";
 
 $|++;

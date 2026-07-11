@@ -4,14 +4,17 @@
 
 use 5.28.0;
 use warnings;
-use warnings FATAL => qw( utf8 recursion );
+use warnings FATAL => qw( recursion );
+use utf8;
 use experimental "signatures";
-use open ":encoding(UTF-8)";
 use feature "unicode_strings";
+
+use Encode ();
 
 my $Version = "1.00";
 
 $|++;
+binmode STDOUT, ":encoding(UTF-8)";
 
 #<<<
 my @Blocklist = (qw(
@@ -164,13 +167,26 @@ sub process_msg ($msg) {
   check_end($msg);
 }
 
+sub read_msg ($file) {
+  open my $fh, "<:raw", $file or die "Can't open $file: $!";
+  my $bytes = do { local $/; <$fh> }
+    // "";
+  close $fh or die "Can't close $file: $!";
+  my $text = eval {
+    Encode::decode("UTF-8", $bytes, Encode::FB_CROAK | Encode::LEAVE_SRC)
+  };
+  unless (defined $text) {
+    push @Errors, ["Commit message is not valid UTF-8", ""];
+    $text = Encode::decode("UTF-8", $bytes, Encode::FB_DEFAULT);
+  }
+  split /^/m, $text
+}
+
 sub main {
   my ($file) = @ARGV;
   # say STDERR "commit-msg hook: [$file]";
 
-  open my $fh, "<", $file or die "Can't open $file: $!";
-  my @msg = <$fh>;
-  close $fh or die "Can't close $file: $!";
+  my @msg = read_msg($file);
   process_msg(\@msg);
 
   return 0 unless @Errors;
@@ -182,6 +198,7 @@ sub main {
   print $report;  # captured by pre-commit, shown on failure
 
   open my $tty, "+<", "/dev/tty" or return 1;  # no terminal: decline
+  binmode $tty, ":encoding(UTF-8)";
   print $tty $report, "Force commit? [y/N] ";
   my $force = <$tty> // "";
   close $tty or die "Can't close tty";
