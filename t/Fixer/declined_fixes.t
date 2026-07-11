@@ -71,4 +71,14 @@ subtest "Quote-sensitive escapes decline single-quote conversion" => sub {
     q(my $x = '$aBAR';), "escape-free content still converts to single quotes";
 };
 
+subtest "Interpolation-changing command fixes are declined" => sub {
+  my $qx_single = q(my $out = qx'echo $$';);
+  is fixer("PPI::Token::QuoteLike::Command", "use qx()")->fix($qx_single),
+    $qx_single, "qx'' keeps its non-interpolating delimiter";
+
+  is fixer("PPI::Token::QuoteLike::Command", "use qx()")
+    ->fix('my $out = qx"echo $$";'), 'my $out = qx(echo $$);',
+    "interpolating qx is still re-delimited";
+};
+
 done_testing

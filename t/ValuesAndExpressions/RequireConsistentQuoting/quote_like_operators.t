@@ -84,9 +84,14 @@ subtest "qx() operator" => sub {
   good $Policy, 'my $output = qx(echo |pipe)',
     "qx() optimal when content has pipes";
 
-  # With single quotes
-  bad $Policy, q(my $output = qx'echo \'hello\''), "use qx()",
-    "qx'' with single quotes should use qx() to avoid escapes";
+  # With single quotes: perlop says qx does not interpolate when its
+  # delimiter is '', so that delimiter is semantic, not stylistic
+  good $Policy, q(my $output = qx'echo \'hello\''),
+    "qx'' suppresses interpolation so its delimiter is kept";
+  good $Policy, q(my $output = qx'echo $$'),
+    "qx'' with shell variables is exempt from delimiter rules";
+  bad $Policy, 'my $output = qx"echo $$"', "use qx()",
+    "interpolating qx with a non-bracket delimiter is still flagged";
   good $Policy, q[my $output = qx(echo 'hello')],
     "qx() optimal when content has single quotes";
 };

@@ -17,6 +17,14 @@ my %Interpolating = map { $_ => 1 } qw(
   PPI::Token::QuoteLike::Command
 );
 
+sub _interpolates ($self, $elem) {
+  # perlop: qx does not interpolate when its delimiter is ''
+  return 0
+    if ref $elem eq "PPI::Token::QuoteLike::Command"
+    && $elem->content =~ /\Aqx\s*'/;
+  $Interpolating{ ref $elem } // 0
+}
+
 sub new ($class) {
   my $policy
     = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
@@ -147,6 +155,13 @@ sub _value_preserved ($self, $elem, $new_source) {
   # uncoverable condition left note:every replacement contains a quote token
   # uncoverable condition right note:PPI serialisation is faithful
   return 0 unless $token && $doc->serialize eq $code;
+  if (
+       $elem->isa("PPI::Token::QuoteLike::Command")
+    || $token->isa("PPI::Token::QuoteLike::Command")
+  ) {
+    return 0 if $self->_interpolates($elem) != $self->_interpolates($token);
+    return $self->_canonical($token) eq $self->_canonical($elem);
+  }
   return $self->_canonical($token) eq $self->_canonical($elem)
     if $Interpolating{ ref $token } && $Interpolating{ ref $elem };
   $self->_normalised_value($token) eq $self->_normalised_value($elem)

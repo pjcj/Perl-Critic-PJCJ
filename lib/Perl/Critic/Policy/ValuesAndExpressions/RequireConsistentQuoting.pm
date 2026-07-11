@@ -323,6 +323,11 @@ sub check_quote_operators ($self, $elem) {
     = $self->parse_quote_token($elem);
   return unless defined $current_start;
 
+  # perlop: qx interpolates "unless the delimiter is ''". The single-quote
+  # delimiter is semantic, not stylistic, so it is exempt from the
+  # delimiter rules
+  return if $operator eq "qx" && $current_start eq "'";
+
   # Don't skip empty content - () is preferred even for empty quotes
   my ($optimal_delim, $current_is_optimal) = $self->find_optimal_delimiter(
     $content, $operator, $current_start, $current_end
@@ -680,6 +685,13 @@ or C<{}> in that order.
   my @words = qw/word word/;              # should use qw()
   my $path  = q|some|path|;               # should use ""
   my $text  = qq#some#text#;              # should use ""
+
+The one exception is C<qx> with a single-quote delimiter. perlop defines
+C<qx''> as non-interpolating, so that delimiter is semantic rather than
+stylistic and is always left alone.
+
+  # Good - qx'' deliberately suppresses interpolation
+  my $pid = qx'echo $$';                  # the shell sees $$, not Perl
 
 =head2 Special Case: Use and No statements
 
