@@ -17,15 +17,15 @@ sub new ($class, %args) {
 sub violates ($self, $elem, $doc) {
   my $flags = $self->{flags};
   return ref $elem eq $flags ? $self : () unless ref $flags eq "HASH";
-  my $explanation = $flags->{ ref $elem } or return ();
-  $self->{explanation} = $explanation;
+  my $description = $flags->{ ref $elem } or return ();
+  $self->{description} = $description;
   $self
 }
 
-sub explanation ($self) { $self->{explanation} }
+sub description ($self) { $self->{description} }
 
-sub fix_data ($self, $explanation) {
-  $self->{real}->fix_data($explanation)
+sub fix_data ($self, $description) {
+  $self->{real}->fix_data($description)
 }
 
 sub parse_quote_token ($self, $elem) {
@@ -66,36 +66,36 @@ FakePolicy - test double emitting violations the real policy never produces
   my $fixer = Perl::Critic::PJCJ::Fixer->new;
   $fixer->{policy} = FakePolicy->new(
     flags       => "PPI::Token::Quote::Single",
-    explanation => "use ''",
+    description => "use ''",
   );
 
 =head1 DESCRIPTION
 
-Perl::Critic::PJCJ::Fixer contains guards for class and explanation
+Perl::Critic::PJCJ::Fixer contains guards for class and description
 combinations the real policy never emits. This double flags every element of
-the configured class with the configured explanation, so tests can drive the
+the configured class with the configured description, so tests can drive the
 fixer down those defensive paths and assert that unsafe fixes are declined.
 
 =head1 METHODS
 
 =head2 new (%args)
 
-Create a policy double. C<flags> is the PPI class to flag and C<explanation>
-is the explanation each violation carries. Alternatively C<flags> may be a
-hashref mapping PPI classes to explanations, so different classes can carry
-different explanations.
+Create a policy double. C<flags> is the PPI class to flag and C<description>
+is the description each violation carries. Alternatively C<flags> may be a
+hashref mapping PPI classes to descriptions, so different classes can carry
+different descriptions.
 
 =head2 violates ($elem, $doc)
 
 Return the double itself as the violation for every element whose class
 matches C<flags>. When C<flags> is a hashref, the element's class selects
-the explanation.
+the description.
 
-=head2 explanation
+=head2 description
 
-The configured explanation.
+The configured description.
 
-=head2 fix_data ($explanation)
+=head2 fix_data ($description)
 
 Delegated to the real policy.
 

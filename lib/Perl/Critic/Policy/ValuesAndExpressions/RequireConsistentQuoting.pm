@@ -8,15 +8,50 @@ use experimental "signatures";
 
 use parent qw( Perl::Critic::Policy );
 
+use Exporter            qw( import );
 use List::Util          qw( all any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 
-my $Desc               = "Quoting";
-my $Expl_double        = 'use ""';
-my $Expl_single        = "use ''";
-my $Expl_optimal       = "use %s";
-my $Expl_use_qw        = "use qw()";
-my $Expl_remove_parens = "remove parentheses";
+use Perl::Critic::PJCJ::Violation ();
+
+our @EXPORT_OK = qw(
+  desc_double desc_optimal desc_remove_parens desc_single desc_use_qw
+);
+
+sub desc_double ()          { 'use ""' }
+sub desc_single ()          { "use ''" }
+sub desc_use_qw ()          { "use qw()" }
+sub desc_remove_parens ()   { "remove parentheses" }
+sub desc_optimal ($display) { "use $display" }
+
+my $Expl = "Quoting should be consistent and minimal";
+
+my $Fix_double        = { type => "double" };
+my $Fix_single        = { type => "single" };
+my $Fix_remove_parens = { type => "remove_parens" };
+my $Fix_use_qw = { type => "operator", op => "qw", start => "(", end => ")" };
+
+sub _operator_fix ($self, $op, $delim) { {
+  type  => "operator",
+  op    => $op,
+  start => $delim->{start},
+  end   => $delim->{end},
+} }
+
+sub _render_fix ($self, $fix) {
+  my $type = $fix->{type};
+  return desc_double        if $type eq "double";
+  return desc_single        if $type eq "single";
+  return desc_remove_parens if $type eq "remove_parens";
+  desc_optimal("$fix->{op}$fix->{start}$fix->{end}")
+}
+
+sub _fix_violation ($self, $fix, $elem) {
+  Perl::Critic::PJCJ::Violation->new(
+    $self->_render_fix($fix),
+    $Expl, $elem, $self->get_severity,
+  )->set_fix($fix)
+}
 
 sub supported_parameters { }
 sub default_severity     { $SEVERITY_MEDIUM }
@@ -133,33 +168,18 @@ sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
   ($optimal, $current_is_optimal)
 }
 
-sub fix_data ($self, $explanation) {
-  state $map = do {
-    my %map = (
-      $Expl_double        => { type => "double" },
-      $Expl_single        => { type => "single" },
-      $Expl_remove_parens => { type => "remove_parens" },
-    );
-    for my $op (qw( q qq qw qx )) {
-      for my $delim ($self->_get_supported_delimiters($op)) {
-        $map{ sprintf $Expl_optimal, $delim->{display} } = {
-          type  => "operator",
-          op    => $op,
-          start => $delim->{start},
-          end   => $delim->{end},
-        };
-      }
-    }
-    my ($qw_delim) = $self->_get_supported_delimiters("qw");
-    $map{$Expl_use_qw} = {
-      type  => "operator",
-      op    => "qw",
-      start => $qw_delim->{start},
-      end   => $qw_delim->{end},
-    };
-    \%map
-  };
-  $map->{$explanation}
+sub _known_fixes ($self) {
+  my @fixes = ($Fix_double, $Fix_single, $Fix_remove_parens);
+  for my $op (qw( q qq qw qx )) {
+    push @fixes, map $self->_operator_fix($op, $_),
+      $self->_get_supported_delimiters($op);
+  }
+  @fixes
+}
+
+sub fix_data ($self, $description) {
+  state $map = { map { ($self->_render_fix($_) => $_) } $self->_known_fixes };
+  $map->{$description}
 }
 
 sub check_delimiter_optimisation ($self, $elem) {
@@ -169,8 +189,8 @@ sub check_delimiter_optimisation ($self, $elem) {
   $operator //= "q" if $start eq "'";
   my ($optimal_delim, $current_is_optimal)
     = $self->find_optimal_delimiter($content, $operator, $start, $end);
-  return $self->violation(
-    $Desc, sprintf($Expl_optimal, $optimal_delim->{display}), $elem
+  return $self->_fix_violation(
+    $self->_operator_fix($operator, $optimal_delim), $elem
   ) unless $current_is_optimal;
 
   return
@@ -243,7 +263,7 @@ sub check_single_quoted ($self, $elem) {
     # Keep single quotes if double would introduce interpolation
     $self->would_interpolate_from_single_quotes($string);
 
-  $self->violation($Desc, $Expl_double, $elem)
+  $self->_fix_violation($Fix_double, $elem)
 }
 
 sub check_double_quoted ($self, $elem) {
@@ -262,7 +282,7 @@ sub check_double_quoted ($self, $elem) {
 
   # Check for escaped dollar/at signs or double quotes, but only suggest single
   # quotes if no other interpolation exists AND no dangerous escape sequences
-  return $self->violation($Desc, $Expl_single, $elem)
+  return $self->_fix_violation($Fix_single, $elem)
     if $cleaned =~ /\\[\$\@\"]/
     && !$self->has_quote_sensitive_escapes($string)
     && !$self->would_interpolate($string);
@@ -272,9 +292,7 @@ sub check_double_quoted ($self, $elem) {
   # so qq() eliminates the quote escaping while preserving both
   if ($cleaned =~ /\\"/) {
     my ($optimal) = $self->find_optimal_delimiter($string, "qq", '"', '"');
-    return $self->violation(
-      $Desc, sprintf($Expl_optimal, $optimal->{display}), $elem
-    );
+    return $self->_fix_violation($self->_operator_fix("qq", $optimal), $elem);
   }
 
   return
@@ -300,16 +318,16 @@ sub check_q_literal ($self, $elem) {
   if ($has_single_quotes) {
     return $would_interpolate
       ? $self->check_delimiter_optimisation($elem)
-      : $self->violation($Desc, $Expl_double, $elem);
+      : $self->_fix_violation($Fix_double, $elem);
   }
 
   # Only double quotes (no single quotes) - single quotes always work:
   # they don't interpolate and can hold " without escaping
-  return $self->violation($Desc, $Expl_single, $elem) if $has_double_quotes;
+  return $self->_fix_violation($Fix_single, $elem) if $has_double_quotes;
 
-  return $self->violation($Desc, $Expl_single, $elem) if $would_interpolate;
+  return $self->_fix_violation($Fix_single, $elem) if $would_interpolate;
 
-  $self->violation($Desc, $Expl_double, $elem)
+  $self->_fix_violation($Fix_double, $elem)
 }
 
 sub check_qq_interpolate ($self, $elem) {
@@ -329,7 +347,7 @@ sub check_qq_interpolate ($self, $elem) {
 
   # Rules 1,2: If double quotes would suggest single quotes, use single quotes
   if ($double_quote_suggestion && $double_quote_suggestion eq "''") {
-    return $self->violation($Desc, $Expl_single, $elem);
+    return $self->_fix_violation($Fix_single, $elem);
   }
 
   # Rule 1: If double quotes would suggest qq(), qq() is appropriate
@@ -339,7 +357,7 @@ sub check_qq_interpolate ($self, $elem) {
   # Rule 1: Otherwise prefer simple double quotes. Every string containing a
   # double quote was handled above, so nothing here needs qq(); an apostrophe
   # needs no escaping in double quotes
-  $self->violation($Desc, $Expl_double, $elem)
+  $self->_fix_violation($Fix_double, $elem)
 }
 
 sub check_quote_operators ($self, $elem) {
@@ -359,8 +377,8 @@ sub check_quote_operators ($self, $elem) {
     $content, $operator, $current_start, $current_end
   );
 
-  return $self->violation(
-    $Desc, sprintf($Expl_optimal, $optimal_delim->{display}), $elem
+  return $self->_fix_violation(
+    $self->_operator_fix($operator, $optimal_delim), $elem
   ) if !$current_is_optimal;
 
   return
@@ -454,7 +472,7 @@ sub _use_args_qw_representable ($self, @args) {
 
 sub _use_qw_violation ($self, $elem, @args) {
   return () unless $self->_use_args_qw_representable(@args);
-  $self->violation($Desc, $Expl_use_qw, $elem)
+  $self->_fix_violation($Fix_use_qw, $elem)
 }
 
 sub check_use_statement ($self, $elem) {
@@ -479,13 +497,13 @@ sub check_use_statement ($self, $elem) {
   return () if @args == 1 && $self->_is_pragma($elem);
 
   # Rule 1: qw() without parens should use qw()
-  return $self->violation($Desc, $Expl_use_qw, $elem)
+  return $self->_fix_violation($Fix_use_qw, $elem)
     if $has_qw && !$qw_uses_parens;
 
   # Rule 2: Any => operator anywhere → should have no parentheses
   if ($has_fat_comma) {
     if ($has_parens) {
-      return $self->violation($Desc, $Expl_remove_parens, $elem);
+      return $self->_fix_violation($Fix_remove_parens, $elem);
     }
     return ();
   }
@@ -493,7 +511,7 @@ sub check_use_statement ($self, $elem) {
   # Rule 3: Complex expressions → should have no parentheses
   if ($has_complex_expr) {
     if ($has_parens) {
-      return $self->violation($Desc, $Expl_remove_parens, $elem);
+      return $self->_fix_violation($Fix_remove_parens, $elem);
     }
     return ();
   }
@@ -1072,14 +1090,39 @@ Only considers bracket delimiters C<()>, C<[]>, C<< <> >>, C<{}> as valid
 options, rejecting exotic delimiters like C</>, C<|>, C<#>. When multiple
 delimiters work equally well, uses the preference order to break ties.
 
+=head2 _operator_fix ($op, $delim)
+
+Builds an operator fix structure for operator C<$op> and the delimiter hashref
+C<$delim> (with C<start> and C<end> keys).
+
+=head2 _render_fix ($fix)
+
+Renders a fix structure as its user-visible suggestion string, which becomes
+the violation's description (e.g. C<< use "" >>, C<use q[]>). This is the
+single place the wording of a suggestion is produced.
+
+=head2 _known_fixes
+
+Returns the list of every fix structure the policy can produce: the three plain
+fixes plus one operator fix per supported delimiter of C<q>, C<qq>, C<qw> and
+C<qx>. L<fix_data> is generated from this list.
+
+=head2 _fix_violation ($fix, $elem)
+
+Builds a L<Perl::Critic::PJCJ::Violation> for C<$elem> whose description is
+L<_render_fix|/"_render_fix ($fix)"> of C<$fix>, whose explanation is the
+static rationale, and which carries C<$fix> directly via C<< ->fix >>.
+
 =head2 fix_data
 
-Maps a violation's explanation string to structured fix data, so that tools
-such as L<Perl::Critic::PJCJ::Fixer> need not parse the explanation wording
-themselves. The mapping is built from the same constants used to create the
-violations, so the two cannot drift apart.
+Maps a violation's description string to structured fix data, so that tools
+such as L<Perl::Critic::PJCJ::Fixer> can resolve a fix without a live violation
+object. The map is generated from L<_known_fixes|/"_known_fixes"> via
+L<_render_fix|/"_render_fix ($fix)">, so it cannot drift from the wording the
+policy actually emits. Violations from this policy also carry their fix
+directly, so this lookup is only a fallback.
 
-Returns a hashref describing the fix, or C<undef> for an unknown explanation:
+Returns a hashref describing the fix, or C<undef> for an unknown description:
 
   { type => "double" }         # use ""
   { type => "single" }         # use ''

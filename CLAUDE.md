@@ -62,8 +62,7 @@ exports:
 
 - `good $policy, $code, $desc` — assert no violations.
 - `bad $policy, $code, $expected_msg, $desc` — assert exactly one violation
-  whose `explanation` (for RequireConsistentQuoting) or `description` matches
-  `$expected_msg` via `like`.
+  whose `description` matches `$expected_msg` via `like`.
 - `find_violations` / `count_violations` — lower-level helpers.
 
 Tests are organised by concern under
@@ -74,10 +73,17 @@ Tests are organised by concern under
 
 ### Violation messages
 
-RequireConsistentQuoting uses the `explanation` field (not `description`) for
-its suggestion text (e.g. `use ''`, `use ""`, `use qq()`, `use qw()`). The
-`description` is always the generic string `"Quoting"`. Tests check
-`explanation`.
+RequireConsistentQuoting puts the per-violation suggestion (e.g. `use ''`,
+`use ""`, `use qq()`, `use qw()`) in the `description` field, which is what `%m`
+formats show. The `explanation` is a single static rationale. Tests check
+`description`; there is no policy-class special case in the test helper.
+
+Each violation is a `Perl::Critic::PJCJ::Violation` that carries its structured
+fix (`->fix`). The Fixer reads that attached fix directly and only falls back to
+`fix_data($description)` for test doubles; a violation with no fix mapping
+warns. The suggestion wording lives in one place: the exported constant subs
+`desc_double`, `desc_single`, `desc_use_qw`, `desc_remove_parens` and
+`desc_optimal($display)`, which tests import rather than duplicating literals.
 
 ## Style Notes
 

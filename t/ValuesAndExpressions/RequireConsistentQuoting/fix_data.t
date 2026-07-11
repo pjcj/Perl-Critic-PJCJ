@@ -48,21 +48,32 @@ subtest "Unknown explanations" => sub {
     "an unknown explanation returns undef";
 };
 
-subtest "Every emitted explanation has fix data" => sub {
-  my @snippets = (
-    q(my $x = 'hello'),
-    'my $output = "Price: \$10"',
-    'my @x = qw{simple words}',
-    'my @x = qw(word(with)parens)',
-    'my $x = qq(simple)',
-    'use Foo "a1", "a2";',
-    'use Qux ( key => "value" );',
-  );
-  for my $code (@snippets) {
-    for my $violation (find_violations($Policy, $code)) {
-      my $expl = $violation->explanation;
-      ok $Policy->fix_data($expl), "fix data exists for $expl";
-    }
+my @Snippets = (
+  q(my $x = 'hello'),
+  'my $output = "Price: \$10"',
+  'my @x = qw{simple words}',
+  'my @x = qw(word(with)parens)',
+  'my $x = qq(simple)',
+  'use Foo "a1", "a2";',
+  'use Qux ( key => "value" );',
+);
+
+sub emitted_violations () {
+  map find_violations($Policy, $_), @Snippets
+}
+
+subtest "Every emitted description has fix data" => sub {
+  for my $violation (emitted_violations) {
+    my $desc = $violation->description;
+    ok $Policy->fix_data($desc), "fix data exists for $desc";
+  }
+};
+
+subtest "Violations carry their fix structure" => sub {
+  for my $violation (emitted_violations) {
+    ok $violation->can("fix"), "violation has a fix method";
+    is $violation->fix, $Policy->fix_data($violation->description),
+      "attached fix matches the rendered lookup";
   }
 };
 

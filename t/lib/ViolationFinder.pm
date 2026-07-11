@@ -53,8 +53,8 @@ sub count_violations ($policy, $code, $expected_violations, $description) {
 
 sub good ($policy, $code, $description) {
   my @violations = count_violations($policy, $code, 0, $description);
-  my $field      = _is_quoting_policy($policy) ? "explanation" : "description";
-  fail join " --- ", (map $_ // "*undef*", $_->$field, $code) for @violations;
+  fail join " --- ", (map $_ // "*undef*", $_->description, $code)
+    for @violations;
 
   is $Fixer->fix($code), $code, "$description - fixer leaves it alone"
     if _is_quoting_policy($policy);
@@ -65,9 +65,7 @@ sub bad ($policy, $code, $expected_message, $description) {
   is @violations, 1, "$description - should have one violation";
   return unless @violations;
 
-  # For quoting policies, check explanation instead of description
-  my $field = _is_quoting_policy($policy) ? "explanation" : "description";
-  like $violations[0]->$field, qr/\Q$expected_message\E/,
+  like $violations[0]->description, qr/\Q$expected_message\E/,
     "$description - should suggest $expected_message";
 
   if (_is_quoting_policy($policy)) {
@@ -204,10 +202,9 @@ Parameters:
 =back
 
 This function verifies that the code violates the policy exactly once and that
-the violation message contains the expected text. For most policies, it checks
-the description field. For the RequireConsistentQuoting policy, it checks the
-explanation field instead, and also asserts that L<Perl::Critic::PJCJ::Fixer>
-resolves the violation.
+the violation's description contains the expected text. For the
+RequireConsistentQuoting policy it also asserts that
+L<Perl::Critic::PJCJ::Fixer> resolves the violation.
 
 =head2 fixes
 

@@ -16,6 +16,13 @@ use ViolationFinder qw( bad find_violations );
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
+subtest "Message field placement" => sub {
+  my ($v) = find_violations($Policy, q(my $x = 'hello'));
+  is $v->description, 'use ""', "description carries the suggestion";
+  like $v->explanation, qr/consistent/,
+    "explanation carries the static rationale";
+};
+
 subtest "Single quote violation messages" => sub {
   bad $Policy, q(my $x = 'hello'), 'use ""', "Simple single-quoted string";
 
@@ -83,11 +90,15 @@ subtest "Combined violation messages" => sub {
 
   is @violations, 2, "Two violations in combined code";
 
-  # Check that descriptions are about quoting
-  like $violations[0]->description, qr(Quoting),
-    "First violation is about quoting";
-  like $violations[1]->description, qr(Quoting),
-    "Second violation is about quoting";
+  # The suggestion is in the description, the rationale in the explanation
+  like $violations[0]->description, qr/use /,
+    "First violation suggests a quoting change";
+  like $violations[0]->explanation, qr/consistent/,
+    "First violation explains the rationale";
+  like $violations[1]->description, qr/use /,
+    "Second violation suggests a quoting change";
+  like $violations[1]->explanation, qr/consistent/,
+    "Second violation explains the rationale";
 };
 
 done_testing;

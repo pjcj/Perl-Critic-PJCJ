@@ -4,7 +4,7 @@ use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is subtest );
+use Test2::V0    qw( done_testing is like subtest warning );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
@@ -12,10 +12,10 @@ use lib                       qw( lib t/lib );
 use FakePolicy                ();
 use Perl::Critic::PJCJ::Fixer ();
 
-sub fixer ($flags, $explanation) {
+sub fixer ($flags, $description) {
   my $fixer = Perl::Critic::PJCJ::Fixer->new;
   $fixer->{policy}
-    = FakePolicy->new(flags => $flags, explanation => $explanation);
+    = FakePolicy->new(flags => $flags, description => $description);
   $fixer
 }
 
@@ -37,9 +37,16 @@ subtest "Class and explanation pairs the policy cannot produce" => sub {
   }
 };
 
-subtest "Include explanations without matching structure" => sub {
-  is fixer("PPI::Statement::Include", "use say")->fix('use Foo "a";'),
-    'use Foo "a";', "an unknown include explanation declines";
+subtest "Unmapped descriptions warn" => sub {
+  my $out;
+  like warning {
+    $out = fixer("PPI::Statement::Include", "use say")->fix('use Foo "a";')
+  }, qr/no fix mapping for 'use say' at line 1/,
+    "an unmapped description warns";
+  is $out, 'use Foo "a";', "and the source is unchanged";
+};
+
+subtest "Include descriptions without matching structure" => sub {
   is fixer("PPI::Statement::Include", "use ''")->fix('use Foo "a";'),
     'use Foo "a";', "a non-operator include explanation declines";
   is fixer("PPI::Statement::Include", "use q()")->fix('use Foo "a";'),

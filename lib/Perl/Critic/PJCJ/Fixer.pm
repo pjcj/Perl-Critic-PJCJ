@@ -262,8 +262,16 @@ sub _fix_once ($self, $source, $lines) {
     sub ($top, $elem) {
       my ($violation) = $self->{policy}->violates($elem, $doc);
       return 0 unless $violation && $self->_in_range($elem, $lines);
-      my $fix = $self->{policy}->fix_data($violation->explanation);
-      push @fixes, [$elem, $fix] if $fix;
+      my $fix = ($violation->can("fix") && $violation->fix)
+        || $self->{policy}->fix_data($violation->description);
+      if ($fix) {
+        push @fixes, [$elem, $fix];
+      } else {
+        my $msg = $violation->description;
+        warn "Perl::Critic::PJCJ::Fixer: no fix mapping for '$msg' at line "
+          . ($elem->line_number // 0) . "\n"
+          unless $self->{warned}{$msg}++;
+      }
       0
     }
   );
@@ -294,6 +302,7 @@ sub _finish ($self, $source, $current) {
 sub fix ($self, $source, %opts) {
   my $lines   = $opts{lines} ? [$opts{lines}->@*] : undef;
   my $current = $source;
+  $self->{warned} = {};
   my %seen;
   for (1 .. $Max_passes) {
     $seen{$current} = 1;
@@ -359,6 +368,11 @@ needed, since one fix can enable the next suggestion.
 Source receiving no applied fix is returned byte for byte, and a file using
 CRLF line endings throughout keeps them. A file with mixed line endings is
 normalised to LF when a fix applies.
+
+Each violation from the policy carries its own structured fix, which the fixer
+uses directly; for other violation sources it falls back to the policy's
+C<fix_data> lookup keyed on the description. A violation with no fix by either
+route is reported once on standard error and left unchanged.
 
 A repeating or non-converging sequence of fixes is reported on standard
 error and the current state returned.
