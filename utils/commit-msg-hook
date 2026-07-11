@@ -157,7 +157,7 @@ sub check_end ($msg) {
 }
 
 sub process_msg ($msg) {
-  push @Errors, ["Empty commit message"] unless @$msg;
+  push @Errors, ["Empty commit message", ""] unless @$msg;
   check_line_endings($msg);
   chomp @$msg;
   check_beginning($msg);

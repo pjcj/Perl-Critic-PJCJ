@@ -57,4 +57,11 @@ subtest "A clean message needs no terminal" => sub {
   is $exit, 0,  "the commit is accepted";
 };
 
+subtest "An empty message is reported without printf warnings" => sub {
+  my ($out, $exit) = run_hook("");
+  like $out,   qr/Empty commit message/, "the empty message is reported";
+  unlike $out, qr/Missing argument/,     "printf receives both values";
+  is $exit, 1, "the commit is rejected";
+};
+
 done_testing
