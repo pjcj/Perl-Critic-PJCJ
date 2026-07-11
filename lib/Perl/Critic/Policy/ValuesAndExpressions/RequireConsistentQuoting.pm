@@ -467,8 +467,7 @@ sub check_use_statement ($self, $elem) {
 
   my @args = $self->_extract_use_arguments($elem) or return;
 
-  my ($string_count, $has_qw, $qw_uses_parens)
-    = $self->_summarise_use_arguments(@args);
+  my ($has_qw, $qw_uses_parens) = $self->_summarise_use_arguments(@args);
 
   # Check for different types of arguments
   my (
@@ -486,32 +485,18 @@ sub check_use_statement ($self, $elem) {
   return $self->_fix_violation($Fix_use_qw, $elem)
     if $has_qw && !$qw_uses_parens;
 
-  # Rule 2: Any => operator anywhere → should have no parentheses
-  if ($has_fat_comma) {
-    if ($has_parens) {
-      return $self->_fix_violation($Fix_remove_parens, $elem);
-    }
-    return ();
-  }
-
-  # Rule 3: Complex expressions → should have no parentheses
-  if ($has_complex_expr) {
-    if ($has_parens) {
-      return $self->_fix_violation($Fix_remove_parens, $elem);
-    }
+  # Rules 2, 3: fat comma or complex expressions should have no parentheses
+  if ($has_fat_comma || $has_complex_expr) {
+    return $self->_fix_violation($Fix_remove_parens, $elem) if $has_parens;
     return ();
   }
 
   # If interpolation is needed, don't suggest qw() - let normal rules apply
   return () if $self->_any_arg_interpolates(@args);
 
-  # Rule 1: All simple strings or q() operators → use qw()
+  # Rule 1: string arguments, with or without qw(), should be qw() alone
   return $self->_use_qw_violation($elem, @args)
-    if ($has_simple_strings || $has_q_operators) && !$has_qw;
-
-  # Mixed qw() and other things
-  return $self->_use_qw_violation($elem, @args)
-    if $has_qw && ($string_count > 0 || $has_q_operators);
+    if $has_simple_strings || $has_q_operators;
 
   ()
 }
@@ -557,44 +542,25 @@ sub _extract_list_arguments ($self, $list) {
   @args
 }
 
-sub _summarise_use_arguments ($self, @args) {
-  my $string_count   = 0;
-  my $has_qw         = 0;
-  my $qw_uses_parens = 1;
-
-  for my $arg (@args) {
-    $self->_count_use_arguments(
-      $arg, \$string_count, \$has_qw, \$qw_uses_parens
-    );
-  }
-
-  ($string_count, $has_qw, $qw_uses_parens)
-}
-
-sub _count_use_arguments (
-  $self, $elem, $str_count_ref, $qw_ref, $qw_parens_ref
-) {
-
-  $$str_count_ref++
-    if $elem->isa("PPI::Token::Quote::Single")
-    || $elem->isa("PPI::Token::Quote::Double")
-    || $elem->isa("PPI::Token::Quote::Literal")
-    || $elem->isa("PPI::Token::Quote::Interpolate");
-
+sub _scan_qw ($self, $elem, $qw_ref, $qw_parens_ref) {
   if ($elem->isa("PPI::Token::QuoteLike::Words")) {
-    $$qw_ref = 1;
-    my $content = $elem->content;
-    $$qw_parens_ref = 0 if $content !~ /\Aqw\s*\(/;
+    $$qw_ref        = 1;
+    $$qw_parens_ref = 0 if $elem->content !~ /\Aqw\s*\(/;
   }
 
   # Recursively check children (for structures like lists)
   if ($elem->can("children")) {
-    for my $child ($elem->children) {
-      $self->_count_use_arguments(
-        $child, $str_count_ref, $qw_ref, $qw_parens_ref
-      );
-    }
+    $self->_scan_qw($_, $qw_ref, $qw_parens_ref) for $elem->children;
   }
+}
+
+sub _summarise_use_arguments ($self, @args) {
+  my $has_qw         = 0;
+  my $qw_uses_parens = 1;
+
+  $self->_scan_qw($_, \$has_qw, \$qw_uses_parens) for @args;
+
+  ($has_qw, $qw_uses_parens)
 }
 
 sub _any_arg_interpolates ($self, @args) {
@@ -1303,10 +1269,9 @@ quoting decisions.
 
 =head2 _summarise_use_arguments
 
-Provides summary statistics about use/no statement arguments: counts string
-tokens, detects C<qw()> usage, and verifies that C<qw()> operators use
-parentheses rather than other delimiters. This information drives the
-violation logic in C<check_use_statement>.
+Detects C<qw()> usage among use/no statement arguments and whether those
+C<qw()> operators use parentheses rather than other delimiters. This
+information drives the violation logic in C<check_use_statement>.
 
 =head1 AUTHOR
 
