@@ -54,11 +54,11 @@ sub _fix_violation ($self, $fix, $elem) {
   )->set_fix($fix)
 }
 
-sub supported_parameters { }
-sub default_severity     { $SEVERITY_MEDIUM }
-sub default_themes       { qw( cosmetic pjcj ) }
+sub supported_parameters ($self) { }
+sub default_severity     ($self) { $SEVERITY_MEDIUM }
+sub default_themes       ($self) { qw( cosmetic pjcj ) }
 
-sub applies_to {
+sub applies_to ($self) {
   #<<<
   qw(
     PPI::Statement::Include
@@ -100,10 +100,6 @@ sub escape_single_quoted ($self, $string) {
 }
 
 sub would_interpolate_from_single_quotes ($self, $string) {
-  # Test whether a string from single quotes would interpolate if converted
-  # to double quotes. PPI gives us the decoded content of single-quoted
-  # strings, so re-escape it to reconstruct the original source before
-  # testing interpolation.
   $self->would_interpolate($self->escape_single_quoted($string))
 }
 
@@ -201,6 +197,115 @@ sub _quote_token_complete ($self, $elem) {
   $token && $token->content eq $elem->content
 }
 
+sub has_quote_sensitive_escapes ($self, $string) {
+  $string =~ /
+    \\(?:
+      [tnrfbae]           |  # Single char escapes: \t \n \r \f \b \a \e
+      x[0-9a-fA-F]*       |  # Hex escapes: \x1b \xff
+      x\{[^}]*\}          |  # Hex braces: \x{1b} \x{263A}
+      [0-7]{1,3}          |  # Octal: \033 \377
+      o\{[^}]*\}          |  # Octal braces: \o{033}
+      c.                  |  # Control chars: \c[ \cA
+      N\{[^}]*\}          |  # Named chars: \N{name} \N{U+263A}
+      [luLUEQF]              # String modification: \l \u \L \U \E \Q \F
+    )
+  /x
+}
+
+sub _has_newlines ($self, $string) {
+  # Check if string contains literal newlines (not \n escape sequences)
+  index($string, "\n") != -1
+}
+
+sub _extract_list_arguments ($self, $list) {
+  my @args;
+  for my $child ($list->children) {
+    if ($child->isa("PPI::Statement::Expression")) {
+      for my $expr_child ($child->children) {
+        next unless $expr_child->significant;
+        # Skip commas but keep fat comma (=>) and other significant operators
+        next
+          if $expr_child->isa("PPI::Token::Operator")
+          && $expr_child->content eq ",";
+        push @args, $expr_child;
+      }
+    } elsif ($child->isa("PPI::Statement") || $child->isa("PPI::Structure")) {
+      # Handle other statements and structures (like hash constructors)
+      push @args, $child;
+    } else {
+      next unless $child->significant;
+      push @args, $child;
+    }
+  }
+  @args
+}
+
+sub _extract_use_arguments ($self, $elem) {
+  # No module means no import arguments; ->arguments dies on a bare "use"
+  return () unless $elem->module;
+  my @args;
+  for my $child ($elem->arguments) {
+    # Skip commas but keep fat comma (=>) and other significant operators
+    next if $child->isa("PPI::Token::Operator") && $child->content eq ",";
+
+    # If it's a list structure (parentheses), extract its contents
+    if ($child->isa("PPI::Structure::List")) {
+      push @args, $self->_extract_list_arguments($child);
+    } else {
+      push @args, $child;
+    }
+  }
+  @args
+}
+
+sub _is_pragma ($self, $elem) {
+  !!$elem->pragma
+}
+
+sub _any_arg_interpolates ($self, @args) {
+  for my $arg (@args) {
+    next if $arg->isa("PPI::Token::QuoteLike::Words");
+    next unless $arg->can("string");
+    return 1 if $self->would_interpolate($arg->string);
+  }
+  0
+}
+
+sub _use_statement_verdict ($self, $stmt) {
+  my @args = $self->_extract_use_arguments($stmt);
+
+  # Single-arg pragmas follow normal quoting rules
+  return 0 if @args == 1 && $self->_is_pragma($stmt);
+
+  # If interpolation is needed, don't treat this as a use statement
+  # so individual strings get checked normally
+  return 0 if $self->_any_arg_interpolates(@args);
+  1
+}
+
+sub _cached_use_statement_verdict ($self, $stmt) {
+  my $doc = $stmt->document or return $self->_use_statement_verdict($stmt);
+
+  my $cached = $self->{_use_cache_doc};
+  if (!$cached || refaddr($cached) != refaddr($doc)) {
+    $self->{_use_cache_doc} = $doc;
+    weaken $self->{_use_cache_doc};
+    $self->{_use_cache} = {};
+  }
+  $self->{_use_cache}{ refaddr $stmt } //= $self->_use_statement_verdict($stmt)
+}
+
+sub _is_in_use_statement ($self, $elem) {
+  my $current = $elem;
+  while ($current) {
+    return $self->_cached_use_statement_verdict($current)
+      if $current->isa("PPI::Statement::Include")
+      && $current->type =~ /^(use|no)$/;
+    $current = $current->parent;
+  }
+  0
+}
+
 sub violates ($self, $elem, $) {
   state $dispatch = {
     "PPI::Token::Quote::Single"      => "check_single_quoted",
@@ -234,6 +339,12 @@ sub violates ($self, $elem, $) {
   }
 
   $self->$method($elem)
+}
+
+sub prepare_to_scan_document ($self, $) {
+  delete $self->{_use_cache_doc};
+  delete $self->{_use_cache};
+  1
 }
 
 sub check_single_quoted ($self, $elem) {
@@ -317,6 +428,26 @@ sub check_q_literal ($self, $elem) {
     if $self->would_interpolate_from_single_quotes($string);
 
   $self->_fix_violation($Fix_double, $elem)
+}
+
+sub _what_would_double_quotes_suggest ($self, $string) {
+  my $would_interpolate = $self->would_interpolate($string);
+
+  # Rules 1,2: If has escaped variables but no interpolation → suggest
+  # single quotes
+  return "''" if !$would_interpolate && ($string =~ /\\[\$\@]/);
+
+  # Rule 1: If has quotes that need handling → suggest qq()
+  my $has_single_quotes = index($string, "'") != -1;
+  my $has_double_quotes = index($string, '"') != -1;
+
+  if ($has_double_quotes) {
+    return "qq()" if $would_interpolate || $has_single_quotes;
+    return "''";  # Only double quotes, no interpolation
+  }
+
+  # Rules 1,2: Otherwise double quotes are fine
+  undef
 }
 
 sub check_qq_interpolate ($self, $elem) {
@@ -455,6 +586,27 @@ sub _use_qw_violation ($self, $elem, @args) {
   $self->_fix_violation($Fix_use_qw, $elem)
 }
 
+sub _scan_qw ($self, $elem, $qw_ref, $qw_parens_ref) {
+  if ($elem->isa("PPI::Token::QuoteLike::Words")) {
+    $$qw_ref        = 1;
+    $$qw_parens_ref = 0 if $elem->content !~ /\Aqw\s*\(/;
+  }
+
+  # Recursively check children (for structures like lists)
+  if ($elem->can("children")) {
+    $self->_scan_qw($_, $qw_ref, $qw_parens_ref) for $elem->children;
+  }
+}
+
+sub _summarise_use_arguments ($self, @args) {
+  my $has_qw         = 0;
+  my $qw_uses_parens = 1;
+
+  $self->_scan_qw($_, \$has_qw, \$qw_uses_parens) for @args;
+
+  ($has_qw, $qw_uses_parens)
+}
+
 sub check_use_statement ($self, $elem) {
   # Check "use" and "no" statements, but not "require"
   return unless $elem->type =~ /^(use|no)$/;
@@ -493,168 +645,6 @@ sub check_use_statement ($self, $elem) {
     if $has_simple_strings || $has_q_operators;
 
   ()
-}
-
-sub _extract_use_arguments ($self, $elem) {
-  # No module means no import arguments; ->arguments dies on a bare "use"
-  return () unless $elem->module;
-  my @args;
-  for my $child ($elem->arguments) {
-    # Skip commas but keep fat comma (=>) and other significant operators
-    next if $child->isa("PPI::Token::Operator") && $child->content eq ",";
-
-    # If it's a list structure (parentheses), extract its contents
-    if ($child->isa("PPI::Structure::List")) {
-      push @args, $self->_extract_list_arguments($child);
-    } else {
-      push @args, $child;
-    }
-  }
-  @args
-}
-
-sub _extract_list_arguments ($self, $list) {
-  my @args;
-  for my $child ($list->children) {
-    if ($child->isa("PPI::Statement::Expression")) {
-      for my $expr_child ($child->children) {
-        next unless $expr_child->significant;
-        # Skip commas but keep fat comma (=>) and other significant operators
-        next
-          if $expr_child->isa("PPI::Token::Operator")
-          && $expr_child->content eq ",";
-        push @args, $expr_child;
-      }
-    } elsif ($child->isa("PPI::Statement") || $child->isa("PPI::Structure")) {
-      # Handle other statements and structures (like hash constructors)
-      push @args, $child;
-    } else {
-      next unless $child->significant;
-      push @args, $child;
-    }
-  }
-  @args
-}
-
-sub _scan_qw ($self, $elem, $qw_ref, $qw_parens_ref) {
-  if ($elem->isa("PPI::Token::QuoteLike::Words")) {
-    $$qw_ref        = 1;
-    $$qw_parens_ref = 0 if $elem->content !~ /\Aqw\s*\(/;
-  }
-
-  # Recursively check children (for structures like lists)
-  if ($elem->can("children")) {
-    $self->_scan_qw($_, $qw_ref, $qw_parens_ref) for $elem->children;
-  }
-}
-
-sub _summarise_use_arguments ($self, @args) {
-  my $has_qw         = 0;
-  my $qw_uses_parens = 1;
-
-  $self->_scan_qw($_, \$has_qw, \$qw_uses_parens) for @args;
-
-  ($has_qw, $qw_uses_parens)
-}
-
-sub _any_arg_interpolates ($self, @args) {
-  for my $arg (@args) {
-    next if $arg->isa("PPI::Token::QuoteLike::Words");
-    next unless $arg->can("string");
-    return 1 if $self->would_interpolate($arg->string);
-  }
-  0
-}
-
-sub _is_pragma ($self, $elem) {
-  !!$elem->pragma
-}
-
-sub prepare_to_scan_document ($self, $) {
-  delete $self->{_use_cache_doc};
-  delete $self->{_use_cache};
-  1
-}
-
-sub _use_statement_verdict ($self, $stmt) {
-  my @args = $self->_extract_use_arguments($stmt);
-
-  # Single-arg pragmas follow normal quoting rules
-  return 0 if @args == 1 && $self->_is_pragma($stmt);
-
-  # If interpolation is needed, don't treat this as a use statement
-  # so individual strings get checked normally
-  return 0 if $self->_any_arg_interpolates(@args);
-  1
-}
-
-sub _cached_use_statement_verdict ($self, $stmt) {
-  my $doc = $stmt->document or return $self->_use_statement_verdict($stmt);
-
-  my $cached = $self->{_use_cache_doc};
-  if (!$cached || refaddr($cached) != refaddr($doc)) {
-    $self->{_use_cache_doc} = $doc;
-    weaken $self->{_use_cache_doc};
-    $self->{_use_cache} = {};
-  }
-  $self->{_use_cache}{ refaddr $stmt } //= $self->_use_statement_verdict($stmt)
-}
-
-sub _is_in_use_statement ($self, $elem) {
-  my $current = $elem;
-  while ($current) {
-    return $self->_cached_use_statement_verdict($current)
-      if $current->isa("PPI::Statement::Include")
-      && $current->type =~ /^(use|no)$/;
-    $current = $current->parent;
-  }
-  0
-}
-
-sub _what_would_double_quotes_suggest ($self, $string) {
-  my $would_interpolate = $self->would_interpolate($string);
-
-  # Rules 1,2: If has escaped variables but no interpolation → suggest
-  # single quotes
-  return "''" if !$would_interpolate && ($string =~ /\\[\$\@]/);
-
-  # Rule 1: If has quotes that need handling → suggest qq()
-  my $has_single_quotes = index($string, "'") != -1;
-  my $has_double_quotes = index($string, '"') != -1;
-
-  if ($has_double_quotes) {
-    return "qq()" if $would_interpolate || $has_single_quotes;
-    return "''";  # Only double quotes, no interpolation
-  }
-
-  # Rules 1,2: Otherwise double quotes are fine
-  undef
-}
-
-sub has_quote_sensitive_escapes ($self, $string) {
-  # Check if string contains escape sequences that would have different meanings
-  # in single vs double quotes. These should be preserved in their current
-  # quote style to maintain their intended meaning.
-  #
-  # This only includes escape sequences where the conversion would change
-  # the actual output, not just the internal representation.
-  $string =~ /
-    \\(?:
-      [tnrfbae]           |  # Single char escapes: \t \n \r \f \b \a \e
-      x[0-9a-fA-F]*       |  # Hex escapes: \x1b \xff
-      x\{[^}]*\}          |  # Hex braces: \x{1b} \x{263A}
-      [0-7]{1,3}          |  # Octal: \033 \377
-      o\{[^}]*\}          |  # Octal braces: \o{033}
-      c.                  |  # Control chars: \c[ \cA
-      N\{[^}]*\}          |  # Named chars: \N{name} \N{U+263A}
-      [luLUEQF]              # String modification: \l \u \L \U \E \Q \F
-    )
-  /x
-}
-
-sub _has_newlines ($self, $string) {
-  # Check if string contains literal newlines (not \n escape sequences)
-  index($string, "\n") != -1
 }
 
 "
@@ -1002,28 +992,26 @@ violation carries: C<< use "" >>, C<use ''>, C<use qw()>,
 C<remove parentheses> and C<< use $display >> respectively. They are available
 via C<@EXPORT_OK>.
 
+=head2 _operator_fix ($op, $delim)
+
+Builds an operator fix structure for operator C<$op> and the delimiter hashref
+C<$delim> (with C<start> and C<end> keys).
+
+=head2 _render_fix ($fix)
+
+Renders a fix structure as its user-visible suggestion string, which becomes
+the violation's description (e.g. C<< use "" >>, C<use q[]>). This is the
+single place the wording of a suggestion is produced.
+
+=head2 _fix_violation ($fix, $elem)
+
+Builds a L<Perl::Critic::PJCJ::Violation> for C<$elem> whose description is
+L<_render_fix|/"_render_fix ($fix)"> of C<$fix>, whose explanation is the
+static rationale, and which carries C<$fix> directly via C<< ->fix >>.
+
 =head2 supported_parameters
 
 This policy has no configurable parameters.
-
-=head2 violates
-
-The main entry point for policy violation checking. Uses a dispatch table to
-route different quote token types to their appropriate checking methods. This
-design allows for efficient handling of the six different PPI token types that
-represent quoted strings and quote-like operators.
-
-Two shared guards are applied here, before dispatch, rather than in each
-checking method: tokens inside a C<use>/C<no> statement (handled instead by
-C<check_use_statement>) and string tokens containing literal newlines are both
-left alone.
-
-=head2 prepare_to_scan_document
-
-Clears the per-document C<use>/C<no> statement verdict cache before each
-document is scanned, and returns true. Perl::Critic reuses one policy instance
-for every file in a run, so this override stops a cached verdict from one
-document being read against another.
 
 =head2 would_interpolate
 
@@ -1078,28 +1066,11 @@ options, rejecting exotic delimiters like C</>, C<|>, C<#>. When multiple
 delimiters work equally well, ties are broken by the preference order
 C<()> > C<[]> > C<< <> >> > C<{}>.
 
-=head2 _operator_fix ($op, $delim)
-
-Builds an operator fix structure for operator C<$op> and the delimiter hashref
-C<$delim> (with C<start> and C<end> keys).
-
-=head2 _render_fix ($fix)
-
-Renders a fix structure as its user-visible suggestion string, which becomes
-the violation's description (e.g. C<< use "" >>, C<use q[]>). This is the
-single place the wording of a suggestion is produced.
-
 =head2 _known_fixes
 
 Returns the list of every fix structure the policy can produce: the three plain
 fixes plus one operator fix per supported delimiter of C<q>, C<qq>, C<qw> and
 C<qx>. L<fix_data> is generated from this list.
-
-=head2 _fix_violation ($fix, $elem)
-
-Builds a L<Perl::Critic::PJCJ::Violation> for C<$elem> whose description is
-L<_render_fix|/"_render_fix ($fix)"> of C<$fix>, whose explanation is the
-static rationale, and which carries C<$fix> directly via C<< ->fix >>.
 
 =head2 fix_data
 
@@ -1129,6 +1100,57 @@ optimal alternative, issuing violations when the current choice is suboptimal.
 
 Acts as a bridge between the parsing and optimisation logic, providing a
 clean interface for the quote-checking methods.
+
+=head2 has_quote_sensitive_escapes ($string)
+
+Tests whether a string contains escape sequences (such as C<\n>, C<\x1b> or
+C<\F>) that mean different things in single and double quotes. Such strings
+keep their current quote style. This is the single source of the double-quote
+escape list, shared with L<Perl::Critic::PJCJ::Fixer>, which must not decode
+double-quoted content containing these escapes.
+
+=head2 _extract_list_arguments
+
+Recursively processes parenthesised argument lists within use/no statements.
+Handles complex nested structures including expressions, statements, and
+hash constructors whilst filtering out structural tokens that don't affect
+quoting decisions.
+
+=head2 _extract_use_arguments
+
+Extracts and processes arguments from use/no statements, handling both bare
+arguments and those enclosed in parentheses. Skips whitespace, commas, and
+semicolons whilst preserving significant operators like fat comma (C<=E<gt>>).
+
+Handles nested list structures by recursively extracting their contents,
+ensuring all argument types are properly identified for rule enforcement.
+
+=head2 _any_arg_interpolates
+
+Checks whether any string argument in a list would interpolate if placed in
+double quotes. Used by both C<check_use_statement> and C<_is_in_use_statement>
+to determine whether a use/no statement's arguments require interpolation,
+which affects whether C<qw()> can be suggested and whether individual tokens
+should be checked under normal quoting rules.
+
+=head2 violates
+
+The main entry point for policy violation checking. Uses a dispatch table to
+route different quote token types to their appropriate checking methods. This
+design allows for efficient handling of the six different PPI token types that
+represent quoted strings and quote-like operators.
+
+Two shared guards are applied here, before dispatch, rather than in each
+checking method: tokens inside a C<use>/C<no> statement (handled instead by
+C<check_use_statement>) and string tokens containing literal newlines are both
+left alone.
+
+=head2 prepare_to_scan_document
+
+Clears the per-document C<use>/C<no> statement verdict cache before each
+document is scanned, and returns true. Perl::Critic reuses one policy instance
+for every file in a run, so this override stops a cached verdict from one
+document being read against another.
 
 =head2 check_single_quoted
 
@@ -1176,6 +1198,25 @@ optimisation according to Rules 1 and 3. These operators don't have simpler
 alternatives, so the policy only ensures they use the most appropriate
 delimiters to handle unbalanced content gracefully.
 
+=head2 statement_level_list ($elem)
+
+Returns the C<PPI::Structure::List> wrapping a use/no statement's whole
+argument list (the parentheses in C<use Foo ( ... );>), or C<undef> when
+there is none. A list nested inside the arguments, such as the parentheses
+of a function or method call, does not qualify. Shared with
+L<Perl::Critic::PJCJ::Fixer> so the policy and the fixer can never disagree
+about which parentheses a "remove parentheses" violation means.
+
+=head2 _analyse_argument_types
+
+Analyses use/no statement arguments to classify them into different types:
+fat comma operators, complex expressions, version numbers, simple strings,
+and quote operators. This classification drives the quoting rule enforcement
+in C<check_use_statement>.
+
+Also detects whether the original statement uses parentheses, which affects
+the violation messages for fat comma and complex expression cases.
+
 =head2 collect_qw_words ($words, @elements)
 
 Decodes the values of use/no statement arguments into C<$words>, recursing
@@ -1203,6 +1244,12 @@ C<use qw()> suggestion is only emitted when this holds.
 Emits the C<use qw()> violation for a use/no statement, or nothing when the
 arguments are not qw-representable.
 
+=head2 _summarise_use_arguments
+
+Detects C<qw()> usage among use/no statement arguments and whether those
+C<qw()> operators use parentheses rather than other delimiters. This
+information drives the violation logic in C<check_use_statement>.
+
 =head2 check_use_statement
 
 Checks quoting consistency in C<use> and C<no> statements. Analyses every
@@ -1224,63 +1271,6 @@ argument type to enforce appropriate quoting:
 
 This promotes consistency and clarity whilst supporting modern Perl idioms
 and maintaining compatibility with tools like perlimports.
-
-=head2 has_quote_sensitive_escapes ($string)
-
-Tests whether a string contains escape sequences (such as C<\n>, C<\x1b> or
-C<\F>) that mean different things in single and double quotes. Such strings
-keep their current quote style. This is the single source of the double-quote
-escape list, shared with L<Perl::Critic::PJCJ::Fixer>, which must not decode
-double-quoted content containing these escapes.
-
-=head2 _any_arg_interpolates
-
-Checks whether any string argument in a list would interpolate if placed in
-double quotes. Used by both C<check_use_statement> and C<_is_in_use_statement>
-to determine whether a use/no statement's arguments require interpolation,
-which affects whether C<qw()> can be suggested and whether individual tokens
-should be checked under normal quoting rules.
-
-=head2 statement_level_list ($elem)
-
-Returns the C<PPI::Structure::List> wrapping a use/no statement's whole
-argument list (the parentheses in C<use Foo ( ... );>), or C<undef> when
-there is none. A list nested inside the arguments, such as the parentheses
-of a function or method call, does not qualify. Shared with
-L<Perl::Critic::PJCJ::Fixer> so the policy and the fixer can never disagree
-about which parentheses a "remove parentheses" violation means.
-
-=head2 _analyse_argument_types
-
-Analyses use/no statement arguments to classify them into different types:
-fat comma operators, complex expressions, version numbers, simple strings,
-and quote operators. This classification drives the quoting rule enforcement
-in C<check_use_statement>.
-
-Also detects whether the original statement uses parentheses, which affects
-the violation messages for fat comma and complex expression cases.
-
-=head2 _extract_use_arguments
-
-Extracts and processes arguments from use/no statements, handling both bare
-arguments and those enclosed in parentheses. Skips whitespace, commas, and
-semicolons whilst preserving significant operators like fat comma (C<=E<gt>>).
-
-Handles nested list structures by recursively extracting their contents,
-ensuring all argument types are properly identified for rule enforcement.
-
-=head2 _extract_list_arguments
-
-Recursively processes parenthesised argument lists within use/no statements.
-Handles complex nested structures including expressions, statements, and
-hash constructors whilst filtering out structural tokens that don't affect
-quoting decisions.
-
-=head2 _summarise_use_arguments
-
-Detects C<qw()> usage among use/no statement arguments and whether those
-C<qw()> operators use parentheses rather than other delimiters. This
-information drives the violation logic in C<check_use_statement>.
 
 =head1 AUTHOR
 

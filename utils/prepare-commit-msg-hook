@@ -18,9 +18,9 @@ $|++;
 
 my $Ticket_re = ticket_re;
 
-sub get_ticket { get_current_branch =~ /^($Ticket_re)/ ? $1 : "GH-XXXXX" }
+sub get_ticket () { get_current_branch =~ /^($Ticket_re)/ ? $1 : "GH-XXXXX" }
 
-sub main {
+sub main () {
   my ($file, $type) = @ARGV;
   $type //= $ENV{PRE_COMMIT_COMMIT_MSG_SOURCE} // "";
 

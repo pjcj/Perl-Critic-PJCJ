@@ -95,7 +95,7 @@ sub inject_postamble ($content, $postamble) {
   $content
 }
 
-sub main {
+sub main () {
   my $makefile_pl     = shift @ARGV or die "Usage: $0 <Makefile.PL>\n";
   my $targets_file    = "dev/Makefile.targets";
   my $targets_content = read_targets_file($targets_file);

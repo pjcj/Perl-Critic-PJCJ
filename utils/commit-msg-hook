@@ -179,7 +179,7 @@ sub read_msg ($file) {
   split /^/m, $text
 }
 
-sub main {
+sub main () {
   my ($file) = @ARGV;
   # say STDERR "commit-msg hook: [$file]";
 
