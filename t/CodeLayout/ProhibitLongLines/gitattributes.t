@@ -9,7 +9,7 @@ use lib qw( lib t/lib );
 
 use File::Temp qw( tempdir );
 use PPI        ();
-use Test2::V0  qw( done_testing is ok skip subtest );
+use Test2::V0  qw( done_testing is ok skip_all subtest );
 
 use Perl::Critic::Policy::CodeLayout::ProhibitLongLines ();
 
@@ -53,9 +53,9 @@ sub violations_for_file ($policy, $path) {
 }
 
 sub require_git () {
-  skip "git not available" unless git_available();
+  skip_all "git not available" unless git_available();
   my $dir = setup_git_repo();
-  skip "could not initialise git repo" unless $dir;
+  skip_all "could not initialise git repo" unless $dir;
   $dir
 }
 
