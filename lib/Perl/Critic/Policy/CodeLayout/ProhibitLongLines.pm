@@ -89,7 +89,11 @@ sub _gitattr_lookup ($self, $attr, $filename) {
     my $quiet  = open STDERR, ">", File::Spec->devnull;
     my $opened = open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr,
       "--", $base;
-    if ($quiet) { open STDERR, ">&", $saved_err or return }
+    if ($quiet) {
+      # Restore our own STDERR; keep going even if the dup back fails, since
+      # abandoning the lookup would not make a broken STDERR any better
+      open STDERR, ">&", $saved_err or warn "Cannot restore STDERR: $!\n";
+    }
     return unless $opened;
     my $result = do { local $/ = undef; <$fh> };
     close $fh or return;
