@@ -35,6 +35,16 @@ subtest "Line ranges restrict fixes" => sub {
     "no range fixes everything";
 };
 
+subtest "Line ranges leave out-of-range violations untouched" => sub {
+  my $in = qq(my \$a = 'one';\nuse Foo "a", "b";\nmy \$c = 'three';\n);
+  is $Fixer->fix($in, lines => [2, 2]),
+    qq[my \$a = 'one';\nuse Foo qw( a b );\nmy \$c = 'three';\n],
+    "only the use statement line is fixed";
+  is $Fixer->fix($in, lines => [3, 3]),
+    qq(my \$a = 'one';\nuse Foo "a", "b";\nmy \$c = "three";\n),
+    "only the trailing line is fixed";
+};
+
 subtest "Line ranges do not drift when fixes shorten the document" => sub {
   my $in = qq(use Foo "a",\n  "b";\nmy \$x = 'zzz';\n);
   is $Fixer->fix($in, lines => [1, 2]),

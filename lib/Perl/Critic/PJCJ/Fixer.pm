@@ -265,8 +265,9 @@ sub _fix_once ($self, $source, $lines) {
   my @fixes;
   $doc->find(
     sub ($top, $elem) {
+      return 0 unless $self->_in_range($elem, $lines);
       my ($violation) = $self->{policy}->violates($elem, $doc);
-      return 0 unless $violation && $self->_in_range($elem, $lines);
+      return 0 unless $violation;
       my $fix
         = $violation->can("fix")
         ? $violation->fix
