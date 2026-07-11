@@ -23,8 +23,8 @@ sub new ($class) {
   bless { policy => $policy }, $class
 }
 
-sub _decode_single ($self, $raw) { $raw =~ s/\\([\\'])/$1/gr }
-
+# Only valid for content free of quote-sensitive escapes; conversion call
+# sites guard with the policy's has_quote_sensitive_escapes predicate
 sub _decode_double ($self, $raw) { $raw =~ s/\\(.)/$1/gsr }
 
 sub _decode_q ($self, $raw, $start, $end) {
@@ -36,7 +36,7 @@ sub _decode_delimiters ($self, $raw, $start, $end) {
 }
 
 sub _encode_single ($self, $value) {
-  "'" . ($value =~ s/([\\'])/\\$1/gr) . "'"
+  "'" . $self->{policy}->escape_single_quoted($value) . "'"
 }
 
 sub _encode_double ($self, $value) {
@@ -45,8 +45,7 @@ sub _encode_double ($self, $value) {
 
 sub _normalised_value ($self, $elem) {
   my $class = ref $elem;
-  return $self->_decode_single($elem->string)
-    if $class eq "PPI::Token::Quote::Single";
+  return $elem->literal if $class eq "PPI::Token::Quote::Single";
   return $self->_decode_double($elem->string)
     if $class eq "PPI::Token::Quote::Double";
 
@@ -84,8 +83,7 @@ sub _operator_replacement ($self, $elem, $op, $start, $end) {
   my $content;
 
   if ($class eq "PPI::Token::Quote::Single") {
-    $content
-      = $self->_decode_single($elem->string) =~ s/([\\\Q$start$end\E])/\\$1/gr;
+    $content = $elem->literal =~ s/([\\\Q$start$end\E])/\\$1/gr;
     return "$op$start$content$end";
   }
 
@@ -109,11 +107,11 @@ sub _replacement ($self, $elem, $fix) {
     if $type eq "operator";
 
   if ($class eq "PPI::Token::Quote::Single") {
-    return $self->_encode_double($self->_decode_single($elem->string))
-      if $type eq "double";
+    return $self->_encode_double($elem->literal) if $type eq "double";
   } elsif ($class eq "PPI::Token::Quote::Double") {
     return $self->_encode_single($self->_decode_double($elem->string))
-      if $type eq "single";
+      if $type eq "single"
+      && !$self->{policy}->has_quote_sensitive_escapes($elem->string);
   } elsif ($class eq "PPI::Token::Quote::Literal") {
     my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
     my $value = $self->_decode_q($raw, $start, $end);
@@ -124,7 +122,8 @@ sub _replacement ($self, $elem, $fix) {
     return '"' . $self->_decode_delimiters($raw, $start, $end) . '"'
       if $type eq "double";
     return $self->_encode_single($self->_decode_double($raw))
-      if $type eq "single";
+      if $type eq "single"
+      && !$self->{policy}->has_quote_sensitive_escapes($raw);
   }
 
   undef

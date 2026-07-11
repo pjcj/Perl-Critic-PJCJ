@@ -47,7 +47,7 @@ Single test file: `yath test -j20 --qvf -T t/path/to/test.t`
 
 - `would_interpolate($string)` — uses PPI to check if content would interpolate
   in double quotes.
-- `_has_quote_sensitive_escapes($string)` — regex check for escape sequences
+- `has_quote_sensitive_escapes($string)` — regex check for escape sequences
   (`\n`, `\t`, `\x1b`, `\N{...}`, etc.) that differ between `''` and `""`.
 - `find_optimal_delimiter($content, $op, $start, $end)` — determines best
   bracket delimiter (`()` > `[]` > `<>` > `{}`), accounting for unbalanced

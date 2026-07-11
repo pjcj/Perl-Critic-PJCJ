@@ -32,6 +32,14 @@ sub would_interpolate ($self, $string) {
   $self->{real}->would_interpolate($string)
 }
 
+sub escape_single_quoted ($self, $string) {
+  $self->{real}->escape_single_quoted($string)
+}
+
+sub has_quote_sensitive_escapes ($self, $string) {
+  $self->{real}->has_quote_sensitive_escapes($string)
+}
+
 "
 And if I only could
 I'd make a deal with God
@@ -85,6 +93,14 @@ Delegated to the real policy.
 Delegated to the real policy.
 
 =head2 would_interpolate ($string)
+
+Delegated to the real policy.
+
+=head2 escape_single_quoted ($string)
+
+Delegated to the real policy.
+
+=head2 has_quote_sensitive_escapes ($string)
 
 Delegated to the real policy.
 

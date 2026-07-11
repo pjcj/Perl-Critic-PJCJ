@@ -58,30 +58,17 @@ sub would_interpolate ($self, $string) {
   $cache{$string} = $would_interpolate
 }
 
+sub escape_single_quoted ($self, $string) {
+  # The inner content of a '...' literal: backslash-escape \ and '
+  $string =~ s/([\\'])/\\$1/gr
+}
+
 sub would_interpolate_from_single_quotes ($self, $string) {
   # Test whether a string from single quotes would interpolate if converted
-  # to double quotes. This is used when checking single-quoted strings to
-  # see if they should stay single-quoted to avoid unintended interpolation.
-  #
-  # The challenge is that PPI gives us the decoded content of single-quoted
-  # strings. For example, for the source 'price: \\$5.00', PPI's string()
-  # method returns 'price: \$5.00' (with one backslash). But to test
-  # interpolation properly, we need to reconstruct what the original
-  # escaping would have been.
-  #
-  # In single quotes, only backslash (\) and apostrophe (') are escaped:
-  # - '\' in the source becomes '\\' in the content
-  # - '\'' in the source becomes ''' in the content
-  #
-  # So to reconstruct the original string for interpolation testing:
-  # - Each '\' in content represents '\\' in the original source
-  # - Each ''' in content represents '\'' in the original source
-
-  my $reconstructed = $string;
-  $reconstructed =~ s/\\/\\\\/g;  # \ → \\
-  $reconstructed =~ s/'/\\'/g;    # ' → \'
-
-  $self->would_interpolate($reconstructed)
+  # to double quotes. PPI gives us the decoded content of single-quoted
+  # strings, so re-escape it to reconstruct the original source before
+  # testing interpolation.
+  $self->would_interpolate($self->escape_single_quoted($string))
 }
 
 sub delimiter_preference_order ($self, $delimiter_start) {
@@ -223,7 +210,7 @@ sub check_single_quoted ($self, $elem) {
     $has_double_quotes ||
     # Check if string contains escape sequences that would have different
     # meanings between single vs double quotes. If so, preserve single quotes.
-    $self->_has_quote_sensitive_escapes($string) ||
+    $self->has_quote_sensitive_escapes($string) ||
     # Keep single quotes if double would introduce interpolation
     $self->would_interpolate_from_single_quotes($string);
 
@@ -248,7 +235,7 @@ sub check_double_quoted ($self, $elem) {
   # quotes if no other interpolation exists AND no dangerous escape sequences
   return $self->violation($Desc, $Expl_single, $elem)
     if $cleaned =~ /\\[\$\@\"]/
-    && !$self->_has_quote_sensitive_escapes($string)
+    && !$self->has_quote_sensitive_escapes($string)
     && !$self->would_interpolate($string);
 
   # If has escaped double quotes, suggest qq() — by this point, the ''
@@ -306,7 +293,7 @@ sub check_qq_interpolate ($self, $elem) {
 
   # Only preserve qq() if escape sequences are actually needed
   return $self->check_delimiter_optimisation($elem)
-    if $self->_has_quote_sensitive_escapes($string);
+    if $self->has_quote_sensitive_escapes($string);
 
   my $double_quote_suggestion
     = $self->_what_would_double_quotes_suggest($string);
@@ -584,7 +571,7 @@ sub _what_would_double_quotes_suggest ($self, $string) {
   undef
 }
 
-sub _has_quote_sensitive_escapes ($self, $string) {
+sub has_quote_sensitive_escapes ($self, $string) {
   # Check if string contains escape sequences that would have different meanings
   # in single vs double quotes. These should be preserved in their current
   # quote style to maintain their intended meaning.
@@ -948,6 +935,12 @@ consistency.
 Uses PPI's authoritative parsing to detect interpolation rather than regex
 patterns, ensuring accurate detection of complex cases like literal variables.
 
+=head2 escape_single_quoted ($string)
+
+Encodes a string as the inner content of a single-quoted literal by
+backslash-escaping backslashes and apostrophes. This is the single source of
+single-quote encoding knowledge, shared with L<Perl::Critic::PJCJ::Fixer>.
+
 =head2 would_interpolate_from_single_quotes
 
 Tests whether a string from single quotes would interpolate if converted to
@@ -1086,6 +1079,14 @@ argument types:
 
 This promotes consistency and clarity whilst supporting modern Perl idioms
 and maintaining compatibility with tools like perlimports.
+
+=head2 has_quote_sensitive_escapes ($string)
+
+Tests whether a string contains escape sequences (such as C<\n>, C<\x1b> or
+C<\F>) that mean different things in single and double quotes. Such strings
+keep their current quote style. This is the single source of the double-quote
+escape list, shared with L<Perl::Critic::PJCJ::Fixer>, which must not decode
+double-quoted content containing these escapes.
 
 =head2 _any_arg_interpolates
 

@@ -57,4 +57,18 @@ subtest "Replacements which do not preserve the value are declined" => sub {
     q(my $x = ' ';), "a space cannot survive as a qw word";
 };
 
+subtest "Quote-sensitive escapes decline single-quote conversion" => sub {
+  my $double = 'my $x = "\$a\FBAR";';
+  is fixer("PPI::Token::Quote::Double", "use ''")->fix($double), $double,
+    "a double-quoted string with \\F is not rewritten to single quotes";
+
+  my $interp = 'my $x = qq(\$a\FBAR);';
+  is fixer("PPI::Token::Quote::Interpolate", "use ''")->fix($interp),
+    $interp, "a qq string with \\F is not rewritten to single quotes";
+
+  my $plain = 'my $x = "\$aBAR";';
+  is fixer("PPI::Token::Quote::Double", "use ''")->fix($plain),
+    q(my $x = '$aBAR';), "escape-free content still converts to single quotes";
+};
+
 done_testing
