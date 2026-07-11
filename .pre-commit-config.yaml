@@ -4,6 +4,12 @@
 
 fail_fast: false  # Allow all checks to run even if one fails
 
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+  - prepare-commit-msg
+minimum_pre_commit_version: "2.18.0"
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -110,3 +116,17 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - jscpd@5.0.11
+
+      - id: commit-msg
+        name: commit message style
+        description: Check the commit message against house style
+        language: system
+        entry: utils/commit-msg-hook
+        stages: [ commit-msg ]
+
+      - id: prepare-commit-msg
+        name: prepare commit message
+        description: Insert the ticket reference and hints
+        language: system
+        entry: utils/prepare-commit-msg-hook
+        stages: [ prepare-commit-msg ]

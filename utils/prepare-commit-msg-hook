@@ -23,7 +23,7 @@ sub get_ticket { get_current_branch =~ /^([A-Z]{2,8}-\d+)/ ? $1 : "GH-XXXXX" }
 
 sub main {
   my ($file, $type) = @ARGV;
-  $type //= "";
+  $type //= $ENV{PRE_COMMIT_COMMIT_MSG_SOURCE} // "";
 
   return 0 if $type !~ /^(?:|message|template|merge)$/;
 

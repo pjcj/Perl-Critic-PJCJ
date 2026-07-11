@@ -175,15 +175,16 @@ sub main {
 
   return 0 unless @Errors;
 
-  say "Errors found:";
   my $max = 0;
   for my $e (@Errors) { $max = length $e->[0] if length $e->[0] > $max }
-  for my $e (@Errors) { printf "%-${max}s: «%s»\n", @$e }
+  my $report = join "", "Errors found:\n",
+    map { sprintf "%-${max}s: «%s»\n", @$_ } @Errors;
+  print $report;  # captured by pre-commit, shown on failure
 
-  print "Force commit? [y/N] ";
-  open my $in, "<", "/dev/tty" or die "Can't open tty";
-  my $force = <$in> // "";
-  close $in or die "Can't close tty";
+  open my $tty, "+<", "/dev/tty" or return 1;  # no terminal: decline
+  print $tty $report, "Force commit? [y/N] ";
+  my $force = <$tty> // "";
+  close $tty or die "Can't close tty";
   $force =~ /^y/i ? 0 : 1
 }
 
