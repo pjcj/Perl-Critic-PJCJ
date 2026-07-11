@@ -51,7 +51,11 @@ subtest "Include explanations without matching structure" => sub {
   is fixer("PPI::Statement::Include", "remove parentheses")->fix("use Foo;"),
     "use Foo;", "a use statement without parentheses declines";
   is fixer("PPI::Statement::Include", "remove parentheses")
-    ->fix("use Foo ();"), "use Foo ;", "empty parentheses are removed";
+    ->fix("use Foo ();"), "use Foo;",
+    "empty parentheses are removed with their leading space";
+  is fixer("PPI::Statement::Include", "remove parentheses")
+    ->fix("use Foo();"), "use Foo;",
+    "empty parentheses without a leading space are removed";
 };
 
 subtest "Replacements which do not preserve the value are declined" => sub {

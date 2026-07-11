@@ -181,6 +181,10 @@ sub _remove_include_parens ($self, $elem) {
   my @kids = $list->children;
   while (@kids && !$kids[0]->significant)  { (shift @kids)->delete }
   while (@kids && !$kids[-1]->significant) { (pop @kids)->delete }
+  unless (@kids) {
+    my $prev = $list->previous_sibling;
+    $prev->delete unless $prev->significant;
+  }
   $list->start->set_content("");
   $list->finish->set_content("");
   1
