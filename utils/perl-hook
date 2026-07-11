@@ -14,6 +14,7 @@ sub is_perl ($file) {
 }
 
 sub check_tidy ($files) {
+  require Perl::Tidy;
   my $status = 0;
   for my $file (@$files) {
     my $fh;
@@ -23,8 +24,18 @@ sub check_tidy ($files) {
       next;
     }
     my $source = do { local $/; <$fh> };
-    my $tidied = qx(perltidy --profile=.perltidyrc -st \Q$file\E);
-    if ($?) {
+    my $tidied = "";
+    my $error  = eval {
+      Perl::Tidy::perltidy(
+        source      => \$source,
+        destination => \$tidied,
+        stderr      => \my $stderr,
+        errorfile   => \my $errors,
+        perltidyrc  => ".perltidyrc",
+        argv        => [],
+      )
+    };
+    if (!defined $error || $error) {
       say "perltidy failed: $file";
       $status = 1;
       next;
@@ -80,6 +91,8 @@ on the executable bit, and can never match files written in another
 language.
 
 C<tidy> reports files whose C<perltidy> output differs from their content.
+It uses the L<Perl::Tidy> module in this process rather than spawning one
+C<perltidy> process per file, which keeps the check fast at repo scale.
 C<critic> runs C<perlcritic> with the repository lib in C<@INC> so a
 distribution providing its own policies is checked with the working-tree
 code.  Both modes exit non-zero if any file fails.  C<list> prints the

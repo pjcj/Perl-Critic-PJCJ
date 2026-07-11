@@ -21,14 +21,7 @@ sub write_file ($path, $content, $mode = 0644) {
   chmod $mode, $path or die "Cannot chmod $path: $!\n";
 }
 
-sub fake_perltidy ($body) {
-  my $dir = tempdir(CLEANUP => 1);
-  write_file("$dir/perltidy", "#!/bin/sh\n$body\n", 0755);
-  $dir
-}
-
-sub run_tidy ($path, @files) {
-  local $ENV{PATH} = $path;
+sub run_tidy (@files) {
   my $files = join " ", map "\Q$_\E", @files;
   my $out   = qx($^X $Hook tidy $files 2>&1);
   ($out, $? >> 8)
@@ -37,28 +30,38 @@ sub run_tidy ($path, @files) {
 my $Work = tempdir(CLEANUP => 1);
 write_file("$Work/clean.pm", "my \$x = 1;\n");
 
-subtest "A missing perltidy is reported as a failure" => sub {
-  my ($out, $exit) = run_tidy(tempdir(CLEANUP => 1), "$Work/clean.pm");
+subtest "A file perltidy cannot process is reported as a failure" => sub {
+  write_file("$Work/broken.pm", "}\n");
+  my ($out, $exit) = run_tidy("$Work/broken.pm");
   like $out,   qr/perltidy failed/, "the cause is reported";
   unlike $out, qr/Not tidy/,        "the file is not misreported as untidy";
   is $exit, 1, "the hook fails";
 };
 
-subtest "A crashing perltidy is reported as a failure" => sub {
-  my ($out, $exit) = run_tidy(fake_perltidy("exit 3"), "$Work/clean.pm");
-  like $out, qr/perltidy failed/, "the cause is reported";
-  is $exit, 1, "the hook fails";
-};
-
 subtest "Tidy and untidy files are distinguished" => sub {
-  my $pass = fake_perltidy('/bin/cat "$3"');
-  my ($out, $exit) = run_tidy($pass, "$Work/clean.pm");
+  my ($out, $exit) = run_tidy("$Work/clean.pm");
   is $out,  "", "a tidy file produces no output";
   is $exit, 0,  "a tidy file passes";
 
-  ($out, $exit) = run_tidy(fake_perltidy("echo DIFFERENT"), "$Work/clean.pm");
+  write_file("$Work/untidy.pm", "my  \$x=1;\n");
+  ($out, $exit) = run_tidy("$Work/untidy.pm");
   like $out, qr/Not tidy/, "an untidy file is reported";
   is $exit, 1, "an untidy file fails";
+};
+
+subtest "Every file is checked, not just the first failure" => sub {
+  write_file("$Work/messy.pm", "my  \$y=2;\n");
+  my ($out, $exit) = run_tidy("$Work/untidy.pm", "$Work/messy.pm");
+  like $out, qr/Not tidy: \Q$Work\E\/untidy\.pm/, "the first is reported";
+  like $out, qr/Not tidy: \Q$Work\E\/messy\.pm/,  "the second is reported";
+  is $exit, 1, "the hook fails";
+};
+
+subtest "No perltidy process is spawned" => sub {
+  local $ENV{PATH} = tempdir(CLEANUP => 1);
+  my ($out, $exit) = run_tidy("$Work/clean.pm");
+  is $out,  "", "a tidy file passes without a perltidy binary";
+  is $exit, 0,  "the hook succeeds";
 };
 
 subtest "List mode prints only the Perl files" => sub {
@@ -76,16 +79,14 @@ subtest "List mode prints only the Perl files" => sub {
 
 subtest "An unreadable file is reported, not skipped" => sub {
   write_file("$Work/hidden.pm", "my \$x = 1;\n", 0000);
-  my ($out, $exit)
-    = run_tidy(fake_perltidy('/bin/cat "$3"'), "$Work/hidden.pm");
+  my ($out, $exit) = run_tidy("$Work/hidden.pm");
   like $out, qr/Cannot read/, "the cause is reported";
   is $exit, 1, "the hook fails";
 };
 
 subtest "An unreadable candidate file aborts the run" => sub {
   write_file("$Work/mystery", "#!/usr/bin/env perl\n", 0000);
-  my ($out, $exit)
-    = run_tidy(fake_perltidy('/bin/cat "$3"'), "$Work/mystery");
+  my ($out, $exit) = run_tidy("$Work/mystery");
   like $out, qr/Cannot read/, "the cause is reported";
   isnt $exit, 0, "the hook fails";
 };
