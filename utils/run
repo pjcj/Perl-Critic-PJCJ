@@ -96,6 +96,10 @@ setup() {
 }
 
 setup_hooks() {
+  if [[ ! -d .git/hooks ]]; then
+    pi "No .git/hooks directory - skipping hook setup"
+    return 0
+  fi
   for hook in commit-msg prepare-commit-msg; do
     for link in ".git/hooks/$hook" ".git/hooks/$hook.legacy"; do
       if [[ -L $link && $(readlink "$link") == *"utils/${hook}-hook" ]]; then
