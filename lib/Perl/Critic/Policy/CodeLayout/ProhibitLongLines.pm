@@ -8,14 +8,33 @@ use experimental "signatures";
 
 use parent qw( Perl::Critic::Policy );
 
-use Encode                              qw( decode FB_CROAK );
-use File::Basename                      qw( dirname );
-use List::Util                          qw( any );
-use Perl::Critic::Utils                 qw( $SEVERITY_MEDIUM );
+use Encode              qw( decode FB_CROAK );
+use File::Basename      qw( dirname );
+use List::Util          qw( any );
+use Perl::Critic::Utils qw( $SEVERITY_MEDIUM words_from_string );
 use Perl::Critic::Utils::SourceLocation ();
 
 my $Desc = "Line exceeds maximum length";
 my $Expl = "Keep lines under the configured maximum for readability";
+
+sub _parse_allow_lines_matching ($self, $parameter, $config_string) {
+  my $string = $config_string // $parameter->get_default_string // "";
+  my @patterns;
+  for my $pattern (words_from_string($string)) {
+    my $re = eval { qr/$pattern/ };
+    if (!defined $re) {
+      my $error = $@;
+      chomp $error;
+      $self->throw_parameter_value_exception(
+        "allow_lines_matching", $pattern,
+        undef,                  "is not a valid regular expression: $error",
+      );
+    }
+    push @patterns, $re;
+  }
+  $self->__set_parameter_value($parameter, \@patterns);
+  return
+}
 
 sub supported_parameters { (
   {
@@ -28,7 +47,7 @@ sub supported_parameters { (
     name           => "allow_lines_matching",
     description    => "Regex patterns for lines exempt from length check",
     default_string => "",
-    behavior       => "string list",
+    parser         => \&_parse_allow_lines_matching,
   }, {
     name           => "gitattributes_line_length",
     description    => "Git attribute name for per-file line length override",
@@ -47,7 +66,7 @@ sub violates ($self, $elem, $doc) {
   return if defined $override && $override eq "ignore";
 
   my $max_length = $override // $self->{_max_line_length};
-  my @patterns   = keys $self->{_allow_lines_matching}->%*;
+  my $patterns   = $self->{_allow_lines_matching};
   my $source     = $doc->serialize;
 
   # PPI serializes source as octets, so decode to characters before measuring
@@ -62,7 +81,7 @@ sub violates ($self, $elem, $doc) {
   for my $line_num (0 .. $#lines) {
     my $length = length $lines[$line_num];
     if ($length > $max_length) {
-      next if any { $lines[$line_num] =~ /$_/ } @patterns;
+      next if any { $lines[$line_num] =~ $_ } @$patterns;
       my $violation_desc
         = "Line is $length characters long (exceeds $max_length)";
 
@@ -194,6 +213,9 @@ Multiple patterns (space-separated):
 
   [CodeLayout::ProhibitLongLines]
   allow_lines_matching = ^\s*package\s+ https?://
+
+Invalid patterns are reported as a configuration error when the policy is
+loaded.
 
 =head2 gitattributes_line_length
 
