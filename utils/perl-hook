@@ -6,6 +6,9 @@ use warnings;
 use feature      qw( signatures );
 use experimental qw( signatures );
 
+use File::Basename qw( dirname );
+use File::Temp     qw( tempfile );
+
 my $Unreadable = 0;
 
 sub is_perl ($file) {
@@ -60,6 +63,24 @@ sub check_tidy ($files) {
   $status
 }
 
+sub write_atomic ($file, $content, $mode) {
+  my ($out, $temp)
+    = eval { tempfile("perl-hook-XXXXXX", DIR => dirname($file), UNLINK => 0) };
+  unless ($out) {
+    say "Cannot create temporary file for $file: $@";
+    return 0;
+  }
+  my $ok = print {$out} $content;
+  $ok &&= close $out;
+  $ok &&= chmod $mode, $temp;
+  $ok &&= rename $temp, $file;
+  return 1 if $ok;
+  my $error = $!;
+  unlink $temp;
+  say "Cannot write $file: $error";
+  0
+}
+
 sub format_files ($files) {
   my $status = 0;
   for my $file (@$files) {
@@ -70,6 +91,7 @@ sub format_files ($files) {
       next;
     }
     my $source = do { local $/; <$fh> };
+    my $mode   = (stat $fh)[2] & 07777;
     my $tidied = tidy_source($source);
     unless (defined $tidied) {
       say "perltidy failed: $file";
@@ -77,16 +99,7 @@ sub format_files ($files) {
       next;
     }
     next if $tidied eq $source;
-    my $out;
-    unless (open $out, ">", $file) {
-      say "Cannot write $file: $!";
-      $status = 1;
-      next;
-    }
-    unless (print {$out} $tidied and close $out) {
-      say "Cannot write $file: $!";
-      $status = 1;
-    }
+    $status = 1 unless write_atomic($file, $tidied, $mode);
   }
   $status
 }
@@ -117,7 +130,8 @@ sub main () {
     exit $status;
   }
   if ($mode eq "format") {
-    exit format_files(\@perl);
+    my $status = format_files(\@perl) || $Unreadable;
+    exit $status;
   }
   my $status = check_tidy(\@perl) || $Unreadable;
   exit $status;

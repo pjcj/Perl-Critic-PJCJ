@@ -4,7 +4,7 @@ use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is like skip_all subtest unlike );
+use Test2::V0    qw( done_testing is isnt like skip_all subtest unlike );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
@@ -25,6 +25,18 @@ sub run_tidy (@files) {
   my $files = join " ", map "\Q$_\E", @files;
   my $out   = qx($^X $Hook tidy $files 2>&1);
   ($out, $? >> 8)
+}
+
+sub run_format (@files) {
+  my $files = join " ", map "\Q$_\E", @files;
+  my $out   = qx($^X $Hook format $files 2>&1);
+  ($out, $? >> 8)
+}
+
+sub read_file ($path) {
+  open my $fh, "<", $path or die "Cannot read $path: $!\n";
+  local $/;
+  <$fh>
 }
 
 my $Work = tempdir(CLEANUP => 1);
@@ -102,6 +114,32 @@ subtest "List mode keeps its output clean of warnings" => sub {
   is $list,   "$Work/clean.pm\n", "only readable Perl files are listed";
   my $all = qx($^X $Hook list $files 2>&1);
   like $all, qr/Cannot read/, "the unreadable candidate is reported";
+};
+
+subtest "Format mode rewrites an untidy file in place" => sub {
+  write_file("$Work/reformat.pm", "my  \$x=1;\n");
+  my ($out, $exit) = run_format("$Work/reformat.pm");
+  is $exit,                          0,               "the hook succeeds";
+  is read_file("$Work/reformat.pm"), "my \$x = 1;\n", "the file is tidied";
+};
+
+subtest "Format mode reports an unreadable candidate" => sub {
+  write_file("$Work/obscure", "#!/usr/bin/env perl\n", 0000);
+  write_file("$Work/plain.pm", "my \$x = 1;\n");
+  my ($out, $exit) = run_format("$Work/obscure", "$Work/plain.pm");
+  like $out, qr/Cannot read \Q$Work\E\/obscure/, "the cause is reported";
+  is $exit, 1, "the hook fails";
+};
+
+subtest "Format mode leaves the original intact on a failed write" => sub {
+  skip_all "ulimit is POSIX-specific" if $^O eq "MSWin32";
+  write_file("$Work/atomic.pm", "my  \$x=1;\n");
+  my $cmd = qq(sh -c "ulimit -f 0; exec \Q$^X\E \Q$Hook\E format )
+    . qq(\Q$Work/atomic.pm\E" >/dev/null 2>&1);
+  system $cmd;
+  isnt $?, 0, "the hook fails";
+  is read_file("$Work/atomic.pm"), "my  \$x=1;\n",
+    "the original content survives";
 };
 
 done_testing
