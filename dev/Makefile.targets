@@ -45,7 +45,7 @@ format:
 	perlimports --inplace-edit --no-preserve-unused $$files 2>/dev/null \
 		|| true; \
 	perl -Ilib script/perl-quote-fix --inplace $$files || exit 1; \
-	perltidy -b $$files >/dev/null 2>&1; \
+	utils/perl-hook format $$files || exit 1; \
 	for file in $$files; do \
 		if ! diff -q "$$file.tdybak" "$$file" >/dev/null 2>&1; then \
 			echo "Formatted $$file"; \
