@@ -40,13 +40,16 @@ sub read_file ($file) {
   <$fh>
 }
 
-sub run_script ($source, @args) {
-  my $file = write_file($source);
-  open my $out, "-|", $^X, "-Ilib", $Script, @args, $file
+sub run_files (@args) {
+  open my $out, "-|", $^X, "-Ilib", $Script, @args
     or die "Cannot run $Script: $!";
   my $output = do { local $/ = undef; <$out> };
   close $out or $! == 0 or die "Cannot close pipe from $Script: $!";
   $output
+}
+
+sub run_script ($source, @args) {
+  run_files(@args, write_file($source))
 }
 
 sub run_inplace (@files) {
@@ -80,6 +83,28 @@ subtest "Bad arguments fail" => sub {
   isnt $?, 0, "invalid --lines exits non-zero";
   run_script("", "--lines", "9-1");
   isnt $?, 0, "reversed --lines exits non-zero";
+};
+
+subtest "Filter mode fails on unopenable input" => sub {
+  my $missing = "/no/such/perl-quote-fix-input.pl";
+  my $out     = qx($^X -Ilib $Script \Q$missing\E 2>&1);
+  isnt $?, 0, "a missing input file exits non-zero";
+  like $out, qr/\ACannot read [^\n]+\n\z/,
+    "the cause is reported and nothing reaches stdout";
+};
+
+subtest "Every named file is processed in filter mode" => sub {
+  my $one = write_file(q(my $x = 'a';));
+  my $two = write_file(q(my $y = 'b';));
+  is run_files($one, $two), 'my $x = "a";my $y = "b";',
+    "both files appear fixed";
+};
+
+subtest "Empty input produces empty output" => sub {
+  skip_on_windows "null-device redirection is POSIX-specific";
+  my $out = qx($^X -Ilib $Script </dev/null 2>&1);
+  is $out, "", "no output and no warnings";
+  is $?,   0,  "the script succeeds";
 };
 
 subtest "Multiple files are fixed in place" => sub {

@@ -74,16 +74,35 @@ sub run_in_place ($lines) {
   exit $status;
 }
 
+sub read_source ($file) {
+  my $fh;
+  unless (open $fh, "<", $file) {
+    warn "Cannot read $file: $!\n";
+    exit 1;
+  }
+  my $source = do { local $/ = undef; <$fh> };
+  $source // ""
+}
+
+sub run_filter ($lines) {
+  my $fixer = Perl::Critic::PJCJ::Fixer->new;
+  unless (@ARGV) {
+    my $source = do { local $/ = undef; <> }
+      // "";
+    print $fixer->fix($source, lines => $lines);
+    return;
+  }
+  print $fixer->fix(read_source($_), lines => $lines) for @ARGV;
+}
+
 sub main () {
   my %opt;
   GetOptions(\%opt, "lines=s", "inplace", "help|h") or pod2usage(2);
   pod2usage(0) if $opt{help};
 
   run_in_place($opt{lines}) if $opt{inplace};
-
-  my $lines  = parse_lines($opt{lines});
-  my $source = do { local $/ = undef; <> };
-  print Perl::Critic::PJCJ::Fixer->new->fix($source, lines => $lines);
+  my $lines = parse_lines($opt{lines});
+  run_filter($lines);
 }
 
 main
@@ -97,6 +116,7 @@ perl-quote-fix - fix RequireConsistentQuoting violations in Perl source
 =head1 SYNOPSIS
 
   perl-quote-fix [--lines START-END] < input.pl > output.pl
+  perl-quote-fix [--lines START-END] file ... > output.pl
   perl-quote-fix --inplace file ...
 
   Options:
@@ -106,11 +126,13 @@ perl-quote-fix - fix RequireConsistentQuoting violations in Perl source
 
 =head1 DESCRIPTION
 
-Reads Perl source on standard input and writes it to standard output with
-all violations of
+Reads Perl source on standard input, or from the named files, and writes it
+to standard output with all violations of
 L<Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting>
-fixed. The runtime value of every string is preserved; anything that cannot
-be fixed safely is left unchanged. Source that the policy already accepts
+fixed. Each named file is read explicitly and fixed as a separate document;
+an input which cannot be read is reported and the exit status is non-zero.
+The runtime value of every string is preserved; anything that cannot be
+fixed safely is left unchanged. Source that the policy already accepts
 passes through byte for byte.
 
 With C<--lines>, the whole document is still parsed but only violations
