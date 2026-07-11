@@ -4,7 +4,7 @@ use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is isnt like skip_all subtest unlike );
+use Test2::V0    qw( done_testing is like skip_all subtest unlike );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
@@ -84,11 +84,24 @@ subtest "An unreadable file is reported, not skipped" => sub {
   is $exit, 1, "the hook fails";
 };
 
-subtest "An unreadable candidate file aborts the run" => sub {
+subtest "An unreadable candidate is reported, the rest still checked" => sub {
   write_file("$Work/mystery", "#!/usr/bin/env perl\n", 0000);
-  my ($out, $exit) = run_tidy("$Work/mystery");
-  like $out, qr/Cannot read/, "the cause is reported";
-  isnt $exit, 0, "the hook fails";
+  write_file("$Work/scruffy.pm", "my  \$z=3;\n");
+  my ($out, $exit) = run_tidy("$Work/mystery", "$Work/scruffy.pm");
+  like $out, qr/Cannot read \Q$Work\E\/mystery/, "the cause is reported";
+  like $out, qr/Not tidy: \Q$Work\E\/scruffy\.pm/,
+    "the other file is still checked";
+  is $exit, 1, "the hook fails";
+};
+
+subtest "List mode keeps its output clean of warnings" => sub {
+  write_file("$Work/veiled", "#!/usr/bin/env perl\n", 0000);
+  my $files = join " ", map "\Q$_\E", "$Work/veiled", "$Work/clean.pm";
+  my $list  = qx($^X $Hook list $files 2>/dev/null);
+  is $? >> 8, 1,                  "the hook fails";
+  is $list,   "$Work/clean.pm\n", "only readable Perl files are listed";
+  my $all = qx($^X $Hook list $files 2>&1);
+  like $all, qr/Cannot read/, "the unreadable candidate is reported";
 };
 
 done_testing

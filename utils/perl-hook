@@ -6,9 +6,16 @@ use warnings;
 use feature      qw( signatures );
 use experimental qw( signatures );
 
+my $Unreadable = 0;
+
 sub is_perl ($file) {
   return 1 if $file =~ /\.(?:pm|pl|t|psgi)\z/;
-  open my $fh, "<", $file or die "Cannot read $file: $!\n";
+  my $fh;
+  unless (open $fh, "<", $file) {
+    warn "Cannot read $file: $!\n";
+    $Unreadable = 1;
+    return 0;
+  }
   my $first = <$fh> // "";
   $first =~ /\A#!.*\bperl\b/
 }
@@ -53,18 +60,27 @@ sub main () {
     or die "usage: perl-hook tidy|critic|list file ...\n";
 
   my @perl = grep is_perl($_), @ARGV;
-  exit 0 unless @perl;
+  exit $Unreadable unless @perl;
 
   if ($mode eq "list") {
     say for @perl;
-    exit 0;
+    exit $Unreadable;
   }
   if ($mode eq "critic") {
-    exec "perl", "-Ilib", "-S", "perlcritic", "--profile", ".perlcriticrc",
-      @perl
-      or die "exec perlcritic failed: $!\n";
+    my @cmd = (
+      "perl",      "-Ilib",         "-S", "perlcritic",
+      "--profile", ".perlcriticrc", @perl,
+    );
+    unless ($Unreadable) {
+      exec @cmd or die "exec perlcritic failed: $!\n";
+    }
+    my $rc = system @cmd;
+    die "run perlcritic failed: $!\n" if $rc == -1;
+    my $status = ($rc >> 8) || 1;
+    exit $status;
   }
-  exit check_tidy(\@perl);
+  my $status = check_tidy(\@perl) || $Unreadable;
+  exit $status;
 }
 
 main();
@@ -98,6 +114,10 @@ distribution providing its own policies is checked with the working-tree
 code.  Both modes exit non-zero if any file fails.  C<list> prints the
 selected Perl files, one per line, so other tools can share this
 selection instead of defining their own.
+
+A candidate that cannot be read is reported on STDERR, treated as not
+Perl, and makes the hook exit non-zero once the remaining files have
+been checked.
 
 =head1 AUTHOR
 
