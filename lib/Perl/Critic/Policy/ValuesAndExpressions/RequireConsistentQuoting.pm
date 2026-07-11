@@ -191,7 +191,7 @@ sub _quote_token_complete ($self, $elem) {
     $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike")
   } $doc->tokens;
 
-  # uncoverable condition left note:the probe starts with a quote token
+  # uncoverable branch false note:the probe starts with a quote token
   $token && $token->content eq $elem->content
 }
 

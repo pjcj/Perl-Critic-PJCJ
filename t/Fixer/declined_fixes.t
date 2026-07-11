@@ -79,6 +79,9 @@ subtest "Interpolation-changing command fixes are declined" => sub {
   is fixer("PPI::Token::QuoteLike::Command", "use qx()")
     ->fix('my $out = qx"echo $$";'), 'my $out = qx(echo $$);',
     "interpolating qx is still re-delimited";
+
+  is fixer("PPI::Token::Quote::Single", "use qx()")->fix(q(my $x = 'a';)),
+    q(my $x = 'a';), "a plain string does not become an interpolating command";
 };
 
 done_testing
