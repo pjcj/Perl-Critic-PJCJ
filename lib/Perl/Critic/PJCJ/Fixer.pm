@@ -56,15 +56,15 @@ sub _normalised_value ($self, $elem) {
   return $elem->literal if $class eq "PPI::Token::Quote::Single";
   return $self->_decode_double($elem->string)
     if $class eq "PPI::Token::Quote::Double";
+  return join "\0", $elem->literal if $class eq "PPI::Token::QuoteLike::Words";
 
   my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
   return $self->_decode_q($raw, $start, $end)
     if $class eq "PPI::Token::Quote::Literal";
-  return $self->_decode_double($raw)
-    if $class eq "PPI::Token::Quote::Interpolate";
 
-  my $content = $raw =~ s/\\([\Q$start$end\E])/$1/gr;
-  join "\0", grep length, split /\s+/, $content
+  # Interpolate; a Command never reaches here because _value_preserved
+  # compares interpolating token pairs via _canonical
+  $self->_decode_double($raw)
 }
 
 sub _balanced ($self, $content, $start, $end) {

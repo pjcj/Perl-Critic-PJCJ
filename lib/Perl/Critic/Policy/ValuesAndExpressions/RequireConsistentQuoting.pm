@@ -423,9 +423,7 @@ sub collect_qw_words ($self, $words, @elements) {
       return 0 if $raw =~ /\\(?![\\"])/;
       push @$words, $raw =~ s/\\([\\"])/$1/gr;
     } elsif ($class eq "PPI::Token::QuoteLike::Words") {
-      my ($start, $end, $raw) = $self->parse_quote_token($el);
-      my $content = $raw =~ s/\\([\Q$start$end\E])/$1/gr;
-      push @$words, grep length, split /\s+/, $content;
+      push @$words, $el->literal;
     } elsif ($class eq "PPI::Token::Word" && $el->content =~ /\A-\w+\z/) {
       push @$words, $el->content;
     } elsif ($class eq "PPI::Token::Operator" && $el->content eq ",") {
