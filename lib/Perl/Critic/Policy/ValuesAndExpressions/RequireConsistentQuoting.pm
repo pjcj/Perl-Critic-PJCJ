@@ -908,8 +908,8 @@ This Policy is not configurable except for the standard options.
 
   # Bad
   my $greeting = 'hello';                 # Rule 2: should use double quotes
-  my $email    = "user@domain.com";       # Rule 2: should use single quotes
-                                          # (literal @)
+  my $email    = "user\@domain.com";      # Rule 2: should use single quotes
+                                          # (escaped @)
   my $path     = 'C:\Program Files';      # Rule 2: should use double quotes
 
   # Good

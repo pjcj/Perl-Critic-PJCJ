@@ -31,6 +31,12 @@ subtest "Escaped special characters" => sub {
     "Escaped dollar signs should use single quotes";
   bad $Policy, 'my $email = "\@domain"', "use ''",
     "Escaped at-signs should use single quotes";
+
+  # POD EXAMPLES: the email example is only detectable in escaped form
+  bad $Policy, 'my $email = "user\@domain.com"', "use ''",
+    "escaped @ in double quotes should use single quotes";
+  good $Policy, 'my $email = "user@domain.com"',
+    "bare @ interpolates, so the policy accepts double quotes";
   bad $Policy, 'my $quote = "\""', "use ''",
     "Escaped double quotes should use single quotes";
   bad $Policy, 'my $csv = "val1,\"unclosed quote,val3\n"', "use qq()",
