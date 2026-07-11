@@ -39,18 +39,14 @@ test: zt
 
 format:
 	@mkdir -p tmp/perltidy
-	@git ls-files -z | xargs -0 utils/perl-hook list | while read file; do \
-		cp "$$file" "$$file.tdybak"; \
-		perlimports --inplace-edit --no-preserve-unused \
-			"$$file" 2>/dev/null || true; \
-		if perl -Ilib script/perl-quote-fix < "$$file" > "$$file.pqf"; then \
-			cp "$$file.pqf" "$$file" && rm "$$file.pqf"; \
-		else \
-			rm -f "$$file.pqf"; \
-			echo "perl-quote-fix failed: $$file" >&2; \
-			exit 1; \
-		fi; \
-		perltidy -b "$$file" >/dev/null 2>&1; \
+	@files=$$(git ls-files -z | xargs -0 utils/perl-hook list); \
+	test -n "$$files" || exit 0; \
+	for file in $$files; do cp "$$file" "$$file.tdybak"; done; \
+	perlimports --inplace-edit --no-preserve-unused $$files 2>/dev/null \
+		|| true; \
+	perl -Ilib script/perl-quote-fix --inplace $$files || exit 1; \
+	perltidy -b $$files >/dev/null 2>&1; \
+	for file in $$files; do \
 		if ! diff -q "$$file.tdybak" "$$file" >/dev/null 2>&1; then \
 			echo "Formatted $$file"; \
 		fi; \

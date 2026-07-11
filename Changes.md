@@ -7,7 +7,10 @@
   - Fixes are decided by the policy itself, preserve the runtime value of every
     string, and repeat until the source is clean
   - `--lines START-END` restricts fixes to a line range for editor integrations
+  - `--inplace` fixes many named files in a single process
   - Perl::Critic::PJCJ::Fixer provides the same rewriting as a module
+- Batch file processing in `make format` and the tidy hook so each tool starts
+  once rather than once per file, cutting runtime substantially
 
 ## v0.2.7 - 2026-06-25
 
