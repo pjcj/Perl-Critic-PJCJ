@@ -134,29 +134,29 @@ the Run::AfterBuild plugin.
 
 =head1 FUNCTIONS
 
-=head2 read_targets_file($targets_file)
+=head2 read_targets_file ($targets_file)
 
 Reads the contents of the targets file and returns it as a string.
 
-=head2 filter_conflicting_targets($targets_content)
+=head2 filter_conflicting_targets ($targets_content)
 
 Removes targets that would conflict with ExtUtils::MakeMaker's built-in
 targets (test, clean, install) to avoid "target redefined" warnings.
 
-=head2 create_postamble($targets_content)
+=head2 create_postamble ($targets_content)
 
 Creates the Perl code for the MY::postamble subroutine that will be
 injected into the Makefile.PL.
 
-=head2 read_makefile_pl($makefile_pl)
+=head2 read_makefile_pl ($makefile_pl)
 
 Reads the Makefile.PL file and returns its contents.
 
-=head2 write_makefile_pl($makefile_pl, $content)
+=head2 write_makefile_pl ($makefile_pl, $content)
 
 Writes the modified content back to the Makefile.PL file.
 
-=head2 inject_postamble($content, $postamble)
+=head2 inject_postamble ($content, $postamble)
 
 Injects the postamble code before the WriteMakefile call in the Makefile.PL.
 

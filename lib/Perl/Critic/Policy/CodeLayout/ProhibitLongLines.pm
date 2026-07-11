@@ -15,7 +15,6 @@ use List::Util          qw( any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM words_from_string );
 use Perl::Critic::Utils::SourceLocation ();
 
-my $Desc = "Line exceeds maximum length";
 my $Expl = "Keep lines under the configured maximum for readability";
 
 my %Lookup_needed;  # abs dir             -> can a lookup possibly answer?
