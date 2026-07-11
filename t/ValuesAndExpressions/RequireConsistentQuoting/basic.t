@@ -40,6 +40,29 @@ subtest "Policy methods" => sub {
   ok $Policy->would_interpolate('@array'), "Array interpolates";
   ok !$Policy->would_interpolate('\\$escaped'),
     "Escaped variable doesn't interpolate";
+
+  ok $Policy->prepare_to_scan_document(undef),
+    "prepare_to_scan_document returns true";
+
+  my $doc  = PPI::Document->new(\"use Foo 'a', 'b';");
+  my $stmt = $doc->find_first("PPI::Statement::Include");
+  $stmt->remove;
+  my ($str) = @{ $stmt->find("PPI::Token::Quote::Single") };
+  ok !$Policy->violates($str, undef),
+    "detached use-statement strings are still exempt";
+};
+
+subtest "use cache distinguishes live documents" => sub {
+  # Two documents held alive at once force the cache to notice the change
+  # of document by refaddr rather than only through the weak reference
+  # going undef
+  my $src  = "use Foo 'one', 'two';";
+  my $doc1 = PPI::Document->new(\$src);
+  my $doc2 = PPI::Document->new(\$src);
+  my ($s1) = @{ $doc1->find("PPI::Token::Quote::Single") };
+  my ($s2) = @{ $doc2->find("PPI::Token::Quote::Single") };
+  ok !$Policy->violates($s1, $doc1), "first document string is exempt";
+  ok !$Policy->violates($s2, $doc2), "second live document string is exempt";
 };
 
 subtest "Basic functionality" => sub {

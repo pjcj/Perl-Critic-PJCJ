@@ -11,6 +11,7 @@ use parent qw( Perl::Critic::Policy );
 use Exporter            qw( import );
 use List::Util          qw( all any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
+use Scalar::Util        qw( refaddr weaken );
 
 use Perl::Critic::PJCJ::Violation ();
 
@@ -579,23 +580,42 @@ sub _is_pragma ($self, $elem) {
   $module =~ /^[a-z][a-z0-9_]*$/
 }
 
+sub prepare_to_scan_document ($self, $) {
+  delete $self->{_use_cache_doc};
+  delete $self->{_use_cache};
+  1
+}
+
+sub _use_statement_verdict ($self, $stmt) {
+  my @args = $self->_extract_use_arguments($stmt);
+
+  # Single-arg pragmas follow normal quoting rules
+  return 0 if @args == 1 && $self->_is_pragma($stmt);
+
+  # If interpolation is needed, don't treat this as a use statement
+  # so individual strings get checked normally
+  return 0 if $self->_any_arg_interpolates(@args);
+  1
+}
+
+sub _cached_use_statement_verdict ($self, $stmt) {
+  my $doc = $stmt->document or return $self->_use_statement_verdict($stmt);
+
+  my $cached = $self->{_use_cache_doc};
+  if (!$cached || refaddr($cached) != refaddr($doc)) {
+    $self->{_use_cache_doc} = $doc;
+    weaken $self->{_use_cache_doc};
+    $self->{_use_cache} = {};
+  }
+  $self->{_use_cache}{ refaddr $stmt } //= $self->_use_statement_verdict($stmt)
+}
+
 sub _is_in_use_statement ($self, $elem) {
   my $current = $elem;
   while ($current) {
-    if (
-      $current->isa("PPI::Statement::Include")
-      && ($current->type =~ /^(use|no)$/)
-    ) {
-      my @args = $self->_extract_use_arguments($current);
-
-      # Single-arg pragmas follow normal quoting rules
-      return 0 if @args == 1 && $self->_is_pragma($current);
-
-      # If interpolation is needed, don't treat this as a use statement
-      # so individual strings get checked normally
-      return 0 if $self->_any_arg_interpolates(@args);
-      return 1;
-    }
+    return $self->_cached_use_statement_verdict($current)
+      if $current->isa("PPI::Statement::Include")
+      && $current->type =~ /^(use|no)$/;
     $current = $current->parent;
   }
   0
@@ -1007,6 +1027,13 @@ Two shared guards are applied here, before dispatch, rather than in each
 checking method: tokens inside a C<use>/C<no> statement (handled instead by
 C<check_use_statement>) and string tokens containing literal newlines are both
 left alone.
+
+=head2 prepare_to_scan_document
+
+Clears the per-document C<use>/C<no> statement verdict cache before each
+document is scanned, and returns true. Perl::Critic reuses one policy instance
+for every file in a run, so this override stops a cached verdict from one
+document being read against another.
 
 =head2 would_interpolate
 

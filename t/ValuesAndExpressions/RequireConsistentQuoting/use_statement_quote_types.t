@@ -351,4 +351,15 @@ subtest "Pragma single-argument quoting" => sub {
     "non-pragma with single argument should use qw()";
 };
 
+subtest "use statement verdict is per document" => sub {
+  # The one shared $Policy judges each document afresh, with no verdict
+  # carried over from an earlier one
+  bad $Policy, 'use Foo "one", "two";', desc_use_qw,
+    "strings inside a plain use are exempt, statement flagged";
+  bad $Policy, q(use Foo 'one', "$var";), desc_double,
+    "with interpolation the single-quoted argument is flagged";
+  bad $Policy, 'use Foo "one", "two";', desc_use_qw,
+    "a later document is judged afresh";
+};
+
 done_testing;
