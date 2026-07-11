@@ -10,12 +10,16 @@ use parent qw( Perl::Critic::Policy );
 
 use Encode              qw( decode FB_CROAK );
 use File::Basename      qw( basename dirname );
+use File::Spec          ();
 use List::Util          qw( any );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM words_from_string );
 use Perl::Critic::Utils::SourceLocation ();
 
 my $Desc = "Line exceeds maximum length";
 my $Expl = "Keep lines under the configured maximum for readability";
+
+my %Lookup_needed;  # abs dir             -> can a lookup possibly answer?
+my %Attr_value;     # "$attr\0$abs_file"  -> computed override (may be undef)
 
 sub _parse_allow_lines_matching ($self, $parameter, $config_string) {
   my $string = $config_string // $parameter->get_default_string // "";
@@ -117,16 +121,33 @@ sub violates ($self, $elem, $doc) {
   @violations
 }
 
-sub _get_gitattr_line_length ($self, $filename) {
-  return unless defined $filename && length $filename;
-  my $attr = $self->{_gitattributes_line_length};
-  return unless defined $attr && length $attr;
+sub _lookup_needed ($dir) {
+  while (1) {
+    return 1 if -e "$dir/.gitattributes";
+    if (-e "$dir/.git") {
+      return 1 if !-d "$dir/.git" || -e "$dir/.git/info/attributes";
+      return 0;
+    }
+    my $parent = dirname($dir);
+    return 0 if $parent eq $dir;
+    $dir = $parent;
+  }
+}
 
+sub _gitattr_lookup ($self, $attr, $filename) {
+  my $dir     = dirname($filename);
+  my $abs_dir = File::Spec->rel2abs($dir);
+  $Lookup_needed{$abs_dir} //= _lookup_needed($abs_dir);
+  return unless $Lookup_needed{$abs_dir};
+
+  my $base   = basename($filename);
   my $output = eval {
-    my $dir  = dirname($filename);
-    my $base = basename($filename);
-    open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr, "--", $base
-      or return;
+    open my $saved_err, ">&", \*STDERR or return;
+    my $quiet  = open STDERR, ">", File::Spec->devnull;
+    my $opened = open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr,
+      "--", $base;
+    if ($quiet) { open STDERR, ">&", $saved_err or return }
+    return unless $opened;
     my $result = do { local $/ = undef; <$fh> };
     close $fh or return;
     $result
@@ -137,6 +158,16 @@ sub _get_gitattr_line_length ($self, $filename) {
   return "ignore" if $value eq "ignore";
   return $value   if $value =~ /^\d+$/;
   return
+}
+
+sub _get_gitattr_line_length ($self, $filename) {
+  return unless defined $filename && length $filename;
+  my $attr = $self->{_gitattributes_line_length};
+  return unless defined $attr && length $attr;
+
+  my $key = join "\0", $attr, File::Spec->rel2abs($filename);
+  return $Attr_value{$key} if exists $Attr_value{$key};
+  $Attr_value{$key} = $self->_gitattr_lookup($attr, $filename)
 }
 
 "
@@ -234,6 +265,10 @@ need this line if you want a different name):
 Requires C<git> on C<$PATH>. Falls back to the configured
 C<max_line_length> when git is unavailable, the file is outside a
 repository, or the attribute is unspecified.
+
+Overrides are read from C<.gitattributes> files and the repository's
+C<.git/info/attributes>. Attribute sources configured elsewhere (such as
+C<core.attributesFile>) are not consulted.
 
 =head1 EXAMPLES
 

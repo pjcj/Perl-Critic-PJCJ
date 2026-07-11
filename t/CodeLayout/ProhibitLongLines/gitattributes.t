@@ -56,6 +56,18 @@ sub violations_for_file ($policy, $path) {
   $policy->violates($doc, $doc)
 }
 
+sub setup_git_shim ($dir, $output) {
+  my $bin = "$dir/bin";
+  my $log = "$dir/git.log";
+  mkdir $bin or die "mkdir: $!";
+  open my $fh, ">", "$bin/git" or die "open: $!";
+  print $fh "#!/bin/sh\n", "echo run >> '$log'\n";
+  print $fh length $output ? "printf '%s\\n' '$output'\n" : "exit 1\n";
+  close $fh or die "close: $!";
+  chmod 0755, "$bin/git" or die "chmod: $!";
+  ($bin, $log)
+}
+
 sub require_git () {
   skip_all "git not available" unless git_available();
   my $dir = setup_git_repo();
@@ -159,6 +171,56 @@ sub test_relative_path () {
   chdir $orig or die "chdir $orig: $!";
 }
 
+sub test_no_spawn_without_attributes () {
+  skip_all "shim needs /bin/sh" if $^O eq "MSWin32";
+  my $dir = tempdir(CLEANUP => 1);
+  mkdir "$dir/.git" or die "mkdir: $!";
+  my ($bin, $log) = setup_git_shim($dir, "");
+  local $ENV{PATH} = $bin;
+
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
+  my $path   = write_perl_file($dir, "a.t", "1;\n");
+  ok !defined $policy->_get_gitattr_line_length($path), "no override";
+  ok !-e $log,                                          "git never spawned";
+}
+
+sub test_lookup_cached_per_file () {
+  skip_all "shim needs /bin/sh" if $^O eq "MSWin32";
+  my $dir = tempdir(CLEANUP => 1);
+  mkdir "$dir/.git" or die "mkdir: $!";
+  write_perl_file($dir, ".gitattributes", "wide.t custom-line-length=200\n");
+  my ($bin, $log) = setup_git_shim($dir, "wide.t: custom-line-length: 200");
+  local $ENV{PATH} = $bin;
+
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
+  my $path   = write_perl_file($dir, "wide.t", "1;\n");
+  is $policy->_get_gitattr_line_length($path), 200, "first lookup";
+  is $policy->_get_gitattr_line_length($path), 200, "second lookup";
+  my @runs = do { open my $fh, "<", $log or die "open: $!"; <$fh> };
+  is scalar @runs, 1, "exactly one git spawn";
+}
+
+sub test_stderr_suppressed () {
+  skip_all "git not available" unless git_available();
+  my $dir = tempdir(CLEANUP => 1);
+  write_perl_file($dir, ".gitattributes", "wide.t custom-line-length=200\n");
+  my $path = write_perl_file($dir, "wide.t", "1;\n");
+
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
+  open my $saved, ">&", \*STDERR          or die "dup: $!";
+  open STDERR,    ">",  "$dir/stderr.txt" or die "redirect: $!";
+  my $value = $policy->_get_gitattr_line_length($path);
+  open STDERR, ">&", $saved or die "restore: $!";
+
+  my $err = do {
+    open my $fh, "<", "$dir/stderr.txt" or die "open: $!";
+    local $/ = undef;
+    <$fh>
+  };
+  is $err, "", "no stderr leakage";
+  ok !defined $value, "no override outside a repository";
+}
+
 subtest "ignore attribute suppresses violations" => \&test_ignore_attribute;
 subtest "numeric attribute overrides limit"      => \&test_numeric_attribute;
 subtest "unspecified attribute uses default"    => \&test_unspecified_attribute;
@@ -166,5 +228,8 @@ subtest "no filename falls back to default"     => \&test_no_filename;
 subtest "feature disabled when parameter empty" => \&test_feature_disabled;
 subtest "_get_gitattr_line_length values"     => \&test_get_gitattr_line_length;
 subtest "relative paths honour gitattributes" => \&test_relative_path;
+subtest "no spawn when nothing can match" => \&test_no_spawn_without_attributes;
+subtest "lookup cached per file"          => \&test_lookup_cached_per_file;
+subtest "stderr suppressed on spawn"      => \&test_stderr_suppressed;
 
 done_testing;
