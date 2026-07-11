@@ -35,6 +35,10 @@ subtest "Escaped special characters" => sub {
   bad $Policy, 'my $email = "\@domain"', desc_single,
     "Escaped at-signs should use single quotes";
 
+  # An apostrophe would need escaping in '', so prefer q() instead
+  bad $Policy, q(my $x = "\$10 isn't"), desc_optimal("q()"),
+    "escaped sigil with an apostrophe should use q() not single quotes";
+
   # POD EXAMPLES: the email example is only detectable in escaped form
   bad $Policy, 'my $email = "user\@domain.com"', desc_single,
     "escaped @ in double quotes should use single quotes";

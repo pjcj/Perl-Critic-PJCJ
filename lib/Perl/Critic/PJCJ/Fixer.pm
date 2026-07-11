@@ -96,7 +96,12 @@ sub _operator_replacement ($self, $elem, $op, $start, $end) {
   }
 
   if ($class eq "PPI::Token::Quote::Double") {
-    $content = $elem->string =~ s/\\"/"/gr;
+    # An interpolating target keeps the escapes bar the quote; a literal
+    # target (q, qw) takes the fully decoded value
+    $content
+      = $op eq "qq" || $op eq "qx"
+      ? $elem->string =~ s/\\"/"/gr
+      : $self->_decode_double($elem->string);
   } else {
     my ($old_start, $old_end, $raw) = $self->{policy}->parse_quote_token($elem);
     $content = $raw =~ s/\\([\Q$old_start$old_end\E])/$1/gr;
@@ -262,14 +267,16 @@ sub _fix_once ($self, $source, $lines) {
     sub ($top, $elem) {
       my ($violation) = $self->{policy}->violates($elem, $doc);
       return 0 unless $violation && $self->_in_range($elem, $lines);
-      my $fix = ($violation->can("fix") && $violation->fix)
-        || $self->{policy}->fix_data($violation->description);
+      my $fix
+        = $violation->can("fix")
+        ? $violation->fix
+        : $self->{policy}->fix_data($violation->description);
       if ($fix) {
         push @fixes, [$elem, $fix];
       } else {
         my $msg = $violation->description;
         warn "Perl::Critic::PJCJ::Fixer: no fix mapping for '$msg' at line "
-          . ($elem->line_number // 0) . "\n"
+          . $elem->line_number . "\n"
           unless $self->{warned}{$msg}++;
       }
       0

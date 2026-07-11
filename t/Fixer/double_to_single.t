@@ -23,6 +23,11 @@ subtest "Escaped double quotes become literal" => sub {
     "escaped double quotes become literal";
 };
 
+subtest "Apostrophe content becomes q() to avoid escaping" => sub {
+  fixes q(my $x = "\$10 isn't";), q[my $x = q($10 isn't);],
+    "escaped sigil with an apostrophe becomes q() not single quotes";
+};
+
 subtest "Backslashes are re-encoded" => sub {
   fixes 'my $x = "price \$x\\\\y";', q(my $x = 'price $x\\\\y';),
     "escaped backslash stays escaped in single quotes";

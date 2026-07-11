@@ -282,10 +282,19 @@ sub check_double_quoted ($self, $elem) {
 
   # Check for escaped dollar/at signs or double quotes, but only suggest single
   # quotes if no other interpolation exists AND no dangerous escape sequences
-  return $self->_fix_violation($Fix_single, $elem)
-    if $cleaned =~ /\\[\$\@\"]/
+  if (
+       $cleaned =~ /\\[\$\@\"]/
     && !$self->has_quote_sensitive_escapes($string)
-    && !$self->would_interpolate($string);
+    && !$self->would_interpolate($string)
+  ) {
+    # An apostrophe would need escaping in '', so prefer q(), which adds no
+    # escaping for the literal value
+    return $self->_fix_violation($Fix_single, $elem)
+      if index($string, "'") == -1;
+    my $value = $string =~ s/\\(.)/$1/gsr;
+    my ($optimal) = $self->find_optimal_delimiter($value, "q", '"', '"');
+    return $self->_fix_violation($self->_operator_fix("q", $optimal), $elem);
+  }
 
   # If has escaped double quotes, suggest qq() — by this point, the ''
   # suggestion was ruled out (escape sequences or interpolation present),
@@ -1157,7 +1166,9 @@ complex content, promoting cleaner alternatives.
 Validates double-quoted strings to ensure they genuinely need interpolation.
 Suggests single quotes when the content contains only literal C<$> or C<@>
 characters with no actual interpolation, as this indicates the developer
-intended literal content.
+intended literal content. When that literal content also contains an
+apostrophe, C<q()> is suggested instead of single quotes, so that no escaping
+is added.
 
 This reduces unnecessary complexity and makes the code's intent clearer.
 

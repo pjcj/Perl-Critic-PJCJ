@@ -4,7 +4,7 @@ use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is like subtest warning );
+use Test2::V0    qw( done_testing is like subtest warning warnings );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
@@ -47,6 +47,12 @@ subtest "Unmapped descriptions warn" => sub {
   }, qr/no fix mapping for 'use say' at line 1/,
     "an unmapped description warns";
   is $out, 'use Foo "a";', "and the source is unchanged";
+
+  my @w = warnings {
+    fixer("PPI::Token::Quote::Single", "use say")
+      ->fix(q(my $x = 'a'; my $y = 'b';))
+  };
+  is @w, 1, "the same unmapped description warns only once";
 };
 
 subtest "Include descriptions without matching structure" => sub {
