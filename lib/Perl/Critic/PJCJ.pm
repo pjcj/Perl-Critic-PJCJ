@@ -53,7 +53,7 @@ different display contexts.
 
 =head1 AUTHOR
 
-Paul Johnson C<< <paul@pjcj.net> >>
+Paul Johnson <paul@pjcj.net>
 
 =head1 COPYRIGHT
 

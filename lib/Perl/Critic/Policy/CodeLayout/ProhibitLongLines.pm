@@ -75,7 +75,7 @@ sub violates ($self, $elem, $doc) {
           line_number   => $line_num + 1,
           column_number => 1,
           content       => $lines[$line_num],
-          filename      => $doc->filename
+          filename      => $doc->filename,
         );
       }
 
@@ -262,7 +262,7 @@ This Policy is part of the Perl::Critic::PJCJ distribution.
 
 =head1 AUTHOR
 
-Paul Johnson C<< <paul@pjcj.net> >>
+Paul Johnson <paul@pjcj.net>
 
 =head1 COPYRIGHT
 

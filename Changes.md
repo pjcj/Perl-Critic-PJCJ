@@ -2,19 +2,26 @@
 
 {{$NEXT}}
 
+- Add perl-quote-fix, a stdin to stdout filter fixing RequireConsistentQuoting
+  violations
+  - Fixes are decided by the policy itself, preserve the runtime value of every
+    string, and repeat until the source is clean
+  - `--lines START-END` restricts fixes to a line range for editor integrations
+  - Perl::Critic::PJCJ::Fixer provides the same rewriting as a module
+
 ## v0.2.7 - 2026-06-25
 
 - Count ProhibitLongLines line length in characters, not octets
-  - Lines with multi-byte UTF-8 characters are no longer wrongly flagged as
-    too long
+  - Lines with multi-byte UTF-8 characters are no longer wrongly flagged as too
+    long
   - Single-byte source (ASCII, Latin-1) is unaffected; other multi-byte
     encodings are not decoded and still count by octets
 
 ## v0.2.6 - 2026-04-11
 
 - Suggest single quotes for qq/q strings containing only double quotes
-  - `qq("hello")` and `q("hello")` now correctly suggest `'` instead of
-    keeping the quote operator
+  - `qq("hello")` and `q("hello")` now correctly suggest `'` instead of keeping
+    the quote operator
 - Clean and optimise code
 
 ## v0.2.5 - 2026-03-22

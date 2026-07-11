@@ -108,7 +108,7 @@ sub _get_supported_delimiters ($self, $operator) {
     { start => "(", end => ")", display => "${operator}()" },
     { start => "[", end => "]", display => "${operator}[]" },
     { start => "<", end => ">", display => "${operator}<>" },
-    { start => "{", end => "}", display => "${operator}{}" }
+    { start => "{", end => "}", display => "${operator}{}" },
   );
 }
 
@@ -360,7 +360,7 @@ sub check_use_statement ($self, $elem) {
   # Check for different types of arguments
   my (
     $has_fat_comma,      $has_complex_expr, $has_version,
-    $has_simple_strings, $has_q_operators,  $has_parens
+    $has_simple_strings, $has_q_operators,  $has_parens,
   ) = $self->_analyse_argument_types($elem, @args);
 
   # Rule 4: Special cases - no violation
@@ -1083,7 +1083,7 @@ violation logic in C<check_use_statement>.
 
 =head1 AUTHOR
 
-Paul Johnson C<< <paul@pjcj.net> >>
+Paul Johnson <paul@pjcj.net>
 
 =head1 COPYRIGHT
 
