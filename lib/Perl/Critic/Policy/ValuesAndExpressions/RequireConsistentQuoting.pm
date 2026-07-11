@@ -1026,6 +1026,22 @@ This Policy is not configurable except for the standard options.
 
 =head1 METHODS
 
+=head2 desc_double
+
+=head2 desc_single
+
+=head2 desc_use_qw
+
+=head2 desc_remove_parens
+
+=head2 desc_optimal ($display)
+
+The suggestion wording exported for tests, so the strings live in one place
+instead of being duplicated as literals. Each returns the description a
+violation carries: C<< use "" >>, C<use ''>, C<use qw()>,
+C<remove parentheses> and C<< use $display >> respectively. They are available
+via C<@EXPORT_OK>.
+
 =head2 supported_parameters
 
 This policy has no configurable parameters.
