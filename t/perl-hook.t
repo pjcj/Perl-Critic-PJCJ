@@ -61,6 +61,19 @@ subtest "Tidy and untidy files are distinguished" => sub {
   is $exit, 1, "an untidy file fails";
 };
 
+subtest "List mode prints only the Perl files" => sub {
+  write_file("$Work/app.psgi",  "my \$app = sub { };\n");
+  write_file("$Work/tool",      "#!/usr/bin/env perl\nsay 1;\n");
+  write_file("$Work/shelly",    "#!/bin/sh\necho hi\n");
+  write_file("$Work/notes.txt", "hello\n");
+  my $files = join " ", map "\Q$_\E", "$Work/clean.pm", "$Work/app.psgi",
+    "$Work/tool", "$Work/shelly", "$Work/notes.txt";
+  my $out = qx($^X $Hook list $files 2>&1);
+  is $? >> 8, 0, "the hook succeeds";
+  is $out, "$Work/clean.pm\n$Work/app.psgi\n$Work/tool\n",
+    "only the Perl files are listed, in order";
+};
+
 subtest "An unreadable file is reported, not skipped" => sub {
   write_file("$Work/hidden.pm", "my \$x = 1;\n", 0000);
   my ($out, $exit)

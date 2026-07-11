@@ -39,12 +39,12 @@ test: zt
 
 format:
 	@mkdir -p tmp/perltidy
-	@git ls-files "*.pl" "*.pm" "*.t" | while read file; do \
+	@git ls-files -z | xargs -0 utils/perl-hook list | while read file; do \
 		cp "$$file" "$$file.tdybak"; \
 		perlimports --inplace-edit --no-preserve-unused \
 			"$$file" 2>/dev/null || true; \
 		if perl -Ilib script/perl-quote-fix < "$$file" > "$$file.pqf"; then \
-			mv "$$file.pqf" "$$file"; \
+			cp "$$file.pqf" "$$file" && rm "$$file.pqf"; \
 		else \
 			rm -f "$$file.pqf"; \
 			echo "perl-quote-fix failed: $$file" >&2; \
