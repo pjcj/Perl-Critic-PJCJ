@@ -456,33 +456,20 @@ sub check_use_statement ($self, $elem) {
 }
 
 sub _extract_use_arguments ($self, $elem) {
-  my @children     = $elem->children;
-  my $found_module = 0;
+  # No module means no import arguments; ->arguments dies on a bare "use"
+  return () unless $elem->module;
   my @args;
+  for my $child ($elem->arguments) {
+    # Skip commas but keep fat comma (=>) and other significant operators
+    next if $child->isa("PPI::Token::Operator") && $child->content eq ",";
 
-  for my $child (@children) {
-    if ($child->isa("PPI::Token::Word") && !$found_module) {
-      next if $child->content =~ /^(use|no)$/;
-      # This is the module name
-      $found_module = 1;
-      next;
-    }
-
-    if ($found_module) {
-      next if $child->isa("PPI::Token::Whitespace");
-      next if $child->isa("PPI::Token::Structure") && $child->content eq ";";
-      # Skip commas but keep fat comma (=>) and other significant operators
-      next if $child->isa("PPI::Token::Operator") && $child->content eq ",";
-
-      # If it's a list structure (parentheses), extract its contents
-      if ($child->isa("PPI::Structure::List")) {
-        push @args, $self->_extract_list_arguments($child);
-      } else {
-        push @args, $child;
-      }
+    # If it's a list structure (parentheses), extract its contents
+    if ($child->isa("PPI::Structure::List")) {
+      push @args, $self->_extract_list_arguments($child);
+    } else {
+      push @args, $child;
     }
   }
-
   @args
 }
 

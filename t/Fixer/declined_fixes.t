@@ -46,6 +46,8 @@ subtest "Include explanations without matching structure" => sub {
     'use Foo "a";', "a non-qw operator include explanation declines";
   is fixer("PPI::Statement::Include", "use qw()")->fix("use Foo;"),
     "use Foo;", "a use statement without arguments declines";
+  is fixer("PPI::Statement::Include", "use qw()")->fix("use"), "use",
+    "a degenerate use statement passes through the fixer";
   is fixer("PPI::Statement::Include", "remove parentheses")->fix("use Foo;"),
     "use Foo;", "a use statement without parentheses declines";
   is fixer("PPI::Statement::Include", "remove parentheses")

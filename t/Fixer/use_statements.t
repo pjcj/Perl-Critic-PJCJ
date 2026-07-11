@@ -41,6 +41,13 @@ subtest "Arguments which cannot become qw words are declined" => sub {
   unchanged 'use Foo (), "a";',    "an empty list yields no words";
 };
 
+subtest "Module versions stay in place" => sub {
+  fixes 'use POSIX 1.23 "floor";', "use POSIX 1.23 qw( floor );",
+    "a leading module version survives the qw rewrite";
+  unchanged 'use Foo 1.23, "bar";',
+    "a number in the import list still declines the rewrite";
+};
+
 subtest "Only wrongly delimited qw tokens are re-delimited" => sub {
   fixes 'use Foo qw( a ), qw[ b ], $v;', 'use Foo qw( a ), qw( b ), $v;',
     "a qw token with parentheses is left alone";

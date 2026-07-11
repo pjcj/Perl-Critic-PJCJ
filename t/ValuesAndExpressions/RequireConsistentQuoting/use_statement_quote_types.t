@@ -10,7 +10,7 @@ use lib qw( lib t/lib );
 use Test2::V0 qw( done_testing subtest );
 
 use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
-use ViolationFinder qw( bad good );
+use ViolationFinder qw( bad count_violations good );
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
@@ -266,6 +266,14 @@ subtest "Simple strings in parentheses should use qw()" => sub {
 
   bad $Policy, 'use Foo ("arg1"), "arg2"', "use qw()",
     "mixed parentheses and bare simple strings should use qw()";
+};
+
+subtest "Degenerate and version-only use statements" => sub {
+  count_violations $Policy, "use", 0,
+    "a bare use statement produces no violations";
+  good $Policy, "use Baz 1.23", "a lone version number is exempt";
+  bad $Policy, 'use POSIX 1.23 "floor";', "use qw()",
+    "version plus import list uses qw for the strings";
 };
 
 subtest "Pragma single-argument quoting" => sub {

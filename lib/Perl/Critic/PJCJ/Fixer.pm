@@ -185,21 +185,15 @@ sub _remove_include_parens ($self, $elem) {
 }
 
 sub _include_argument_span ($self, $elem) {
-  my $module_seen = 0;
-  my @span;
+  # No module means no import arguments; ->arguments dies on a bare "use"
+  return unless $elem->module;
+  my @args = $elem->arguments or return;
+  my (@span, $in);
   for my $child ($elem->children) {
-    if (!$module_seen) {
-      $module_seen = 1
-        if $child->isa("PPI::Token::Word")
-        && $child->content !~ /\A(?:use|no)\z/;
-      next;
-    }
-    # uncoverable condition right note:a structure token here is always ;
-    last if $child->isa("PPI::Token::Structure") && $child->content eq ";";
-    next if !@span                               && !$child->significant;
-    push @span, $child;
+    $in ||= $child == $args[0];
+    push @span, $child if $in;
+    last if $child == $args[-1];
   }
-  pop @span while @span && !$span[-1]->significant;
   @span
 }
 
