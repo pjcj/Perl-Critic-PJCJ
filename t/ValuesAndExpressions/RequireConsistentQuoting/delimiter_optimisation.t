@@ -64,7 +64,7 @@ subtest "Delimiter preference order" => sub {
     "When tied, () is preferred over {}";
   bad $Policy, 'my @x = qw<one[bracket>', "use qw()",
     "When tied, () is preferred over <>";
-  bad $Policy, 'my @x = qw[one[bracket]', "use qw()",
+  bad $Policy, 'my @x = qw[one\[bracket]', "use qw()",
     "When tied, () is preferred over []";
   good $Policy, 'my @x = qw(one[bracket])',
     "() is preferred when all else is equal";

@@ -37,6 +37,13 @@ subtest "Fallback re-delimiting inside use statements" => sub {
     "every qw token is re-delimited when a full rewrite is unsafe";
 };
 
+subtest "Unterminated quote tokens pass through" => sub {
+  unchanged 'my $x = \'ab',      "unterminated single quote keeps b";
+  unchanged 'my @w = qw( a b',   "unterminated qw keeps b";
+  unchanged 'my $t = qq(ab',     "unterminated qq keeps b";
+  unchanged "use Foo 'a', 'bcd", "unterminated use argument keeps d";
+};
+
 subtest "Whitespace oddities" => sub {
   fixes "use Foo 'a' ;", "use Foo qw( a ) ;",
     "trailing whitespace before the semicolon survives";

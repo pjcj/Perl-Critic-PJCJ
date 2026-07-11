@@ -176,6 +176,25 @@ sub check_delimiter_optimisation ($self, $elem) {
   return
 }
 
+sub _quote_token_complete ($self, $elem) {
+  # Only the final token of a document can be unterminated: the
+  # tokeniser runs an unterminated quote to end of file
+  return 1 if $elem->next_token;
+
+  # A terminated token reparses to itself; an unterminated one absorbs
+  # the appended semicolon
+  my $code = $elem->content . ";";
+
+  # uncoverable branch true note:the probe code is never empty
+  my $doc = PPI::Document->new(\$code) or return 0;
+  my ($token) = grep {
+    $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike")
+  } $doc->tokens;
+
+  # uncoverable condition left note:the probe starts with a quote token
+  $token && $token->content eq $elem->content
+}
+
 sub violates ($self, $elem, $) {
   state $dispatch = {
     "PPI::Token::Quote::Single"      => "check_single_quoted",
@@ -189,6 +208,16 @@ sub violates ($self, $elem, $) {
 
   my $class  = ref $elem;
   my $method = $dispatch->{$class} or return;
+
+  # An unterminated quote token at end of file parses with its final
+  # content character taken as the closing delimiter, so any suggestion
+  # (and any autofix built on it) would delete characters. Leave broken
+  # source alone.
+  my $last = $elem->last_token;
+  return
+    if ($last->isa("PPI::Token::Quote") || $last->isa("PPI::Token::QuoteLike"))
+    && !$self->_quote_token_complete($last);
+
   $self->$method($elem)
 }
 

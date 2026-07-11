@@ -56,7 +56,7 @@ subtest "qw() operator" => sub {
   # Whitespace variations
   bad $Policy, 'my @x = qw  {word(with)parens}', "use qw[]",
     "qw with whitespace before delimiter";
-  bad $Policy, 'my @x = qw\t{word(with)parens}', "use qw[]",
+  bad $Policy, "my \@x = qw\t{word(with)parens}", "use qw[]",
     "qw with tab before delimiter";
   bad $Policy, 'my @x = qw     <simple words>', "use qw()",
     "qw<> with multiple spaces should use qw()";
