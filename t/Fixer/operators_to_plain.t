@@ -33,6 +33,10 @@ subtest "qq() becomes double quotes" => sub {
     "escaped delimiter is unescaped for double quotes";
   fixes 'my $x = qq(a\)b);', 'my $x = "a)b";',
     "escaped end delimiter is unescaped for double quotes";
+  fixes q[my $x = qq(don't);], q(my $x = "don't";),
+    "qq() with apostrophe becomes double-quoted";
+  fixes q[my $x = qq(it's $y);], q(my $x = "it's $y";),
+    "qq() with apostrophe and interpolation keeps double quotes";
 };
 
 subtest "qq() becomes single quotes" => sub {

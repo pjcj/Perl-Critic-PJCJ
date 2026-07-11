@@ -36,6 +36,7 @@ subtest "q() operator violation messages" => sub {
 
 subtest "qq() operator violation messages" => sub {
   bad $Policy, 'my $x = qq(simple)', 'use ""', "qq() with simple content";
+  bad $Policy, q[my $x = qq(don't)], 'use ""', "qq() with apostrophe";
 };
 
 subtest "Delimiter optimisation messages with hints" => sub {

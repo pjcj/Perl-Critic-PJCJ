@@ -124,13 +124,16 @@ subtest "qq() operator" => sub {
   good $Policy, 'my $x = qq(string with $var and "quotes")',
     "qq() justified when content has interpolation and double quotes";
 
-  # When qq() has single quotes (special chars) but double quotes would be fine
-  good $Policy, q[my $x = qq(string with 'single' quotes)],
-    "qq() justified when content has single quotes that need interpolation";
+  # Apostrophes need no escaping in double quotes, so "" is still preferred
+  bad $Policy, q[my $x = qq(string with 'single' quotes)], 'use ""',
+    "qq() with only single quotes should use double quotes";
+  bad $Policy, q[my $x = qq(interpolated $var with 'quotes')], 'use ""',
+    "qq() with interpolation and single quotes should use double quotes";
 
-  # When qq() is justified due to single quotes and uses optimal delimiter
-  good $Policy, q[my $x = qq(interpolated $var with 'quotes')],
-    "qq() justified when content has interpolation and single quotes";
+  bad $Policy, q[my $x = qq(don't)], 'use ""',
+    "qq() with apostrophe should use double quotes";
+  bad $Policy, q(my $x = qq[don't]), 'use ""',
+    "qq[] with apostrophe should use double quotes directly";
 
   # When qq() suggestion comes from double quotes analysis
   good $Policy, q[my $x = qq(content with "double" and 'single' quotes)],

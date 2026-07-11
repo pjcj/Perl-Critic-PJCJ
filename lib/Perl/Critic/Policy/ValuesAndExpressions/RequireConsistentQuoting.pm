@@ -336,13 +336,10 @@ sub check_qq_interpolate ($self, $elem) {
   return $self->check_delimiter_optimisation($elem)
     if $double_quote_suggestion && $double_quote_suggestion eq "qq()";
 
-  # Rule 1: Otherwise prefer simple double quotes unless delimiter chars present
-  my $has_delimiter_chars
-    = index($string, '"') != -1 || index($string, "'") != -1;
-
-  $has_delimiter_chars
-    ? $self->check_delimiter_optimisation($elem)
-    : $self->violation($Desc, $Expl_double, $elem)
+  # Rule 1: Otherwise prefer simple double quotes. Every string containing a
+  # double quote was handled above, so nothing here needs qq(); an apostrophe
+  # needs no escaping in double quotes
+  $self->violation($Desc, $Expl_double, $elem)
 }
 
 sub check_quote_operators ($self, $elem) {
