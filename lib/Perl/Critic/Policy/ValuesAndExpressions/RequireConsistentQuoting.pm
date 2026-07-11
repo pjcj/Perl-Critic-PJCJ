@@ -282,7 +282,7 @@ sub check_double_quoted ($self, $elem) {
     return $self->_fix_violation($self->_operator_fix("q", $optimal), $elem);
   }
 
-  # If has escaped double quotes, suggest qq() — by this point, the ''
+  # If has escaped double quotes, suggest qq() - by this point, the ''
   # suggestion was ruled out (escape sequences or interpolation present),
   # so qq() eliminates the quote escaping while preserving both
   if ($cleaned =~ /\\"/) {
@@ -1205,9 +1205,8 @@ arguments are not qw-representable.
 
 =head2 check_use_statement
 
-Checks quoting consistency in C<use> and C<no> statements. Implements
-comprehensive argument analysis to enforce appropriate quoting based on
-argument types:
+Checks quoting consistency in C<use> and C<no> statements. Analyses every
+argument type to enforce appropriate quoting:
 
 =over 4
 

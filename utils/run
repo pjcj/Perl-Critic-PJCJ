@@ -232,10 +232,10 @@ release_ticket() {
   fi
   pi "On main branch"
 
-  # Working tree must be clean (Changes.md excluded — it gets
+  # Working tree must be clean (Changes.md excluded - it gets
   # committed on the release branch)
   if [[ -n $(git status --porcelain -- ':!Changes.md') ]]; then
-    pf "Working tree is not clean — commit or stash changes first"
+    pf "Working tree is not clean - commit or stash changes first"
   fi
   pi "Working tree is clean (excluding Changes.md)"
 

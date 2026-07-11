@@ -19,7 +19,7 @@ A test input with 20 use statements (3 arguments each), 30 double-quoted
 strings, and 10 single-quoted strings produced:
 
 - 250 calls to `would_interpolate`, each creating a PPI document
-- Only 13 unique strings — 237 calls (95%) were duplicates
+- Only 13 unique strings - 237 calls (95%) were duplicates
 - The three argument strings were each checked 80 times
 
 Micro-benchmarking showed a 2x throughput improvement when each string was
@@ -52,7 +52,7 @@ regressions in pull requests.
 
 ### Why not implemented
 
-Low priority — the coverage baseline is already high (97%+) and the project has
+Low priority - the coverage baseline is already high (97%+) and the project has
 few contributors. Worth adding if the contributor base grows.
 
 ## Make rules individually configurable
@@ -67,9 +67,10 @@ quote style, exclude specific token types, or enable/disable individual rules
 
 ### Why not implemented
 
-The current opinionated approach is intentional — the policy enforces a single
-consistent style. Adding configurability would increase complexity and testing
-surface. Worth considering if users request specific customisation.
+The current opinionated approach is intentional - the policy enforces a single
+consistent style. Adding configurability would increase complexity and the
+amount of testing needed. Worth considering if users request specific
+customisation.
 
 ## Add `pre-commit run --all-files` to CI
 
@@ -82,6 +83,6 @@ locally. CI does not verify that all hooks pass.
 
 ### Why not implemented
 
-Low priority — the existing CI runs `dzil test` which covers correctness.
+Low priority - the existing CI runs `dzil test` which covers correctness.
 Pre-commit enforcement would catch formatting and style regressions but is not
 blocking.

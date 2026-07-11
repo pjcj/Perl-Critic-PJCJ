@@ -222,7 +222,7 @@ Tests that L<Perl::Critic::PJCJ::Fixer> leaves C<$code> unchanged.
 
 Paul Johnson, E<lt>paul@pjcj.netE<gt>
 
-=head1 LICENSE
+=head1 LICENCE
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
