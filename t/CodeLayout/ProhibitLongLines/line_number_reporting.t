@@ -55,6 +55,23 @@ EOCODE
   # Also check the exact message
   is $violations[0]->description, "Line is 73 characters long (exceeds 72)",
     "POD violation has exact expected message";
+  is $violations[0]->column_number, 1, "POD violation anchors at column 1";
+};
+
+subtest "violations anchor at the start of the line" => sub {
+  my $long = 'my $long_variable = "' . ("y" x 60) . '";';
+  my @v    = find_violations($Policy, "my \$x = 1;\n$long\n");
+  is scalar @v,            1, "one violation";
+  is $v[0]->line_number,   2, "correct line";
+  is $v[0]->column_number, 1, "column is the start of the line";
+  like $v[0]->source, qr/\Q$long\E/, "source shows the offending line";
+
+  my $indented = "if (1) {\n  $long\n}\n";
+  @v = find_violations($Policy, $indented);
+  is scalar @v,            1, "one violation in indented code";
+  is $v[0]->column_number, 1, "indented line also anchors at column 1";
+  like $v[0]->source, qr/\Q$long\E/,
+    "source shows the indented offending line";
 };
 
 subtest "Mixed POD and code violations" => sub {

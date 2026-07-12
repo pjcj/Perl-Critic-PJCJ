@@ -26,10 +26,11 @@ reinstall-deps:
 	dzil listdeps --develop | cpm install -g --reinstall --no-prebuilt -
 
 t:
-	yath test -j20 --qvf -T --term-width=$(tput cols)
+	yath test -j20 --qvf -T --term-width=$$(tput cols 2>/dev/null || echo 80)
 
 tv:
-	yath test -j20 --qvf -T --term-width=$(tput cols) -v
+	yath test -j20 --qvf -T \
+		--term-width=$$(tput cols 2>/dev/null || echo 80) -v
 
 zt: clean
 	dzil test -j20
@@ -45,7 +46,7 @@ format:
 	perlimports --inplace-edit --no-preserve-unused $$files 2>/dev/null \
 		|| true; \
 	perl -Ilib script/perl-quote-fix --inplace $$files || exit 1; \
-	perltidy -b $$files >/dev/null 2>&1; \
+	utils/perl-hook format $$files || exit 1; \
 	for file in $$files; do \
 		if ! diff -q "$$file.tdybak" "$$file" >/dev/null 2>&1; then \
 			echo "Formatted $$file"; \

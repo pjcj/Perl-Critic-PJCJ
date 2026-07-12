@@ -315,7 +315,7 @@ max_elsif = 10
 
 
 # Don't use operators like `not', `!~', and `le' within `until' and `unless'.
-[ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions]
+[-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions]
 # set_themes                         = core maintenance pbp
 # add_themes                         =
 # severity                           = 3

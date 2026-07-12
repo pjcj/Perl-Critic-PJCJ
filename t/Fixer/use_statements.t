@@ -14,6 +14,8 @@ subtest "String import lists become qw()" => sub {
     "single quoted argument becomes qw()";
   fixes 'use Bar "arg1", "arg2";', "use Bar qw( arg1 arg2 );",
     "multiple string arguments become qw()";
+  fixes 'use foo_bar "x";', "use foo_bar qw( x );",
+    "underscore module import list becomes qw()";
 };
 
 subtest "qw with wrong delimiters is re-delimited" => sub {
@@ -41,9 +43,23 @@ subtest "Arguments which cannot become qw words are declined" => sub {
   unchanged 'use Foo (), "a";',    "an empty list yields no words";
 };
 
+subtest "Module versions stay in place" => sub {
+  fixes 'use POSIX 1.23 "floor";', "use POSIX 1.23 qw( floor );",
+    "a leading module version survives the qw rewrite";
+  fixes 'use POSIX 1.23 "floor", "ceil";', "use POSIX 1.23 qw( floor ceil );",
+    "several imports after a version merge into one qw";
+  fixes 'use Mod v1.2.3 "floor";', "use Mod v1.2.3 qw( floor );",
+    "a v-string version survives the qw rewrite";
+  unchanged 'use Foo 1.23, "bar";',
+    "a number in the import list still declines the rewrite";
+  unchanged 'use Foo "a", 1.23;', "a trailing number declines the rewrite";
+};
+
 subtest "Only wrongly delimited qw tokens are re-delimited" => sub {
   fixes 'use Foo qw( a ), qw[ b ], $v;', 'use Foo qw( a ), qw( b ), $v;',
     "a qw token with parentheses is left alone";
+  fixes 'use Foo qw[ a ], "b c";', 'use Foo qw( a ), "b c";',
+    "the qw token is re-delimited, the unrepresentable string left alone";
 };
 
 subtest "Escapes in string arguments are decoded faithfully" => sub {
@@ -58,6 +74,12 @@ subtest "Parentheses are removed" => sub {
     "fat comma arguments lose parentheses";
   fixes 'use Quux ( $VERSION );', 'use Quux $VERSION;',
     "complex expressions lose parentheses";
+};
+
+subtest "Call parentheses are left alone" => sub {
+  unchanged 'use lib File::Spec->catdir($dir, "lib");',
+    "method call parentheses survive";
+  unchanged "use constant N => calc();", "function call parentheses survive";
 };
 
 subtest "Comments in argument lists survive" => sub {

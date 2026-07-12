@@ -21,10 +21,14 @@ Perl::Critic::PJCJ - Perl::Critic policies for code style consistency
 =head1 SYNOPSIS
 
   # In your .perlcriticrc file:
-  include = Perl::Critic::PJCJ
+  include = RequireConsistentQuoting ProhibitLongLines
 
   # Or from the command line:
-  perlcritic --include Perl::Critic::PJCJ lib/
+  perlcritic --include RequireConsistentQuoting \
+    --include ProhibitLongLines lib/
+
+  # Or select the policies by theme:
+  perlcritic --theme pjcj lib/
 
 =head1 DESCRIPTION
 

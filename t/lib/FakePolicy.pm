@@ -15,13 +15,17 @@ sub new ($class, %args) {
 }
 
 sub violates ($self, $elem, $doc) {
-  ref $elem eq $self->{flags} ? $self : ()
+  my $flags = $self->{flags};
+  return ref $elem eq $flags ? $self : () unless ref $flags eq "HASH";
+  my $description = $flags->{ ref $elem } or return ();
+  $self->{description} = $description;
+  $self
 }
 
-sub explanation ($self) { $self->{explanation} }
+sub description ($self) { $self->{description} }
 
-sub fix_data ($self, $explanation) {
-  $self->{real}->fix_data($explanation)
+sub fix_data ($self, $description) {
+  $self->{real}->fix_data($description)
 }
 
 sub parse_quote_token ($self, $elem) {
@@ -30,6 +34,18 @@ sub parse_quote_token ($self, $elem) {
 
 sub would_interpolate ($self, $string) {
   $self->{real}->would_interpolate($string)
+}
+
+sub escape_single_quoted ($self, $string) {
+  $self->{real}->escape_single_quoted($string)
+}
+
+sub has_quote_sensitive_escapes ($self, $string) {
+  $self->{real}->has_quote_sensitive_escapes($string)
+}
+
+sub statement_level_list ($self, $elem) {
+  $self->{real}->statement_level_list($elem)
 }
 
 "
@@ -50,33 +66,36 @@ FakePolicy - test double emitting violations the real policy never produces
   my $fixer = Perl::Critic::PJCJ::Fixer->new;
   $fixer->{policy} = FakePolicy->new(
     flags       => "PPI::Token::Quote::Single",
-    explanation => "use ''",
+    description => "use ''",
   );
 
 =head1 DESCRIPTION
 
-Perl::Critic::PJCJ::Fixer contains guards for class and explanation
+Perl::Critic::PJCJ::Fixer contains guards for class and description
 combinations the real policy never emits. This double flags every element of
-the configured class with the configured explanation, so tests can drive the
+the configured class with the configured description, so tests can drive the
 fixer down those defensive paths and assert that unsafe fixes are declined.
 
 =head1 METHODS
 
 =head2 new (%args)
 
-Create a policy double. C<flags> is the PPI class to flag and C<explanation>
-is the explanation each violation carries.
+Create a policy double. C<flags> is the PPI class to flag and C<description>
+is the description each violation carries. Alternatively C<flags> may be a
+hashref mapping PPI classes to descriptions, so different classes can carry
+different descriptions.
 
 =head2 violates ($elem, $doc)
 
 Return the double itself as the violation for every element whose class
-matches C<flags>.
+matches C<flags>. When C<flags> is a hashref, the element's class selects
+the description.
 
-=head2 explanation
+=head2 description
 
-The configured explanation.
+The configured description.
 
-=head2 fix_data ($explanation)
+=head2 fix_data ($description)
 
 Delegated to the real policy.
 
@@ -85,6 +104,18 @@ Delegated to the real policy.
 Delegated to the real policy.
 
 =head2 would_interpolate ($string)
+
+Delegated to the real policy.
+
+=head2 escape_single_quoted ($string)
+
+Delegated to the real policy.
+
+=head2 has_quote_sensitive_escapes ($string)
+
+Delegated to the real policy.
+
+=head2 statement_level_list ($elem)
 
 Delegated to the real policy.
 

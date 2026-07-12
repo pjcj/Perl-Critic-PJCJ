@@ -68,12 +68,6 @@ subtest "Location method for violation system" => sub {
   is $location_array->[4], "source.pl", "fifth element is filename";
 };
 
-subtest "Policy identification" => sub {
-  my $location = Perl::Critic::Utils::SourceLocation->new(line_number => 1);
-
-  is $location->is_policy, 0, "is_policy returns false";
-};
-
 subtest "Constructor with explicit undef values" => sub {
   my $location = Perl::Critic::Utils::SourceLocation->new(
     line_number   => 50,

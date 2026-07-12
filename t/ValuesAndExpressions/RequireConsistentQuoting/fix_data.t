@@ -10,35 +10,41 @@ use experimental qw( signatures );
 
 # Test the policy directly without using Perl::Critic framework
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting qw(
+  desc_double
+  desc_optimal
+  desc_remove_parens
+  desc_single
+  desc_use_qw
+);
 use ViolationFinder qw( find_violations );
 
 my $Policy
   = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
 
 subtest "Plain quote explanations" => sub {
-  is $Policy->fix_data('use ""'), { type => "double" },
+  is $Policy->fix_data(desc_double), { type => "double" },
     'use "" maps to double';
-  is $Policy->fix_data("use ''"), { type => "single" },
+  is $Policy->fix_data(desc_single), { type => "single" },
     "use '' maps to single";
 };
 
 subtest "Use statement explanations" => sub {
-  is $Policy->fix_data("remove parentheses"), { type => "remove_parens" },
+  is $Policy->fix_data(desc_remove_parens), { type => "remove_parens" },
     "remove parentheses maps to remove_parens";
 };
 
 subtest "Operator explanations" => sub {
-  is $Policy->fix_data("use qw()"),
+  is $Policy->fix_data(desc_use_qw),
     { type => "operator", op => "qw", start => "(", end => ")" },
     "use qw() carries operator and delimiters";
-  is $Policy->fix_data("use q[]"),
+  is $Policy->fix_data(desc_optimal("q[]")),
     { type => "operator", op => "q", start => "[", end => "]" },
     "use q[] carries operator and delimiters";
-  is $Policy->fix_data("use qq<>"),
+  is $Policy->fix_data(desc_optimal("qq<>")),
     { type => "operator", op => "qq", start => "<", end => ">" },
     "use qq<> carries operator and delimiters";
-  is $Policy->fix_data("use qx{}"),
+  is $Policy->fix_data(desc_optimal("qx{}")),
     { type => "operator", op => "qx", start => "{", end => "}" },
     "use qx{} carries operator and delimiters";
 };
@@ -48,21 +54,32 @@ subtest "Unknown explanations" => sub {
     "an unknown explanation returns undef";
 };
 
-subtest "Every emitted explanation has fix data" => sub {
-  my @snippets = (
-    q(my $x = 'hello'),
-    'my $output = "Price: \$10"',
-    'my @x = qw{simple words}',
-    'my @x = qw(word(with)parens)',
-    'my $x = qq(simple)',
-    'use Foo "a1", "a2";',
-    'use Qux ( key => "value" );',
-  );
-  for my $code (@snippets) {
-    for my $violation (find_violations($Policy, $code)) {
-      my $expl = $violation->explanation;
-      ok $Policy->fix_data($expl), "fix data exists for $expl";
-    }
+my @Snippets = (
+  q(my $x = 'hello'),
+  'my $output = "Price: \$10"',
+  'my @x = qw{simple words}',
+  'my @x = qw(word(with)parens)',
+  'my $x = qq(simple)',
+  'use Foo "a1", "a2";',
+  'use Qux ( key => "value" );',
+);
+
+sub emitted_violations () {
+  map find_violations($Policy, $_), @Snippets
+}
+
+subtest "Every emitted description has fix data" => sub {
+  for my $violation (emitted_violations) {
+    my $desc = $violation->description;
+    ok $Policy->fix_data($desc), "fix data exists for $desc";
+  }
+};
+
+subtest "Violations carry their fix structure" => sub {
+  for my $violation (emitted_violations) {
+    ok $violation->can("fix"), "violation has a fix method";
+    is $violation->fix, $Policy->fix_data($violation->description),
+      "attached fix matches the rendered lookup";
   }
 };
 

@@ -17,14 +17,22 @@ my %Interpolating = map { $_ => 1 } qw(
   PPI::Token::QuoteLike::Command
 );
 
+sub _interpolates ($self, $elem) {
+  # perlop: qx does not interpolate when its delimiter is ''
+  return 0
+    if ref $elem eq "PPI::Token::QuoteLike::Command"
+    && $elem->content =~ /\Aqx\s*'/;
+  $Interpolating{ ref $elem } // 0
+}
+
 sub new ($class) {
   my $policy
     = Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting->new;
   bless { policy => $policy }, $class
 }
 
-sub _decode_single ($self, $raw) { $raw =~ s/\\([\\'])/$1/gr }
-
+# Only valid for content free of quote-sensitive escapes; conversion call
+# sites guard with the policy's has_quote_sensitive_escapes predicate
 sub _decode_double ($self, $raw) { $raw =~ s/\\(.)/$1/gsr }
 
 sub _decode_q ($self, $raw, $start, $end) {
@@ -36,7 +44,7 @@ sub _decode_delimiters ($self, $raw, $start, $end) {
 }
 
 sub _encode_single ($self, $value) {
-  "'" . ($value =~ s/([\\'])/\\$1/gr) . "'"
+  "'" . $self->{policy}->escape_single_quoted($value) . "'"
 }
 
 sub _encode_double ($self, $value) {
@@ -45,19 +53,18 @@ sub _encode_double ($self, $value) {
 
 sub _normalised_value ($self, $elem) {
   my $class = ref $elem;
-  return $self->_decode_single($elem->string)
-    if $class eq "PPI::Token::Quote::Single";
+  return $elem->literal if $class eq "PPI::Token::Quote::Single";
   return $self->_decode_double($elem->string)
     if $class eq "PPI::Token::Quote::Double";
+  return join "\0", $elem->literal if $class eq "PPI::Token::QuoteLike::Words";
 
   my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
   return $self->_decode_q($raw, $start, $end)
     if $class eq "PPI::Token::Quote::Literal";
-  return $self->_decode_double($raw)
-    if $class eq "PPI::Token::Quote::Interpolate";
 
-  my $content = $raw =~ s/\\([\Q$start$end\E])/$1/gr;
-  join "\0", grep length, split /\s+/, $content
+  # Interpolate; a Command never reaches here because _value_preserved
+  # compares interpolating token pairs via _canonical
+  $self->_decode_double($raw)
 }
 
 sub _balanced ($self, $content, $start, $end) {
@@ -84,13 +91,17 @@ sub _operator_replacement ($self, $elem, $op, $start, $end) {
   my $content;
 
   if ($class eq "PPI::Token::Quote::Single") {
-    $content
-      = $self->_decode_single($elem->string) =~ s/([\\\Q$start$end\E])/\\$1/gr;
+    $content = $elem->literal =~ s/([\\\Q$start$end\E])/\\$1/gr;
     return "$op$start$content$end";
   }
 
   if ($class eq "PPI::Token::Quote::Double") {
-    $content = $elem->string =~ s/\\"/"/gr;
+    # An interpolating target keeps the escapes bar the quote; a literal
+    # target (q, qw) takes the fully decoded value
+    $content
+      = $op eq "qq" || $op eq "qx"
+      ? $elem->string =~ s/\\"/"/gr
+      : $self->_decode_double($elem->string);
   } else {
     my ($old_start, $old_end, $raw) = $self->{policy}->parse_quote_token($elem);
     $content = $raw =~ s/\\([\Q$old_start$old_end\E])/$1/gr;
@@ -109,11 +120,11 @@ sub _replacement ($self, $elem, $fix) {
     if $type eq "operator";
 
   if ($class eq "PPI::Token::Quote::Single") {
-    return $self->_encode_double($self->_decode_single($elem->string))
-      if $type eq "double";
+    return $self->_encode_double($elem->literal) if $type eq "double";
   } elsif ($class eq "PPI::Token::Quote::Double") {
     return $self->_encode_single($self->_decode_double($elem->string))
-      if $type eq "single";
+      if $type eq "single"
+      && !$self->{policy}->has_quote_sensitive_escapes($elem->string);
   } elsif ($class eq "PPI::Token::Quote::Literal") {
     my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
     my $value = $self->_decode_q($raw, $start, $end);
@@ -124,7 +135,8 @@ sub _replacement ($self, $elem, $fix) {
     return '"' . $self->_decode_delimiters($raw, $start, $end) . '"'
       if $type eq "double";
     return $self->_encode_single($self->_decode_double($raw))
-      if $type eq "single";
+      if $type eq "single"
+      && !$self->{policy}->has_quote_sensitive_escapes($raw);
   }
 
   undef
@@ -148,6 +160,13 @@ sub _value_preserved ($self, $elem, $new_source) {
   # uncoverable condition left note:every replacement contains a quote token
   # uncoverable condition right note:PPI serialisation is faithful
   return 0 unless $token && $doc->serialize eq $code;
+  if (
+       $elem->isa("PPI::Token::QuoteLike::Command")
+    || $token->isa("PPI::Token::QuoteLike::Command")
+  ) {
+    return 0 if $self->_interpolates($elem) != $self->_interpolates($token);
+    return $self->_canonical($token) eq $self->_canonical($elem);
+  }
   return $self->_canonical($token) eq $self->_canonical($elem)
     if $Interpolating{ ref $token } && $Interpolating{ ref $elem };
   $self->_normalised_value($token) eq $self->_normalised_value($elem)
@@ -155,75 +174,38 @@ sub _value_preserved ($self, $elem, $new_source) {
 
 sub _apply_replacement ($self, $elem, $fix) {
   my $new = $self->_replacement($elem, $fix);
-  return unless defined $new;
-  $elem->set_content($new) if $self->_value_preserved($elem, $new);
+  return 0 unless defined $new && $self->_value_preserved($elem, $new);
+  $elem->set_content($new);
+  1
 }
 
 sub _remove_include_parens ($self, $elem) {
-  my ($list) = grep $_->isa("PPI::Structure::List"), $elem->children;
-  return unless $list;
+  my $list = $self->{policy}->statement_level_list($elem);
+  return 0 unless $list;
 
   my @kids = $list->children;
   while (@kids && !$kids[0]->significant)  { (shift @kids)->delete }
   while (@kids && !$kids[-1]->significant) { (pop @kids)->delete }
+  unless (@kids) {
+    my $prev = $list->previous_sibling;
+    $prev->delete unless $prev->significant;
+  }
   $list->start->set_content("");
   $list->finish->set_content("");
+  1
 }
 
 sub _include_argument_span ($self, $elem) {
-  my $module_seen = 0;
-  my @span;
+  # No module means no import arguments; ->arguments dies on a bare "use"
+  return unless $elem->module;
+  my @args = $elem->arguments or return;
+  my (@span, $in);
   for my $child ($elem->children) {
-    if (!$module_seen) {
-      $module_seen = 1
-        if $child->isa("PPI::Token::Word")
-        && $child->content !~ /\A(?:use|no)\z/;
-      next;
-    }
-    # uncoverable condition right note:a structure token here is always ;
-    last if $child->isa("PPI::Token::Structure") && $child->content eq ";";
-    next if !@span                               && !$child->significant;
-    push @span, $child;
+    $in ||= $child == $args[0];
+    push @span, $child if $in;
+    last if $child == $args[-1];
   }
-  pop @span while @span && !$span[-1]->significant;
   @span
-}
-
-sub _collect_use_words ($self, $words, @elements) {
-  for my $el (@elements) {
-    next unless $el->significant;
-    my $class = ref $el;
-    if (
-         $class eq "PPI::Token::Quote::Single"
-      || $class eq "PPI::Token::Quote::Literal"
-    ) {
-      push @$words, $self->_normalised_value($el);
-    } elsif (
-      $class eq "PPI::Token::Quote::Double"
-      || $class eq "PPI::Token::Quote::Interpolate"
-    ) {
-      my $raw = $el->string;
-      return 0 if $self->{policy}->would_interpolate($raw);
-      return 0 if $raw =~ /\\(?![\\"])/;
-      push @$words, $raw =~ s/\\([\\"])/$1/gr;
-    } elsif ($class eq "PPI::Token::QuoteLike::Words") {
-      my ($start, $end, $raw) = $self->{policy}->parse_quote_token($el);
-      my $content = $raw =~ s/\\([\Q$start$end\E])/$1/gr;
-      push @$words, grep length, split /\s+/, $content;
-    } elsif ($class eq "PPI::Token::Word" && $el->content =~ /\A-\w+\z/) {
-      push @$words, $el->content;
-    } elsif ($class eq "PPI::Token::Operator" && $el->content eq ",") {
-      next;
-    } elsif (
-      $el->isa("PPI::Structure::List")
-      || $el->isa("PPI::Statement::Expression")
-    ) {
-      return 0 unless $self->_collect_use_words($words, $el->children);
-    } else {
-      return 0;
-    }
-  }
-  @$words ? 1 : 0
 }
 
 sub _span_has_comment ($self, @span) {
@@ -236,27 +218,29 @@ sub _span_has_comment ($self, @span) {
 sub _fix_include ($self, $elem, $fix) {
   return $self->_remove_include_parens($elem)
     if $fix->{type} eq "remove_parens";
-  return unless $fix->{type} eq "operator" && $fix->{op} eq "qw";
+  return 0 unless $fix->{type} eq "operator" && $fix->{op} eq "qw";
 
   my @span = $self->_include_argument_span($elem);
-  return unless @span;
+  return 0 unless @span;
 
   my @words;
   if (
       !$self->_span_has_comment(@span)
-    && $self->_collect_use_words(\@words, @span)
-    && all { /\A[^\s()\\]+\z/ } @words
+    && $self->{policy}->collect_qw_words(\@words, @span)
+    && all { $self->{policy}->qw_word_ok($_) } @words
   ) {
     $span[0]->insert_before(PPI::Token->new("qw( @words )"));
     $_->delete for @span;
-    return;
+    return 1;
   }
 
-  my $qw_tokens = $elem->find("PPI::Token::QuoteLike::Words") or return;
+  my $qw_tokens = $elem->find("PPI::Token::QuoteLike::Words") or return 0;
+  my $applied   = 0;
   for my $token (@$qw_tokens) {
-    $self->_apply_replacement($token, $fix)
-      if $token->content !~ /\Aqw\s*\Q$fix->{start}\E/;
+    next         if $token->content =~ /\Aqw\s*\Q$fix->{start}\E/;
+    $applied = 1 if $self->_apply_replacement($token, $fix);
   }
+  $applied
 }
 
 sub _apply_fix ($self, $elem, $fix) {
@@ -281,34 +265,67 @@ sub _fix_once ($self, $source, $lines) {
   my @fixes;
   $doc->find(
     sub ($top, $elem) {
+      return 0 unless $self->_in_range($elem, $lines);
       my ($violation) = $self->{policy}->violates($elem, $doc);
-      return 0 unless $violation && $self->_in_range($elem, $lines);
-      my $fix = $self->{policy}->fix_data($violation->explanation);
-      push @fixes, [$elem, $fix] if $fix;
+      return 0 unless $violation;
+      my $fix
+        = $violation->can("fix")
+        ? $violation->fix
+        : $self->{policy}->fix_data($violation->description);
+      if ($fix) {
+        push @fixes, [$elem, $fix];
+      } else {
+        my $msg = $violation->description;
+        warn "Perl::Critic::PJCJ::Fixer: no fix mapping for '$msg' at line "
+          . $elem->line_number . "\n"
+          unless $self->{warned}{$msg}++;
+      }
       0
     }
   );
   return $source unless @fixes;
+  my $applied = 0;
   for my $entry (@fixes) {
     my ($elem, $fix) = @$entry;
     my $before = $elem->content =~ tr/\n//;
-    $self->_apply_fix($elem, $fix);
+    $applied = 1 if $self->_apply_fix($elem, $fix);
     $self->_shift_range($lines, ($elem->content =~ tr/\n//) - $before);
   }
+  return $source unless $applied;
 
   $doc->serialize
 }
 
+sub _restore_crlf ($self, $source, $fixed) {
+  return $fixed unless $source =~ /\r\n/;
+  return $fixed if $source     =~ /\r(?!\n)|(?<!\r)\n/;
+  $fixed                       =~ s/\n/\r\n/gr
+}
+
+sub _finish ($self, $source, $current) {
+  return $current if $current eq $source;
+  $self->_restore_crlf($source, $current)
+}
+
 sub fix ($self, $source, %opts) {
-  my $lines    = $opts{lines} ? [$opts{lines}->@*] : undef;
-  my $previous = "";
-  my $current  = $source;
+  my $lines   = $opts{lines} ? [$opts{lines}->@*] : undef;
+  my $current = $source;
+  $self->{warned} = {};
+  my %seen;
   for (1 .. $Max_passes) {
-    last if $current eq $previous;
-    $previous = $current;
-    $current  = $self->_fix_once($current, $lines);
+    $seen{$current} = 1;
+    my $next = $self->_fix_once($current, $lines);
+    return $self->_finish($source, $next) if $next eq $current;
+    if ($seen{$next}) {
+      warn "Perl::Critic::PJCJ::Fixer: fixes oscillate without "
+        . "converging; the result may still violate the policy\n";
+      return $self->_finish($source, $next);
+    }
+    $current = $next;
   }
-  $current
+  warn "Perl::Critic::PJCJ::Fixer: fixes still changing after "
+    . "$Max_passes passes; giving up\n";
+  $self->_finish($source, $current)
 }
 
 "
@@ -355,6 +372,18 @@ Create a new fixer.
 Take Perl source as a string and return the fixed source. Source that cannot be
 parsed is returned unchanged. Fixing repeats until no further changes are
 needed, since one fix can enable the next suggestion.
+
+Source receiving no applied fix is returned byte for byte, and a file using
+CRLF line endings throughout keeps them. A file with mixed line endings is
+normalised to LF when a fix applies.
+
+Each violation from the policy carries its own structured fix, which the fixer
+uses directly; for other violation sources it falls back to the policy's
+C<fix_data> lookup keyed on the description. A violation with no fix by either
+route is reported once on standard error and left unchanged.
+
+A repeating or non-converging sequence of fixes is reported on standard
+error and the current state returned.
 
 The C<lines> option restricts fixes to elements starting within an inclusive
 line range, while still parsing the whole document:
