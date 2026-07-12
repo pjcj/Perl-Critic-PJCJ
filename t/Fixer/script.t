@@ -79,9 +79,10 @@ subtest "Line ranges are honoured" => sub {
 };
 
 subtest "Bad arguments fail" => sub {
-  run_script("", "--lines", "nonsense");
+  my $file = write_file("");
+  my $out  = qx($^X -Ilib $Script --lines nonsense \Q$file\E 2>/dev/null);
   isnt $?, 0, "invalid --lines exits non-zero";
-  run_script("", "--lines", "9-1");
+  $out = qx($^X -Ilib $Script --lines 9-1 \Q$file\E 2>/dev/null);
   isnt $?, 0, "reversed --lines exits non-zero";
 };
 
@@ -144,9 +145,9 @@ subtest "A failed write leaves the original file intact" => sub {
   my $file   = "$dir/big.pl";
   my $source = join "", map qq(my \$x$_ = 'value $_';\n), 1 .. 200;
   write_path($file, $source);
-  my $cmd = qq(sh -c "ulimit -f 0; exec \Q$^X\E -Ilib \Q$Script\E )
-    . qq(--inplace \Q$file\E" >/dev/null 2>&1);
-  system $cmd;
+  my $cmd = qq(ulimit -f 0; exec \Q$^X\E -Ilib \Q$Script\E )
+    . qq(--inplace \Q$file\E >/dev/null 2>&1);
+  system "sh", "-c", $cmd;
   isnt $?,             0,       "the script fails";
   is read_file($file), $source, "the original content survives";
 };

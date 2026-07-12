@@ -134,9 +134,9 @@ subtest "Format mode reports an unreadable candidate" => sub {
 subtest "Format mode leaves the original intact on a failed write" => sub {
   skip_all "ulimit is POSIX-specific" if $^O eq "MSWin32";
   write_file("$Work/atomic.pm", "my  \$x=1;\n");
-  my $cmd = qq(sh -c "ulimit -f 0; exec \Q$^X\E \Q$Hook\E format )
-    . qq(\Q$Work/atomic.pm\E" >/dev/null 2>&1);
-  system $cmd;
+  my $cmd = qq(ulimit -f 0; exec \Q$^X\E \Q$Hook\E format )
+    . qq(\Q$Work/atomic.pm\E >/dev/null 2>&1);
+  system "sh", "-c", $cmd;
   isnt $?, 0, "the hook fails";
   is read_file("$Work/atomic.pm"), "my  \$x=1;\n",
     "the original content survives";
