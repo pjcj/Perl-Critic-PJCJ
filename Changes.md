@@ -2,6 +2,8 @@
 
 {{$NEXT}}
 
+## v0.3.0 - 2026-07-13
+
 - Add perl-quote-fix, a stdin to stdout filter fixing RequireConsistentQuoting
   violations
   - Fixes are decided by the policy itself, preserve the runtime value of every
