@@ -273,7 +273,7 @@ release_ticket() {
   # Step 4: Create release branch
   local release_branch="GH-${issue_num}-release"
   confirm "create branch $release_branch from main"
-  if ((!dryrun)); then
+  if ((! dryrun)); then
     git checkout -b "$release_branch" main
   fi
 
@@ -343,7 +343,7 @@ release() {
 
   # Step 7: Merge PR
   confirm "merge PR"
-  if ((!dryrun)); then
+  if ((! dryrun)); then
     gh pr merge --merge "$release_pr_url"
   fi
 
