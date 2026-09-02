@@ -6,7 +6,7 @@ use warnings;
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use List::Util qw( all any );
+use List::Util qw( all any first );
 use PPI        ();
 use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 
@@ -152,9 +152,9 @@ sub _value_preserved ($self, $elem, $new_source) {
 
   # uncoverable branch true note:code is never empty so PPI always parses
   my $doc = PPI::Document->new(\$code) or return 0;
-  my ($token) = grep {
-    $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike")
-  } $doc->tokens;
+  my $token
+    = first { $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike") }
+    $doc->tokens;
 
   # uncoverable branch true
   # uncoverable condition left note:every replacement contains a quote token
