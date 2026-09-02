@@ -1007,12 +1007,26 @@ severity                           = 2
 # strict = 0
 
 
+# Always use the `/x' modifier with regular expressions, except in split.
+[-RegularExpressions::RequireExtendedFormattingExceptForSplit]
+
+
 # Always use the `/m' modifier with regular expressions.
 [-RegularExpressions::RequireLineBoundaryMatching]
 # set_themes                         = core cosmetic pbp
 # add_themes                         =
 # severity                           = 2
 # maximum_violations_per_document    = no_limit
+
+
+# The house style prefers @$ref for simple variables and postfix
+# dereferencing only for complex expressions.
+[-Reneeb::RequirePostderef]
+
+
+# Its check is loose: any parenthesised single scalar in the statement
+# counts, so plain filters such as `grep is_perl($_), @ARGV` trip it.
+[-Reneeb::ProhibitGrepToGetFirstFoundElement]
 
 
 # Don't call functions with a leading ampersand sigil.
