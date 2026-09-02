@@ -9,7 +9,7 @@ use experimental "signatures";
 use parent qw( Perl::Critic::Policy );
 
 use Exporter            qw( import );
-use List::Util          qw( all any );
+use List::Util          qw( all any first );
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 use Scalar::Util        qw( refaddr weaken );
 
@@ -189,9 +189,9 @@ sub _quote_token_complete ($self, $elem) {
 
   # uncoverable branch true note:the probe code is never empty
   my $doc = PPI::Document->new(\$code) or return 0;
-  my ($token) = grep {
-    $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike")
-  } $doc->tokens;
+  my $token
+    = first { $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike") }
+    $doc->tokens;
 
   # uncoverable branch false note:the probe starts with a quote token
   $token && $token->content eq $elem->content
