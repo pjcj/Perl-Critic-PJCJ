@@ -10,8 +10,10 @@ use experimental qw( signatures );
 
 # Test that unterminated quote tokens are left alone
 use lib qw( lib t/lib );
-use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting
-  qw( desc_double desc_use_qw );
+use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting qw(
+  desc_double
+  desc_use_qw
+);
 use ViolationFinder qw( bad good );
 
 my $Policy
