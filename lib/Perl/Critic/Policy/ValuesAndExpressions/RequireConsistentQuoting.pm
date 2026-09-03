@@ -546,38 +546,6 @@ sub statement_level_list ($self, $elem) {
   @args == 1 && $args[0]->isa("PPI::Structure::List") ? $args[0] : undef
 }
 
-sub _analyse_argument_types ($self, $elem, @args) {
-
-  my $fat_comma
-    = any { $_->isa("PPI::Token::Operator") && $_->content eq "=>" } @args;
-  # Anything the qw rewrite doesn't understand makes the statement
-  # complex. A real module version never gets here: ->arguments excludes
-  # it, so any number is part of the import list itself.
-  my $complex_expr = any {
-    !(   $_->isa("PPI::Token::Quote")
-      || $_->isa("PPI::Token::QuoteLike::Words")
-      || ($_->isa("PPI::Token::Operator") && $_->content eq "=>")
-      || ($_->isa("PPI::Token::Word")     && $_->content =~ /\A-\w+\z/))
-  } @args;
-  my $version = any {
-         $_->isa("PPI::Token::Number::Version")
-      || $_->isa("PPI::Token::Number::Float")
-  } @args;
-  my $simple_strings = any {
-         $_->isa("PPI::Token::Quote::Single")
-      || $_->isa("PPI::Token::Quote::Double")
-  } @args;
-  my $q_operators = any {
-         $_->isa("PPI::Token::Quote::Literal")
-      || $_->isa("PPI::Token::Quote::Interpolate")
-  } @args;
-
-  # Statement-level parentheses: a list wrapping the whole argument list
-  my $parens = defined $self->statement_level_list($elem);
-
-  ($fat_comma, $complex_expr, $version, $simple_strings, $q_operators, $parens)
-}
-
 sub collect_qw_words ($self, $words, @elements) {
   for my $el (@elements) {
     next unless $el->significant;
@@ -628,25 +596,17 @@ sub _use_qw_violation ($self, $elem, @args) {
   $self->_fix_violation($Fix_use_qw, $elem)
 }
 
-sub _scan_qw ($self, $elem, $qw_ref, $qw_parens_ref) {
-  if ($elem->isa("PPI::Token::QuoteLike::Words")) {
-    $$qw_ref        = 1;
-    $$qw_parens_ref = 0 if $elem->content !~ /\Aqw\s*\(/;
+sub _any_qw_without_parens ($self, @elements) {
+  for my $el (@elements) {
+    return 1
+      if $el->isa("PPI::Token::QuoteLike::Words")
+      && $el->content !~ /\Aqw\s*\(/;
+
+    # Recurse into structures such as lists
+    return 1
+      if $el->can("children") && $self->_any_qw_without_parens($el->children);
   }
-
-  # Recursively check children (for structures like lists)
-  if ($elem->can("children")) {
-    $self->_scan_qw($_, $qw_ref, $qw_parens_ref) for $elem->children;
-  }
-}
-
-sub _summarise_use_arguments ($self, @args) {
-  my $has_qw         = 0;
-  my $qw_uses_parens = 1;
-
-  $self->_scan_qw($_, \$has_qw, \$qw_uses_parens) for @args;
-
-  ($has_qw, $qw_uses_parens)
+  0
 }
 
 sub check_use_statement ($self, $elem) {
@@ -655,16 +615,11 @@ sub check_use_statement ($self, $elem) {
 
   my @args = $self->_extract_use_arguments($elem) or return;
 
-  my ($has_qw, $qw_uses_parens) = $self->_summarise_use_arguments(@args);
-
-  # Check for different types of arguments
-  my (
-    $has_fat_comma,      $has_complex_expr, $has_version,
-    $has_simple_strings, $has_q_operators,  $has_parens,
-  ) = $self->_analyse_argument_types($elem, @args);
-
-  # Rule 4: Special cases - no violation
-  return () if $has_version && @args == 1;  # Single version number
+  # Rule 4: a single version number is exempt
+  return ()
+    if @args == 1
+    && ( $args[0]->isa("PPI::Token::Number::Version")
+      || $args[0]->isa("PPI::Token::Number::Float"));
 
   # Pragmas with a single argument allow quotes
   return () if @args == 1 && $self->_is_pragma($elem);
@@ -673,11 +628,20 @@ sub check_use_statement ($self, $elem) {
 
   # Rule 1: qw() without parens should use qw()
   return $self->_fix_violation($Fix_use_qw, $elem)
-    if $has_qw && !$qw_uses_parens && !$interpolates;
+    if !$interpolates && $self->_any_qw_without_parens(@args);
 
-  # Rules 2, 3: fat comma or complex expressions should have no parentheses
-  if ($has_fat_comma || $has_complex_expr) {
-    return $self->_fix_violation($Fix_remove_parens, $elem) if $has_parens;
+  # Rules 2, 3: a fat comma, or anything else the qw rewrite doesn't
+  # understand, makes the statement complex, and a complex statement
+  # should have no parentheses. A real module version never gets here:
+  # ->arguments excludes it, so any number is part of the import list.
+  my $complex = any {
+    !(   $_->isa("PPI::Token::Quote")
+      || $_->isa("PPI::Token::QuoteLike::Words")
+      || ($_->isa("PPI::Token::Word") && $_->content =~ /\A-\w+\z/))
+  } @args;
+  if ($complex) {
+    return $self->_fix_violation($Fix_remove_parens, $elem)
+      if defined $self->statement_level_list($elem);
     return ();
   }
 
@@ -686,7 +650,7 @@ sub check_use_statement ($self, $elem) {
 
   # Rule 1: string arguments, with or without qw(), should be qw() alone
   return $self->_use_qw_violation($elem, @args)
-    if $has_simple_strings || $has_q_operators;
+    if any { $_->isa("PPI::Token::Quote") } @args;
 
   ()
 }
@@ -1294,16 +1258,6 @@ Shared with L<Perl::Critic::PJCJ::Fixer> so the policy and the fixer can
 never disagree about which parentheses a "remove parentheses" violation
 means.
 
-=head2 _analyse_argument_types
-
-Analyses use/no statement arguments to classify them into different types:
-fat comma operators, complex expressions, version numbers, simple strings,
-and quote operators. This classification drives the quoting rule enforcement
-in C<check_use_statement>.
-
-Also detects whether the original statement uses parentheses, which affects
-the violation messages for fat comma and complex expression cases.
-
 =head2 collect_qw_words ($words, @elements)
 
 Decodes the values of use/no statement arguments into C<$words>, recursing
@@ -1333,11 +1287,12 @@ C<use qw()> suggestion is only emitted when this holds.
 Emits the C<use qw()> violation for a use/no statement, or nothing when the
 arguments are not qw-representable.
 
-=head2 _summarise_use_arguments
+=head2 _any_qw_without_parens
 
-Detects C<qw()> usage among use/no statement arguments and whether those
-C<qw()> operators use parentheses rather than other delimiters. This
-information drives the violation logic in C<check_use_statement>.
+Tests whether any C<qw()> operator among use/no statement arguments,
+including those nested inside lists, uses a delimiter other than
+parentheses. C<check_use_statement> reports such a statement so that it
+is rewritten as C<qw( )>.
 
 =head2 check_use_statement
 

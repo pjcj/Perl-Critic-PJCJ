@@ -236,10 +236,6 @@ sub _in_range ($self, $elem, $lines) {
   $line >= $lines->[0] && $line <= $lines->[1]
 }
 
-sub _shift_range ($self, $lines, $delta) {
-  $lines->[1] += $delta if $lines;
-}
-
 sub _warn_declined ($self, $desc, $line) {
   my $where = $self->{file} ? " of $self->{file}" : "";
   warn "Perl::Critic::PJCJ::Fixer: cannot apply '$desc' at line $line"
@@ -275,12 +271,10 @@ sub _fix_once ($self, $source, $lines) {
   my $applied = 0;
   for my $entry (@fixes) {
     my ($elem, $fix, $desc) = @$entry;
-    my $before = $elem->content =~ tr/\n//;
-    my $line   = $elem->line_number;
+    my $line = $elem->line_number;
     $self->_apply_fix($elem, $fix)
       ? $applied = 1
       : $self->_warn_declined($desc, $line);
-    $self->_shift_range($lines, ($elem->content =~ tr/\n//) - $before);
   }
   return $source unless $applied;
 
@@ -308,6 +302,7 @@ sub fix ($self, $source, %opts) {
     $seen{$current} = 1;
     my $next = $self->_fix_once($current, $lines);
     return $self->_finish($source, $next) if $next eq $current;
+    $lines->[1] += ($next =~ tr/\n//) - ($current =~ tr/\n//) if $lines;
     if ($seen{$next}) {
       warn "Perl::Critic::PJCJ::Fixer: fixes oscillate without "
         . "converging; the result may still violate the policy\n";

@@ -54,6 +54,8 @@ subtest "Use statement argument rules" => sub {
     "three arguments with qw() is correct";
   bad $Policy, "use Foo qw[arg1 arg2]", desc_use_qw,
     "qw[] should use qw() with parentheses only";
+  bad $Policy, "use Foo ( ( qw[ arg1 ] ) )", desc_use_qw,
+    "qw[] nested inside an inner list should use qw()";
 
   # Other statement types should not be checked
   good $Policy, "require Foo", "require statements are not checked";
