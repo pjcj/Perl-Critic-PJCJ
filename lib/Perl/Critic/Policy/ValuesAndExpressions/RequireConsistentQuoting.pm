@@ -450,6 +450,12 @@ sub check_q_literal ($self, $elem) {
   return $self->check_delimiter_optimisation($elem)
     if $has_single_quotes && $has_double_quotes;
 
+  # q() reads these escapes the way '' does, so "" is never the answer
+  if ($self->has_quote_sensitive_escapes($string)) {
+    return $self->check_delimiter_optimisation($elem) if $has_single_quotes;
+    return $self->_fix_violation($Fix_single, $elem);
+  }
+
   if ($has_single_quotes) {
     return $self->would_interpolate_from_single_quotes($string)
       ? $self->check_delimiter_optimisation($elem)
@@ -1254,6 +1260,11 @@ appropriate.
 Allows C<q()> when the content has both single and double quotes (making it
 the cleanest option), but suggests simpler alternatives for basic content that
 could use C<''> or C<"">.
+
+Content holding an escape sequence that C<''> and C<""> read differently
+never goes to double quotes, because C<q()> reads such escapes the way
+C<''> does. Such content goes to C<''>, or keeps C<q()> when it also
+holds an apostrophe.
 
 =head2 check_qq_interpolate
 
