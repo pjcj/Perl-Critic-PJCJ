@@ -21,6 +21,11 @@ use v5.26.0;
 use warnings;
 use experimental "signatures";
 
+use Cwd            qw( abs_path );
+use File::Basename qw( dirname );
+use lib dirname(dirname(abs_path(__FILE__))) . "/lib";
+use Perl::Critic::PJCJ::AtomicWrite qw( write_atomic );
+
 my $Width = 72;
 
 sub is_list_item ($line) { $line =~ /^\s*(?:[-*+]|\d+[.)])\s/ }
@@ -143,13 +148,12 @@ sub format_message (@lines) {
 sub reflow_file ($file) {
   open my $in, "<", $file or die "Can't read $file: $!\n";
   my @lines = <$in>;
+  my $mode  = (stat $in)[2] & 07777;
   close $in or die "Can't close $file: $!\n";
 
-  my @out = format_message(@lines);
-
-  open my $fh, ">", $file or die "Can't write $file: $!\n";
-  print {$fh} "$_\n" for @out;
-  close $fh or die "Can't close $file: $!\n";
+  my $error
+    = write_atomic($file, join("", map "$_\n", format_message(@lines)), $mode);
+  die "$error\n" if defined $error;
 }
 
 sub main () {

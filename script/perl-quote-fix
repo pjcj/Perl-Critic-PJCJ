@@ -6,12 +6,10 @@ use warnings;
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use Cwd                       qw( abs_path );
-use File::Basename            qw( dirname );
-use File::Temp                qw( tempfile );
-use Getopt::Long              qw( GetOptions );
-use Pod::Usage                qw( pod2usage );
-use Perl::Critic::PJCJ::Fixer ();
+use Getopt::Long                    qw( GetOptions );
+use Pod::Usage                      qw( pod2usage );
+use Perl::Critic::PJCJ::AtomicWrite qw( write_atomic );
+use Perl::Critic::PJCJ::Fixer       ();
 
 sub parse_lines ($spec) {
   return unless defined $spec;
@@ -24,27 +22,7 @@ sub parse_lines ($spec) {
   );
 }
 
-sub write_fixed ($file, $fixed, $mode) {
-  my ($out, $temp) = eval {
-    tempfile("perl-quote-fix-XXXXXX", DIR => dirname($file), UNLINK => 0)
-  };
-  unless ($out) {
-    warn "Cannot create temporary file for $file: $@";
-    return 0;
-  }
-  my $ok = print {$out} $fixed;
-  $ok &&= close $out;
-  $ok &&= chmod $mode, $temp;
-  $ok &&= rename $temp, $file;
-  return 1 if $ok;
-  my $error = $!;
-  unlink $temp;
-  warn "Cannot write $file: $error\n";
-  0
-}
-
 sub fix_in_place ($fixer, $file) {
-  $file = abs_path($file) if -l $file;
   my $fh;
   unless (open $fh, "<", $file) {
     warn "Cannot read $file: $!\n";
@@ -55,7 +33,10 @@ sub fix_in_place ($fixer, $file) {
   close $fh or warn "Cannot close $file: $!\n";
   my $fixed = $fixer->fix($source);
   return 1 if $fixed eq $source;
-  write_fixed($file, $fixed, $mode)
+  my $error = write_atomic($file, $fixed, $mode);
+  return 1 unless defined $error;
+  warn "$error\n";
+  0
 }
 
 sub run_in_place ($lines) {

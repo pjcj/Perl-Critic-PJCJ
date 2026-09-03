@@ -6,8 +6,10 @@ use warnings;
 use feature      qw( signatures );
 use experimental qw( signatures );
 
+use Cwd            qw( abs_path );
 use File::Basename qw( dirname );
-use File::Temp     qw( tempfile );
+use lib dirname(dirname(abs_path(__FILE__))) . "/lib";
+use Perl::Critic::PJCJ::AtomicWrite qw( write_atomic );
 
 my $Unreadable = 0;
 
@@ -63,24 +65,6 @@ sub check_tidy ($files) {
   $status
 }
 
-sub write_atomic ($file, $content, $mode) {
-  my ($out, $temp)
-    = eval { tempfile("perl-hook-XXXXXX", DIR => dirname($file), UNLINK => 0) };
-  unless ($out) {
-    say "Cannot create temporary file for $file: $@";
-    return 0;
-  }
-  my $ok = print {$out} $content;
-  $ok &&= close $out;
-  $ok &&= chmod $mode, $temp;
-  $ok &&= rename $temp, $file;
-  return 1 if $ok;
-  my $error = $!;
-  unlink $temp;
-  say "Cannot write $file: $error";
-  0
-}
-
 sub format_files ($files) {
   my $status = 0;
   for my $file (@$files) {
@@ -99,7 +83,10 @@ sub format_files ($files) {
       next;
     }
     next if $tidied eq $source;
-    $status = 1 unless write_atomic($file, $tidied, $mode);
+    my $error = write_atomic($file, $tidied, $mode);
+    next unless defined $error;
+    say $error;
+    $status = 1;
   }
   $status
 }
@@ -171,6 +158,8 @@ selected Perl files, one per line, so other tools can share this
 selection instead of defining their own.  C<format> rewrites each file in
 place using the same L<Perl::Tidy> invocation as C<tidy>, so a file
 written by C<format> always passes the C<tidy> check.
+A symlink argument is resolved first, so C<format> rewrites the target and
+leaves the link in place.
 
 A candidate that cannot be read is reported on STDERR, treated as not
 Perl, and makes the hook exit non-zero once the remaining files have
