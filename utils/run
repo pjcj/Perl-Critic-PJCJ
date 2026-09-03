@@ -98,14 +98,6 @@ setup_hooks() {
     pi "No .git/hooks directory - skipping hook setup"
     return 0
   fi
-  for hook in commit-msg prepare-commit-msg; do
-    for link in ".git/hooks/$hook" ".git/hooks/$hook.legacy"; do
-      if [[ -L $link && $(readlink "$link") == *"utils/${hook}-hook" ]]; then
-        rm "$link"
-        pi "Removed legacy $hook symlink"
-      fi
-    done
-  done
   if command -v pre-commit >/dev/null 2>&1; then
     pre-commit install --install-hooks
   else
