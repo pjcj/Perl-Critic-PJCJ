@@ -4,8 +4,9 @@
 
 1. Make sure all feature work is merged to `main`.
 
-2. Add entries to `Changes.md` under the `{{$NEXT}}` heading. **Do not commit
-   `Changes.md`** - the release command commits it on the release branch.
+2. Add entries to `Changes.md` under the `{{$NEXT}}` heading. Open each entry
+   with a verb naming the action. **Do not commit `Changes.md`** - the release
+   command commits it on the release branch.
 
 3. Ensure tests and lint pass:
 

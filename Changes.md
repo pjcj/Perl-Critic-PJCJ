@@ -17,22 +17,21 @@
 ## v0.2.7 - 2026-06-25
 
 - Count ProhibitLongLines line length in characters, not octets
-  - Lines with multi-byte UTF-8 characters are no longer wrongly flagged as too
-    long
+  - Stop wrongly flagging lines with multi-byte UTF-8 characters as too long
   - Single-byte source (ASCII, Latin-1) is unaffected; other multi-byte
     encodings are not decoded and still count by octets
 
 ## v0.2.6 - 2026-04-11
 
 - Suggest single quotes for qq/q strings containing only double quotes
-  - `qq("hello")` and `q("hello")` now correctly suggest `'` instead of keeping
-    the quote operator
+  - Make `qq("hello")` and `q("hello")` suggest `'` rather than keeping the
+    quote operator
 - Clean and optimise code
 
 ## v0.2.5 - 2026-03-22
 
 - Fix false violation for escaped backslashes in double-quoted strings
-  - Strings like `"\\"` no longer incorrectly suggest `use ''`
+  - Stop suggesting `use ''` for strings like `"\\"`
 
 ## v0.2.4 - 2026-02-23
 
@@ -46,9 +45,9 @@
 ## v0.2.3 - 2026-02-22
 
 - Allow quoted strings for single-argument pragmas in use/no statements
-  - Pragmas (all-lowercase module names) with a single argument now accept
-    quoted strings with normal quoting rules applied
-  - Multi-argument pragmas and non-pragma modules are unchanged
+  - Accept quoted strings, with normal quoting rules applied, for
+    single-argument pragmas (all-lowercase module names)
+  - Leave multi-argument pragmas and non-pragma modules unchanged
 
 ## v0.2.2 - 2026-02-21
 
