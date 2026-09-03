@@ -30,6 +30,10 @@ jobs:
           - { os: "ubuntu-latest", perl: "5.42", perl-threaded: true }
 
     steps:
+      - name: Keep LF line endings on checkout
+        if: matrix.os == 'windows-latest'
+        run: git config --global core.autocrlf false
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -56,7 +60,14 @@ jobs:
       - name: Build distribution
         run: dzil build --in build-dir
 
+      - name: Install author test dependencies
+        run: >
+          cpanm --notest Test::EOL Test::Perl::Critic
+          Test::Pod::Coverage::TrustMe Test::Version
+
       - name: Install dependencies and test
+        env:
+          AUTHOR_TESTING: 1
         run: |
           cd build-dir
           cpanm --notest --installdeps .
