@@ -32,6 +32,39 @@ sub in_temp_dir ($code) {
   @result
 }
 
+sub git_available () {
+  open my $fh, "-|", "git", "--version" or return 0;
+  my $out = do { local $/ = undef; <$fh> };
+  close $fh or return 0;
+  defined $out && $out =~ /git version/
+}
+
+sub skip_without_git () { skip_all "git not available" unless git_available() }
+
+sub skip_unless ($ok, $why) { skip_all $why unless $ok }
+
+sub run_git (@args) {
+  local $ENV{GIT_CONFIG_GLOBAL} = "/dev/null";
+  local $ENV{GIT_CONFIG_SYSTEM} = "/dev/null";
+  system("git", @args) == 0
+}
+
+sub unborn_branch () {
+  return 0
+    unless run_git(qw( init -q ))
+    && run_git(qw( symbolic-ref HEAD refs/heads/GH-1234-test ));
+  (1, get_current_branch)
+}
+
+sub detached_head () {
+  return 0
+    unless run_git(qw( init -q ))
+    && run_git(
+      qw( -c user.email=t@t -c user.name=t commit -q --allow-empty -m Initial ))
+    && run_git(qw( checkout -q --detach ));
+  (1, get_current_branch, on_main)
+}
+
 subtest "Ticket regex" => sub {
   like "GH-1234",       qr/^$Ticket_re$/, "typical ticket matches";
   like "ABCDEFGH-1",    qr/^$Ticket_re$/, "eight-letter project matches";
@@ -43,6 +76,21 @@ subtest "Ticket regex" => sub {
 subtest "Branch detection outside a repository" => sub {
   my ($branch, $main) = in_temp_dir(sub { (get_current_branch, on_main) });
   is $branch, "", "no branch outside a repository";
+  ok !$main, "not on main";
+};
+
+subtest "Branch detection on an unborn branch" => sub {
+  skip_without_git();
+  my ($ok, $branch) = in_temp_dir(\&unborn_branch);
+  skip_unless($ok, "could not prepare an unborn repository");
+  is $branch, "GH-1234-test", "an unborn branch reports its name";
+};
+
+subtest "Branch detection on a detached HEAD" => sub {
+  skip_without_git();
+  my ($ok, $branch, $main) = in_temp_dir(\&detached_head);
+  skip_unless($ok, "could not prepare a detached repository");
+  is $branch, "", "a detached HEAD reports no branch";
   ok !$main, "not on main";
 };
 
