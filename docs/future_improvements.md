@@ -15,7 +15,7 @@ regressions in pull requests.
 ### Why not implemented
 
 Low priority - the coverage baseline is already high (97%+) and the project has
-few contributors. Worth adding if the contributor base grows.
+few contributors. Add it if the contributor base grows.
 
 ## Make rules individually configurable
 
@@ -31,8 +31,7 @@ quote style, exclude specific token types, or enable/disable individual rules
 
 The current opinionated approach is intentional - the policy enforces a single
 consistent style. Adding configurability would increase complexity and the
-amount of testing needed. Worth considering if users request specific
-customisation.
+amount of testing needed. Consider it if users request specific customisation.
 
 ## Add `pre-commit run --all-files` to CI
 

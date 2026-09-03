@@ -210,7 +210,7 @@ readability across various display contexts while still allowing reasonable
 code density.
 
 You can configure C<perltidy> to keep lines within the specified limit.  Only
-when it is unable to do that will you need to manually make changes.
+when it is unable to do that will you need to make changes manually.
 
 =head1 CHARACTER ENCODING
 

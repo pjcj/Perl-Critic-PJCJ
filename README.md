@@ -103,7 +103,7 @@ readability across various display contexts while still allowing reasonable code
 density.
 
 You can configure `perltidy` to keep lines within the specified limit. Only when
-it is unable to do that will you need to manually make changes.
+it is unable to do that will you need to make changes manually.
 
 Line lengths are measured in characters. Source is decoded as UTF-8 before
 measuring, so each multi-byte UTF-8 character counts as one. Single-byte
