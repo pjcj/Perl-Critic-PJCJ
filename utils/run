@@ -125,6 +125,7 @@ recipe_setup() {
 
 confirm() {
   local description="$1"
+  local prompt="${2:-Continue? [yes/NO] }"
   if ((dryrun)); then
     pi "[dry run] would: $description"
     return 0
@@ -132,7 +133,7 @@ confirm() {
   echo ""
   pi "About to: $description"
   local answer
-  read -rp "Continue? [yes/NO] " answer
+  read -rp "$prompt" answer
   if [[ ${answer,,} != "yes" && ${answer,,} != "y" ]]; then
     pf "Aborted"
   fi
@@ -336,15 +337,7 @@ release() {
   echo ""
   pi "PR ready for review: $release_pr_url"
   pi "Review the PR, then continue to merge and release."
-  if ((dryrun)); then
-    pi "[dry run] skipping PR review pause"
-  else
-    local answer
-    read -rp "Continue after PR review? [yes/NO] " answer
-    if [[ ${answer,,} != "yes" && ${answer,,} != "y" ]]; then
-      pf "Aborted"
-    fi
-  fi
+  confirm "continue past PR review" "Continue after PR review? [yes/NO] "
 
   # Step 7: Merge PR
   confirm "merge PR"
