@@ -51,6 +51,9 @@ subtest "Delimiter optimisation" => sub {
     "qw[] with angles should use qw()";
   bad $Policy, 'my @x = qw{word<with>angles}', desc_use_qw,
     "qw{} with angles should use qw()";
+
+  bad $Policy, 'my @w = qw/(x) [y] <z> {w} \\\\/;', desc_use_qw,
+    "balanced content with a backslash is re-delimited";
 };
 
 subtest "Delimiter preference order" => sub {

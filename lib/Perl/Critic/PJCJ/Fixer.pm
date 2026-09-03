@@ -81,8 +81,8 @@ sub _balanced ($self, $content, $start, $end) {
 
 sub _delimit_content ($self, $content, $start, $end) {
   return $content if $content !~ /[\Q$start$end\E]/;
-  return          if $content =~ /\\/;
   return $content if $self->_balanced($content, $start, $end);
+  return          if $content =~ /\\/;
   $content =~ s/([\Q$start$end\E])/\\$1/gr
 }
 
