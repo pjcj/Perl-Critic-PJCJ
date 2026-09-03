@@ -119,6 +119,25 @@ subtest "Interpolation-changing command fixes are declined" => sub {
     q(my $x = 'a';), "a plain string does not become an interpolating command";
 };
 
+sub fix_words ($words, $code) {
+  my $fixer = Perl::Critic::PJCJ::Fixer->new;
+  $fixer->{policy} = FakePolicy->new(
+    flags       => "PPI::Statement::Include",
+    description => desc_use_qw,
+    words       => $words,
+  );
+  my $out;
+  warnings { $out = $fixer->fix($code) };
+  $out
+}
+
+subtest "A qw insert which changes the word list is declined" => sub {
+  is fix_words(["a b"], 'use Foo "a b";'), 'use Foo "a b";',
+    "a word which re-parses as two words is not inserted";
+  is fix_words(["a)"], 'use Foo "a)";'), 'use Foo "a)";',
+    "a word which re-parses with different content is not inserted";
+};
+
 subtest "Declined fixes are reported" => sub {
   my $fixer = Perl::Critic::PJCJ::Fixer->new;
   my $code  = 'use Foo qw[ a\( ], $v;';

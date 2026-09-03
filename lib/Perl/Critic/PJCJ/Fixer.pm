@@ -187,6 +187,20 @@ sub _span_has_comment ($self, @span) {
   } @span
 }
 
+sub _qw_replacement ($self, @words) {
+  my $source = "qw( @words )";
+  my ($token, $doc) = $self->{policy}->probe_quote_token("$source;");
+
+  # uncoverable branch true
+  # uncoverable condition left note:the probe code is never empty
+  # uncoverable condition right note:qw( ... ); always parses to one qw token
+  return unless $doc && $token->isa("PPI::Token::QuoteLike::Words");
+  my @parsed = $token->literal;
+  return unless @parsed == @words;
+  return if any { $parsed[$_] ne $words[$_] } 0 .. $#words;
+  $source
+}
+
 sub _fix_include ($self, $elem, $fix) {
   return $self->_remove_include_parens($elem)
     if $fix->{type} eq "remove_parens";
@@ -201,9 +215,12 @@ sub _fix_include ($self, $elem, $fix) {
     && $self->{policy}->collect_qw_words(\@words, @span)
     && all { $self->{policy}->qw_word_ok($_) } @words
   ) {
-    $span[0]->insert_before(PPI::Token->new("qw( @words )"));
-    $_->delete for @span;
-    return 1;
+    my $source = $self->_qw_replacement(@words);
+    if (defined $source) {
+      $span[0]->insert_before(PPI::Token->new($source));
+      $_->delete for @span;
+      return 1;
+    }
   }
 
   my $qw_tokens = $elem->find("PPI::Token::QuoteLike::Words") or return 0;
