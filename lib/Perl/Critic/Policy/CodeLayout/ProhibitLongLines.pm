@@ -17,9 +17,6 @@ use Perl::Critic::Utils::SourceLocation ();
 
 my $Expl = "Keep lines under the configured maximum for readability";
 
-my %Lookup_needed;  # abs dir             -> can a lookup possibly answer?
-my %Attr_value;     # "$attr\0$abs_file"  -> computed override (may be undef)
-
 sub _parse_allow_lines_matching ($self, $parameter, $config_string) {
   my $string = $config_string // $parameter->get_default_string // "";
   my @patterns;
@@ -80,8 +77,8 @@ sub _lookup_needed ($dir) {
 sub _gitattr_lookup ($self, $attr, $filename) {
   my $dir     = dirname($filename);
   my $abs_dir = File::Spec->rel2abs($dir);
-  $Lookup_needed{$abs_dir} //= _lookup_needed($abs_dir);
-  return (1, undef) unless $Lookup_needed{$abs_dir};
+  $self->{_lookup_needed}{$abs_dir} //= _lookup_needed($abs_dir);
+  return (1, undef) unless $self->{_lookup_needed}{$abs_dir};
 
   my $base   = basename($filename);
   my $output = eval {
@@ -115,10 +112,10 @@ sub _get_gitattr_line_length ($self, $filename) {
   return unless defined $attr && length $attr;
 
   my $key = join "\0", $attr, File::Spec->rel2abs($filename);
-  return $Attr_value{$key} if exists $Attr_value{$key};
+  return $self->{_attr_value}{$key} if exists $self->{_attr_value}{$key};
   my ($ok, $value) = $self->_gitattr_lookup($attr, $filename);
   return unless $ok;
-  $Attr_value{$key} = $value
+  $self->{_attr_value}{$key} = $value
 }
 
 sub _first_tokens_by_line ($self, $doc) {
@@ -276,6 +273,9 @@ repository, or the attribute is unspecified.
 Overrides are read from C<.gitattributes> files and the repository's
 C<.git/info/attributes>. Attribute sources configured elsewhere (such as
 C<core.attributesFile>) are not consulted.
+
+Lookups are cached on the policy instance, so one run reads the attribute
+of each file once and a new run reads it afresh.
 
 =head1 EXAMPLES
 

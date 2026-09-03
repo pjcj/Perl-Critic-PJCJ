@@ -103,6 +103,23 @@ sub test_numeric_attribute () {
   is scalar @v, 1, "201-char line exceeds 200-char override";
 }
 
+sub test_fresh_instance_rereads () {
+  my $dir = require_git();
+  local $ENV{GIT_CEILING_DIRECTORIES} = dirname(abs_path($dir));
+  my $path = write_perl_file($dir, "wide.t", "1;\n");
+
+  my $policy_a = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
+  is $policy_a->_get_gitattr_line_length($path), 200, "first instance";
+
+  open my $fh, ">", "$dir/.gitattributes" or die "open: $!";
+  print $fh "wide.t custom-line-length=120\n";
+  close $fh or die "close: $!";
+
+  my $policy_b = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
+  is $policy_b->_get_gitattr_line_length($path), 120,
+    "a fresh instance sees the edited .gitattributes";
+}
+
 sub test_unspecified_attribute () {
   my $dir = require_git();
 
@@ -276,8 +293,9 @@ sub test_attribute_text_in_filename () {
 
 subtest "ignore attribute suppresses violations" => \&test_ignore_attribute;
 subtest "numeric attribute overrides limit"      => \&test_numeric_attribute;
-subtest "unspecified attribute uses default"    => \&test_unspecified_attribute;
-subtest "no filename falls back to default"     => \&test_no_filename;
+subtest "fresh instance rereads attributes"  => \&test_fresh_instance_rereads;
+subtest "unspecified attribute uses default" => \&test_unspecified_attribute;
+subtest "no filename falls back to default"  => \&test_no_filename;
 subtest "feature disabled when parameter empty" => \&test_feature_disabled;
 subtest "_get_gitattr_line_length values"     => \&test_get_gitattr_line_length;
 subtest "relative paths honour gitattributes" => \&test_relative_path;
