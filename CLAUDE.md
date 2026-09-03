@@ -66,6 +66,9 @@ exports:
 - `good $policy, $code, $desc` - assert no violations.
 - `bad $policy, $code, $expected_msg, $desc` - assert exactly one violation
   whose `description` matches `$expected_msg` via `like`.
+- `fixes`, `unchanged` and `declined` - assert what the Fixer does with the
+  source. `declined` also asserts that the Fixer reports the fix it could not
+  apply.
 - `find_violations` / `count_violations` - lower-level helpers.
 
 Tests are organised by concern under
@@ -83,10 +86,11 @@ formats show. The `explanation` is a single static rationale. Tests check
 
 Each violation is a `Perl::Critic::PJCJ::Violation` that carries its structured
 fix (`->fix`). The Fixer reads that attached fix directly and only falls back to
-`fix_data($description)` for test doubles; a violation with no fix mapping
-warns. The suggestion wording lives in one place: the exported constant subs
-`desc_double`, `desc_single`, `desc_use_qw`, `desc_remove_parens` and
-`desc_optimal($display)`, which tests import rather than duplicating literals.
+`fix_data($description)` for test doubles. A violation with no fix mapping, and
+a fix the Fixer declines to apply, are each reported once on standard error. The
+suggestion wording lives in one place: the exported constant subs `desc_double`,
+`desc_single`, `desc_use_qw`, `desc_remove_parens` and `desc_optimal($display)`,
+which tests import rather than duplicating literals.
 
 ## Style Notes
 
