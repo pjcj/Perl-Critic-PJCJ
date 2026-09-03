@@ -33,13 +33,9 @@ $script --help
 $script --verbose --dryrun release-ticket
 $script --dryrun release
 $script release
+$script options  # list flags and recipes for shell completion
 EOT
   exit 0
-}
-
-cleanup() {
-  declare -r res=$?
-  exit "$res"
 }
 
 parse_options() {
@@ -391,6 +387,5 @@ main() {
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
-  trap cleanup EXIT INT
   main "$@"
 fi
