@@ -89,7 +89,9 @@ Tests are organised by concern under
 RequireConsistentQuoting puts the per-violation suggestion (e.g. `use ''`,
 `use ""`, `use qq()`, `use qw()`) in the `description` field, which is what `%m`
 formats show. The `explanation` is a single static rationale. Tests check
-`description`; there is no policy-class special case in the test helper.
+`description`. The test helper runs its fixer round-trip assertions for any
+policy that provides `fix_data`, keyed on that capability rather than on a
+policy class name.
 
 Each violation is a `Perl::Critic::PJCJ::Violation` that carries its structured
 fix (`->fix`). The Fixer reads that attached fix directly and only falls back to

@@ -18,8 +18,8 @@ our @EXPORT_OK = qw( find_violations count_violations good bad fixes
 
 my $Fixer = Perl::Critic::PJCJ::Fixer->new;
 
-sub _is_quoting_policy ($policy) {
-  ref($policy) =~ /RequireConsistentQuoting/
+sub _runs_fixer_assertions ($policy) {
+  $policy->can("fix_data")
 }
 
 sub find_violations ($policy, $code) {
@@ -57,7 +57,7 @@ sub good ($policy, $code, $description) {
     for @violations;
 
   is $Fixer->fix($code), $code, "$description - fixer leaves it alone"
-    if _is_quoting_policy($policy);
+    if _runs_fixer_assertions($policy);
 }
 
 sub bad ($policy, $code, $expected_message, $description) {
@@ -68,7 +68,7 @@ sub bad ($policy, $code, $expected_message, $description) {
   like $violations[0]->description, qr/\Q$expected_message\E/,
     "$description - should suggest $expected_message";
 
-  if (_is_quoting_policy($policy)) {
+  if (_runs_fixer_assertions($policy)) {
     my $fixed     = $Fixer->fix($code);
     my @remaining = find_violations($policy, $fixed);
     is @remaining, 0, "$description - fixer resolves the violation"
@@ -185,7 +185,7 @@ Parameters:
 =back
 
 This is a convenience function that verifies the code passes the policy check.
-For the RequireConsistentQuoting policy it also asserts that
+For policies that provide C<fix_data> it also asserts that
 L<Perl::Critic::PJCJ::Fixer> leaves the code unchanged.
 
 =head2 bad
@@ -209,9 +209,9 @@ Parameters:
 =back
 
 This function verifies that the code violates the policy exactly once and that
-the violation's description contains the expected text. For the
-RequireConsistentQuoting policy it also asserts that
-L<Perl::Critic::PJCJ::Fixer> resolves the violation.
+the violation's description contains the expected text. For policies that
+provide C<fix_data> it also asserts that L<Perl::Critic::PJCJ::Fixer> resolves
+the violation.
 
 =head2 fixes
 
