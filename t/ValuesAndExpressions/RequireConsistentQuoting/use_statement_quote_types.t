@@ -246,6 +246,11 @@ subtest "qw() is only suggested for representable words" => sub {
   good $Policy, "use Foo 'a b', 'c'", "one bad word poisons the list";
   good $Policy, 'use Foo qw( a ), "b c"',
     "mixed qw and unrepresentable strings are left alone";
+  good $Policy, 'use Foo "a#b"',
+    "a hash makes perl warn about comments in qw()";
+  good $Policy, 'use Foo "a,b"',
+    "a comma makes perl warn about separating words";
+  good $Policy, 'use Foo "a", "b#c"', "one warning word poisons the list";
 };
 
 subtest "Special cases should not trigger violations" => sub {

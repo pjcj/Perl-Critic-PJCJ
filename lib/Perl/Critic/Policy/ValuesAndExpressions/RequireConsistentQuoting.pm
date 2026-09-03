@@ -614,7 +614,7 @@ sub collect_qw_words ($self, $words, @elements) {
 }
 
 sub qw_word_ok ($self, $word) {
-  $word =~ /\A[^\s()\\]+\z/
+  $word =~ /\A[^\s()\\#,]+\z/
 }
 
 sub _use_args_qw_representable ($self, @args) {
@@ -1315,10 +1315,12 @@ when the fixer can rewrite the statement.
 
 =head2 qw_word_ok ($word)
 
-Tests whether a single decoded word can be written inside C<qw( )>: it must
-be non-empty and free of whitespace, parentheses and backslashes. This is
-the single word-representability predicate, shared with
-L<Perl::Critic::PJCJ::Fixer>.
+Tests whether a single decoded word can be written inside C<qw( )>. The word
+must be non-empty and free of whitespace, parentheses, backslashes, hashes
+and commas. Perl warns about a hash or a comma inside C<qw( )> under
+C<use warnings>, and no escape avoids the warning, so such a word has no
+C<qw( )> form. This is the single word-representability predicate, shared
+with L<Perl::Critic::PJCJ::Fixer>.
 
 =head2 _use_args_qw_representable
 

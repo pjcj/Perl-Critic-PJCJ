@@ -41,6 +41,8 @@ subtest "Arguments which cannot become qw words are declined" => sub {
   unchanged 'use Foo bar, "baz";', "a plain bareword is not a string";
   unchanged 'use Foo "a" . "b";',  "an expression is not a list of words";
   declined 'use Foo (), "a";', "an empty list yields no words";
+  unchanged "use Foo ('a#b');", "a hash word is not rewritten to qw()";
+  unchanged "use Foo ('a,b');", "a comma word is not rewritten to qw()";
 };
 
 subtest "Module versions stay in place" => sub {
