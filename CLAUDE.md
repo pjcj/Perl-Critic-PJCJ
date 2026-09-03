@@ -18,7 +18,7 @@ Run these after every change:
 
 - **Format**: `make format` (runs `utils/perl-hook fix`, which backs up each
   tracked Perl file to `tmp/perltidy/` and then runs perlimports,
-  `script/perl-quote-fix` and perltidy; always run before other formatting)
+  `script/perl-quote-fix` and perltidy). Always run it before other formatting.
 - **Test**: `make test` (dzil clean + dzil test)
 - **Lint**: `make lint` (pre-commit run --all-files, includes perlcritic)
 - **Coverage**: `make cover-compilation` (statement/branch/condition report)
@@ -39,7 +39,7 @@ Single test file: `yath test -j20 --qvf -T t/path/to/test.t`
   `check_qq_interpolate`, `check_quote_operators`, and `check_use_statement`.
 - `lib/Perl/Critic/Policy/CodeLayout/ProhibitLongLines.pm` - configurable
   maximum line length enforcement. Supports per-file overrides via
-  `.gitattributes` (attribute `custom-line-length`; value `ignore` or an
+  `.gitattributes` (attribute `custom-line-length` with value `ignore` or an
   integer).
 - `lib/Perl/Critic/Utils/SourceLocation.pm` - helper for ProhibitLongLines to
   create synthetic PPI elements with line/column info for violations.
@@ -109,7 +109,7 @@ nor `operator`.
 
 - Perl 5.26+ with `use feature qw( signatures )` and
   `use experimental qw( signatures )`.
-- Formatting is controlled by `.perltidyrc`; imports by `perlimports`. Do not
+- Formatting is controlled by `.perltidyrc` and imports by `perlimports`. Do not
   manually reformat - run `make format`.
 - Perlcritic configuration is in `.perlcriticrc` (severity 2).
 - Each `.pm` file ends with a quoted string (song lyric) instead of `1;`. The

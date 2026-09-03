@@ -88,7 +88,7 @@ sub applies_to ($self) {
 
 sub would_interpolate ($self, $string) {
   # Neutralise embedded double quotes so the probe content is one "..."
-  # token; PPI's interpolations method is the authority
+  # token. PPI's interpolations method is the authority
   my $safe = $string =~ s/"/ /gr;
   PPI::Token::Quote::Double->new(qq("$safe"))->interpolations
 }
@@ -139,7 +139,7 @@ sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
     "{" => $content =~ tr/{}//,
   );
 
-  # Fewest delimiter occurrences in the content wins; ties are broken by the
+  # Fewest delimiter occurrences in the content wins. Ties are broken by the
   # order of @delimiters, which encodes the preference () > [] > <> > {}
   my $optimal = $delimiters[0];
   for my $delim (@delimiters) {
@@ -227,7 +227,7 @@ sub _quote_token_complete ($self, $elem) {
   # tokeniser runs an unterminated quote to end of file
   return 1 if $elem->next_token;
 
-  # A terminated token reparses to itself; an unterminated one absorbs
+  # A terminated token reparses to itself. An unterminated one absorbs
   # the appended semicolon
   my ($token, $doc) = $self->probe_quote_token($elem->content . ";");
 
@@ -283,7 +283,7 @@ sub _extract_list_arguments ($self, $list) {
 }
 
 sub _extract_use_arguments ($self, $elem) {
-  # No module means no import arguments; ->arguments dies on a bare "use"
+  # No module means no import arguments, and ->arguments dies on a bare "use"
   return () unless $elem->module;
   my @args;
   for my $child ($elem->arguments) {
@@ -522,7 +522,7 @@ sub check_qq_interpolate ($self, $elem) {
     if $double_quote_suggestion && $double_quote_suggestion eq "qq()";
 
   # Rule 1: Otherwise prefer simple double quotes. Every string containing a
-  # double quote was handled above, so nothing here needs qq(); an apostrophe
+  # double quote was handled above, so nothing here needs qq(). An apostrophe
   # needs no escaping in double quotes
   $self->_fix_violation($Fix_double, $elem)
 }
@@ -556,7 +556,7 @@ sub check_quote_operators ($self, $elem) {
 }
 
 sub statement_level_list ($self, $elem) {
-  # No module means no arguments; ->arguments dies on a bare "use"
+  # No module means no arguments, and ->arguments dies on a bare "use"
   return unless $elem->module;
   my @args = $elem->arguments;
   @args == 1 && $args[0]->isa("PPI::Structure::List") ? $args[0] : undef

@@ -88,7 +88,7 @@ sub _gitattr_lookup ($self, $attr, $filename) {
     my $opened = open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr,
       "--", $base;
     if ($quiet) {
-      # Restore our own STDERR; keep going even if the dup back fails, since
+      # Restore our own STDERR. Keep going even if the dup back fails, since
       # abandoning the lookup would not make a broken STDERR any better
       open STDERR, ">&", $saved_err or warn "Cannot restore STDERR: $!\n";
     }
@@ -260,7 +260,7 @@ Configure in C<.gitattributes>:
   t/legacy/messy.t        custom-line-length=ignore
   t/generated/*.t         custom-line-length=200
 
-Then in C<.perlcriticrc> (the default attribute name is shown; you only
+Then in C<.perlcriticrc> (the default attribute name is shown, so you only
 need this line if you want a different name):
 
   [CodeLayout::ProhibitLongLines]

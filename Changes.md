@@ -18,7 +18,7 @@
 
 - Count ProhibitLongLines line length in characters, not octets
   - Stop wrongly flagging lines with multi-byte UTF-8 characters as too long
-  - Single-byte source (ASCII, Latin-1) is unaffected; other multi-byte
+  - Single-byte source (ASCII, Latin-1) is unaffected. Other multi-byte
     encodings are not decoded and still count by octets
 
 ## v0.2.6 - 2026-04-11
@@ -66,7 +66,7 @@
 - Add missing List::Util runtime prerequisite
 - Remove dead code in RequireConsistentQuoting
 - Unify release workflow with confirmation checkpoints (`make release`)
-- Move setup recipe into `utils/run`; skip in CI environments
+- Move setup recipe into `utils/run` and skip it in CI environments
 - Fix experimental signatures warning in `dev/append_postamble`
 - Add Perl 5.42 to CI matrix
 
