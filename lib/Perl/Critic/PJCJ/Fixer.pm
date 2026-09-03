@@ -22,7 +22,7 @@ sub new ($class) {
   bless { policy => $policy }, $class
 }
 
-# Only valid for content free of quote-sensitive escapes; conversion call
+# Only valid for content free of quote-sensitive escapes. Conversion call
 # sites guard with the policy's has_quote_sensitive_escapes predicate
 sub _decode_double ($self, $raw) { $raw =~ s/\\(.)/$1/gsr }
 
@@ -49,7 +49,7 @@ sub _normalised_value ($self, $elem) {
   return $self->{policy}->decode_q_literal($raw, $start, $end)
     if $class eq "PPI::Token::Quote::Literal";
 
-  # Interpolate; a Command never reaches here because _value_preserved
+  # Interpolate. A Command never reaches here because _value_preserved
   # compares interpolating token pairs via _canonical
   $self->_decode_double($raw)
 }
@@ -64,7 +64,7 @@ sub _operator_replacement ($self, $elem, $op, $start, $end) {
   }
 
   if ($class eq "PPI::Token::Quote::Double") {
-    # An interpolating target keeps the escapes bar the quote; a literal
+    # An interpolating target keeps the escapes bar the quote. A literal
     # target (q, qw) takes the fully decoded value
     $content
       = $op eq "qq" || $op eq "qx"
@@ -165,7 +165,7 @@ sub _remove_include_parens ($self, $elem) {
 }
 
 sub _include_argument_span ($self, $elem) {
-  # No module means no import arguments; ->arguments dies on a bare "use"
+  # No module means no import arguments, and ->arguments dies on a bare "use"
   return unless $elem->module;
   my @args = $elem->arguments or return;
   my (@span, $in);
@@ -369,8 +369,8 @@ Source receiving no applied fix is returned byte for byte, and a file using
 CRLF line endings throughout keeps them. A file with mixed line endings is
 normalised to LF when a fix applies.
 
-Each violation from the policy carries its own structured fix, which the fixer
-uses directly; for other violation sources it falls back to the policy's
+Each violation from the policy holds its own structured fix, which the fixer
+uses directly. For other violation sources it falls back to the policy's
 C<fix_data> lookup keyed on the description. A violation with no fix by either
 route is reported once on standard error and left unchanged.
 

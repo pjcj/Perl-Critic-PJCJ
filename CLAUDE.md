@@ -18,7 +18,7 @@ Run these after every change:
 
 - **Format**: `make format` (runs `utils/perl-hook fix`, which backs up each
   tracked Perl file to `tmp/perltidy/` and then runs perlimports,
-  `script/perl-quote-fix` and perltidy; always run before other formatting)
+  `script/perl-quote-fix` and perltidy). Always run it before other formatting.
 - **Test**: `make test` (dzil clean + dzil test)
 - **Lint**: `make lint` (pre-commit run --all-files, includes perlcritic)
 - **Coverage**: `make cover-compilation` (statement/branch/condition report)
@@ -39,7 +39,7 @@ Single test file: `yath test -j20 --qvf -T t/path/to/test.t`
   `check_qq_interpolate`, `check_quote_operators`, and `check_use_statement`.
 - `lib/Perl/Critic/Policy/CodeLayout/ProhibitLongLines.pm` - configurable
   maximum line length enforcement. Supports per-file overrides via
-  `.gitattributes` (attribute `custom-line-length`; value `ignore` or an
+  `.gitattributes` (attribute `custom-line-length` with value `ignore` or an
   integer).
 - `lib/Perl/Critic/Utils/SourceLocation.pm` - helper for ProhibitLongLines to
   create synthetic PPI elements with line/column info for violations.
@@ -93,22 +93,23 @@ formats show. The `explanation` is a single static rationale. Tests check
 policy that provides `fix_data`, keyed on that capability rather than on a
 policy class name.
 
-Each violation is a `Perl::Critic::PJCJ::Violation` that carries its structured
+Each violation is a `Perl::Critic::PJCJ::Violation` that holds its structured
 fix (`->fix`). The Fixer reads that attached fix directly and only falls back to
 `fix_data($description)` for test doubles. A violation with no fix mapping, and
 a fix the Fixer declines to apply, are each reported once on standard error. The
-suggestion wording lives in one place: the exported constant subs `desc_double`,
-`desc_single`, `desc_use_qw`, `desc_remove_parens` and `desc_optimal($display)`,
-which tests import rather than duplicating literals. The plain fix types are
-listed once in `%Plain_fixes`, which pairs each type with its `desc_*` sub and
-fix structure. `_render_fix` and `_known_fixes` both read that table, and
-`_render_fix` dies on a type that is neither in the table nor `operator`.
+suggestion wording is kept in one place: the exported constant subs
+`desc_double`, `desc_single`, `desc_use_qw`, `desc_remove_parens` and
+`desc_optimal($display)`, which tests import rather than duplicating literals.
+The plain fix types are listed once in `%Plain_fixes`, which pairs each type
+with its `desc_*` sub and fix structure. `_render_fix` and `_known_fixes` both
+read that table, and `_render_fix` dies on a type that is neither in the table
+nor `operator`.
 
 ## Style Notes
 
 - Perl 5.26+ with `use feature qw( signatures )` and
   `use experimental qw( signatures )`.
-- Formatting is controlled by `.perltidyrc`; imports by `perlimports`. Do not
+- Formatting is controlled by `.perltidyrc` and imports by `perlimports`. Do not
   manually reformat - run `make format`.
 - Perlcritic configuration is in `.perlcriticrc` (severity 2).
 - Each `.pm` file ends with a quoted string (song lyric) instead of `1;`. The

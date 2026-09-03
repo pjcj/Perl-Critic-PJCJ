@@ -227,7 +227,7 @@ perl-hook - run Perl checks on the Perl files among the given files
 A pre-commit helper which selects the Perl files from its arguments and
 runs the requested check on them.  A file is Perl if its name ends in
 C<.pm>, C<.pl>, C<.t> or C<.psgi>, or if its first line is a perl shebang.
-This catches extensionless scripts wherever they live, without depending
+This catches extensionless scripts wherever they are, without depending
 on the executable bit, and can never match files written in another
 language.
 

@@ -4,8 +4,9 @@
 
 1. Make sure all feature work is merged to `main`.
 
-2. Add entries to `Changes.md` under the `{{$NEXT}}` heading. **Do not commit
-   `Changes.md`** - the release command commits it on the release branch.
+2. Add entries to `Changes.md` under the `{{$NEXT}}` heading. Open each entry
+   with a verb naming the action. **Do not commit `Changes.md`** - the release
+   command commits it on the release branch.
 
 3. Ensure tests and lint pass:
 
@@ -22,7 +23,7 @@ From `main`, with `Changes.md` uncommitted:
 make release
 ```
 
-The command walks through the full release with confirmation checkpoints (type
+The command steps through the full release with confirmation checkpoints (type
 "yes" to proceed at each one):
 
 01. Prompts for a version bump if the version in `dist.ini` still matches the

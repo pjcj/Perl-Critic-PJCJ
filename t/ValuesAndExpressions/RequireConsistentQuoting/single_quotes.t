@@ -102,7 +102,7 @@ subtest "Additional single quote coverage tests" => sub {
   bad $Policy, q(my $x = 'don\\'t';), desc_double,
     "single quotes with escaped single quote should use double quotes";
 
-  # Test strings that might expose issues in would_interpolate logic
+  # Test strings that might expose problems in would_interpolate logic
   # These test the boundary between interpolation and non-interpolation
   good $Policy, q(my $x = 'literal \$dollar with "quotes"'),
     "Single quotes justified for escaped dollar with double quotes";

@@ -110,9 +110,9 @@ perl-quote-fix - fix RequireConsistentQuoting violations in Perl source
 Reads Perl source on standard input, or from the named files, and writes it
 to standard output with all violations of
 L<Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting>
-fixed. Each named file is read explicitly and fixed as a separate document;
-an input which cannot be read is reported and the exit status is non-zero.
-The runtime value of every string is preserved; anything that cannot be
+fixed. Each named file is read explicitly and fixed as a separate document.
+An input which cannot be read is reported and the exit status is non-zero.
+The runtime value of every string is preserved. Anything that cannot be
 fixed safely is left unchanged. Source that the policy already accepts
 passes through byte for byte.
 

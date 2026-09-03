@@ -88,7 +88,7 @@ sub applies_to ($self) {
 
 sub would_interpolate ($self, $string) {
   # Neutralise embedded double quotes so the probe content is one "..."
-  # token; PPI's interpolations method is the authority
+  # token. PPI's interpolations method is the authority
   my $safe = $string =~ s/"/ /gr;
   PPI::Token::Quote::Double->new(qq("$safe"))->interpolations
 }
@@ -139,7 +139,7 @@ sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
     "{" => $content =~ tr/{}//,
   );
 
-  # Fewest delimiter occurrences in the content wins; ties are broken by the
+  # Fewest delimiter occurrences in the content wins. Ties are broken by the
   # order of @delimiters, which encodes the preference () > [] > <> > {}
   my $optimal = $delimiters[0];
   for my $delim (@delimiters) {
@@ -227,7 +227,7 @@ sub _quote_token_complete ($self, $elem) {
   # tokeniser runs an unterminated quote to end of file
   return 1 if $elem->next_token;
 
-  # A terminated token reparses to itself; an unterminated one absorbs
+  # A terminated token reparses to itself. An unterminated one absorbs
   # the appended semicolon
   my ($token, $doc) = $self->probe_quote_token($elem->content . ";");
 
@@ -283,7 +283,7 @@ sub _extract_list_arguments ($self, $list) {
 }
 
 sub _extract_use_arguments ($self, $elem) {
-  # No module means no import arguments; ->arguments dies on a bare "use"
+  # No module means no import arguments, and ->arguments dies on a bare "use"
   return () unless $elem->module;
   my @args;
   for my $child ($elem->arguments) {
@@ -522,7 +522,7 @@ sub check_qq_interpolate ($self, $elem) {
     if $double_quote_suggestion && $double_quote_suggestion eq "qq()";
 
   # Rule 1: Otherwise prefer simple double quotes. Every string containing a
-  # double quote was handled above, so nothing here needs qq(); an apostrophe
+  # double quote was handled above, so nothing here needs qq(). An apostrophe
   # needs no escaping in double quotes
   $self->_fix_violation($Fix_double, $elem)
 }
@@ -556,7 +556,7 @@ sub check_quote_operators ($self, $elem) {
 }
 
 sub statement_level_list ($self, $elem) {
-  # No module means no arguments; ->arguments dies on a bare "use"
+  # No module means no arguments, and ->arguments dies on a bare "use"
   return unless $elem->module;
   my @args = $elem->arguments;
   @args == 1 && $args[0]->isa("PPI::Structure::List") ? $args[0] : undef
@@ -1010,9 +1010,9 @@ This Policy is not configurable except for the standard options.
 
 =head2 desc_optimal ($display)
 
-The suggestion wording exported for tests, so the strings live in one place
+The suggestion wording exported for tests, so the strings are kept in one place
 instead of being duplicated as literals. Each returns the description a
-violation carries: C<< use "" >>, C<use ''>, C<use qw()>,
+violation holds: C<< use "" >>, C<use ''>, C<use qw()>,
 C<remove parentheses> and C<< use $display >> respectively. They are available
 via C<@EXPORT_OK>.
 
@@ -1031,7 +1031,7 @@ single place the wording of a suggestion is produced.
 
 Builds a L<Perl::Critic::PJCJ::Violation> for C<$elem> whose description is
 L<_render_fix|/"_render_fix ($fix)"> of C<$fix>, whose explanation is the
-static rationale, and which carries C<$fix> directly via C<< ->fix >>.
+static rationale, and which holds C<$fix> directly via C<< ->fix >>.
 
 =head2 supported_parameters
 
@@ -1121,7 +1121,7 @@ Maps a violation's description string to structured fix data, so that tools
 such as L<Perl::Critic::PJCJ::Fixer> can resolve a fix without a live violation
 object. The map is generated from L<_known_fixes|/"_known_fixes"> via
 L<_render_fix|/"_render_fix ($fix)">, so it cannot drift from the wording the
-policy actually emits. Violations from this policy also carry their fix
+policy actually emits. Violations from this policy also hold their fix
 directly, so this lookup is only a fallback.
 
 Returns a hashref describing the fix, or C<undef> for an unknown description:

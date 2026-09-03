@@ -108,8 +108,8 @@ fixer down those defensive paths and assert that unsafe fixes are declined.
 =head2 new (%args)
 
 Create a policy double. C<flags> is the PPI class to flag and C<description>
-is the description each violation carries. Alternatively C<flags> may be a
-hashref mapping PPI classes to descriptions, so different classes can carry
+is the description each violation holds. Alternatively C<flags> may be a
+hashref mapping PPI classes to descriptions, so different classes can hold
 different descriptions. C<words> is an optional arrayref of words that
 C<collect_qw_words> returns in place of the real decode, so tests can drive
 the fixer with a word list the real policy never produces.
