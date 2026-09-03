@@ -314,7 +314,10 @@ release() {
   local next_content
   next_content=$(
     perl -0777 -nE '
-      if (/\{\{\$NEXT\}\}\n\n(.+?)(?=\n##|\z)/s) { say $1; exit }
+      if (/^\{\{\$NEXT\}\}\n(.*?)(?=^## |\z)/ms) {
+        my $body = $1;
+        say $body if $body =~ /\S/;
+      }
     ' Changes.md
   )
   if [[ -z $next_content ]]; then
