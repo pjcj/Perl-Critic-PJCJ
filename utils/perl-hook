@@ -8,9 +8,13 @@ use experimental qw( signatures );
 
 use Cwd            qw( abs_path );
 use File::Basename qw( dirname );
+use File::Compare  qw( compare );
+use File::Copy     qw( copy );
+use File::Path     qw( make_path );
 use lib dirname(dirname(abs_path(__FILE__))) . "/lib";
 use Perl::Critic::PJCJ::AtomicWrite qw( write_atomic );
 
+my $Root       = dirname(dirname(abs_path(__FILE__)));
 my $Unreadable = 0;
 
 sub is_perl ($file) {
@@ -91,10 +95,84 @@ sub format_files ($files) {
   $status
 }
 
+sub backup_path ($file) {
+  (my $path = $file) =~ s{\A/+}{};
+  "tmp/perltidy/$path"
+}
+
+sub backup_file ($file) {
+  my $backup = backup_path($file);
+  my $dir    = dirname($backup);
+  make_path($dir, { error => \my $errors });
+  if (@$errors) {
+    my ($message) = values %{ $errors->[0] };
+    return "Cannot create $dir: $message";
+  }
+  return if copy($file, $backup);
+  "Cannot back up $file to $backup: $!"
+}
+
+sub backup_files ($files) {
+  my $status = 0;
+  my @kept;
+  for my $file (@$files) {
+    my $error = backup_file($file);
+    if (defined $error) {
+      say $error;
+      $status = 1;
+      next;
+    }
+    push @kept, $file;
+  }
+  (\@kept, $status)
+}
+
+sub run_stage ($name, @cmd) {
+  my $rc = system @cmd;
+  return 0 if $rc == 0;
+  say $rc == -1 ? "Cannot run $name: $!" : "$name failed";
+  1
+}
+
+sub report_changes ($files) {
+  my $status = 0;
+  for my $file (@$files) {
+    my $changed = compare($file, backup_path($file));
+    if ($changed < 0) {
+      say "Cannot compare $file with its backup: $!";
+      $status = 1;
+      next;
+    }
+    say "Formatted $file" if $changed;
+  }
+  $status
+}
+
+sub fix_files ($files) {
+  my ($kept, $status) = backup_files($files);
+  return $status unless @$kept;
+  $status = 1
+    if run_stage(
+      "perlimports",    "perlimports",
+      "--libs",         "lib,t/lib,utils/lib",
+      "--inplace-edit", "--no-preserve-unused",
+      @$kept,
+    );
+  $status = 1
+    if run_stage(
+      "perl-quote-fix", $^X,
+      "-I$Root/lib",    "$Root/script/perl-quote-fix",
+      "--inplace",      @$kept,
+    );
+  $status = 1 if format_files($kept);
+  $status = 1 if report_changes($kept);
+  $status
+}
+
 sub main () {
   my $mode = shift @ARGV // "";
-  $mode =~ /\A(?:tidy|critic|list|format)\z/
-    or die "usage: perl-hook tidy|critic|list|format file ...\n";
+  $mode =~ /\A(?:tidy|critic|list|format|fix)\z/
+    or die "usage: perl-hook tidy|critic|list|format|fix file ...\n";
 
   my @perl = grep is_perl($_), @ARGV;
   exit $Unreadable unless @perl;
@@ -120,6 +198,10 @@ sub main () {
     my $status = format_files(\@perl) || $Unreadable;
     exit $status;
   }
+  if ($mode eq "fix") {
+    my $status = fix_files(\@perl) || $Unreadable;
+    exit $status;
+  }
   my $status = check_tidy(\@perl) || $Unreadable;
   exit $status;
 }
@@ -138,6 +220,7 @@ perl-hook - run Perl checks on the Perl files among the given files
   utils/perl-hook critic file ...
   utils/perl-hook list file ...
   utils/perl-hook format file ...
+  utils/perl-hook fix file ...
 
 =head1 DESCRIPTION
 
@@ -160,6 +243,18 @@ place using the same L<Perl::Tidy> invocation as C<tidy>, so a file
 written by C<format> always passes the C<tidy> check.
 A symlink argument is resolved first, so C<format> rewrites the target and
 leaves the link in place.
+
+C<fix> runs the whole formatting pipeline.  It first copies each selected
+file to C<< tmp/perltidy/<path> >> under the current directory, keeping the
+relative path so files sharing a basename get separate backups.  It then
+runs C<perlimports> with the C<lib>, C<t/lib> and C<utils/lib> directories
+as its library paths, then the distribution's C<perl-quote-fix> with the
+repository lib in C<@INC>, and finally the same rewrite as C<format>.  A
+stage that fails is reported and the later stages still run.  Each file
+whose final content differs from its backup is reported as
+C<< Formatted <file> >>.  The mode exits non-zero if any stage or file
+failed.  The C<format> target of the Makefile calls this mode on every
+tracked file.
 
 A candidate that cannot be read is reported on STDERR, treated as not
 Perl, and makes the hook exit non-zero once the remaining files have
