@@ -84,7 +84,6 @@ setup() {
   if command -v greadlink >&/dev/null; then readl=greadlink; fi
   srcdir=$("$readl" -f "$(dirname "$0")")
   readonly LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/perl-critic-pjcj"
-  mkdir -p "$LOG_DIR"
   readonly LOG_FILE="$LOG_DIR/$script.log"
 
   PATH="$srcdir:$PATH"
@@ -95,6 +94,7 @@ setup() {
   args=()
 
   parse_options "$@"
+  mkdir -p "$LOG_DIR"
 }
 
 setup_hooks() {
