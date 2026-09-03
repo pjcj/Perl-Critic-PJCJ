@@ -158,6 +158,8 @@ selected Perl files, one per line, so other tools can share this
 selection instead of defining their own.  C<format> rewrites each file in
 place using the same L<Perl::Tidy> invocation as C<tidy>, so a file
 written by C<format> always passes the C<tidy> check.
+A symlink argument is resolved first, so C<format> rewrites the target and
+leaves the link in place.
 
 A candidate that cannot be read is reported on STDERR, treated as not
 Perl, and makes the hook exit non-zero once the remaining files have

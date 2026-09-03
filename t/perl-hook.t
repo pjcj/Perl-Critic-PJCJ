@@ -4,7 +4,7 @@ use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is isnt like skip_all subtest unlike );
+use Test2::V0    qw( done_testing is isnt like ok skip_all subtest unlike );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
@@ -31,6 +31,11 @@ sub run_format (@files) {
   my $files = join " ", map "\Q$_\E", @files;
   my $out   = qx($^X $Hook format $files 2>&1);
   ($out, $? >> 8)
+}
+
+sub link_or_skip ($target, $link) {
+  skip_all "symlinks are not supported here"
+    unless eval { symlink $target, $link };
 }
 
 sub read_file ($path) {
@@ -140,6 +145,15 @@ subtest "Format mode leaves the original intact on a failed write" => sub {
   isnt $?, 0, "the hook fails";
   is read_file("$Work/atomic.pm"), "my  \$x=1;\n",
     "the original content survives";
+};
+
+subtest "Format mode rewrites the target of a symlink" => sub {
+  write_file("$Work/linked.pm", "my  \$x=1;\n");
+  link_or_skip("linked.pm", "$Work/alias.pm");
+  my ($out, $exit) = run_format("$Work/alias.pm");
+  is $exit, 0, "the hook succeeds";
+  ok -l "$Work/alias.pm", "the symlink survives";
+  is read_file("$Work/linked.pm"), "my \$x = 1;\n", "the target is tidied";
 };
 
 done_testing
