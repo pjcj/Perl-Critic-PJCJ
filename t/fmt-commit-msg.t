@@ -48,4 +48,41 @@ subtest "A failed write leaves the message intact" => sub {
   is read_file("$Work/atomic.txt"), $Body, "the message survives";
 };
 
+subtest "An indented block survives" => sub {
+  my $msg = "Improve the widget\n\nHere is the code:\n\n"
+    . "    my \$x = frob(1);\n    my \$y = frob(2);\n";
+  write_file("$Work/indented.txt", $msg);
+  system $^X, $Fmt, "$Work/indented.txt";
+  is read_file("$Work/indented.txt"), $msg, "the example is not joined";
+};
+
+subtest "A fenced block survives" => sub {
+  my $msg = "Improve the widget\n\nLike this:\n\n"
+    . "```perl\nmy \$a = 1;\nmy \$b = 2;\n```\n";
+  write_file("$Work/fenced.txt", $msg);
+  system $^X, $Fmt, "$Work/fenced.txt";
+  is read_file("$Work/fenced.txt"), $msg, "the fence and body are not joined";
+};
+
+subtest "An indented block under prose is not folded into it" => sub {
+  my $msg = "Improve the widget\n\nThe fix is this:\n"
+    . "    my \$x = 1;\n    my \$y = 2;\n";
+  write_file("$Work/mixed.txt", $msg);
+  system $^X, $Fmt, "$Work/mixed.txt";
+  is read_file("$Work/mixed.txt"), $msg, "the prose keeps its own line";
+};
+
+subtest "Bullet items still reflow" => sub {
+  write_file("$Work/bullet.txt",
+        "Improve the widget\n\n"
+      . "- a bullet item that is quite long and should be wrapped somewhere"
+      . " around here\n  with a continuation\n");
+  system $^X, $Fmt, "$Work/bullet.txt";
+  is read_file("$Work/bullet.txt"),
+      "Improve the widget\n\n"
+    . "- a bullet item that is quite long and should be wrapped somewhere\n"
+    . "  around here with a continuation\n",
+    "a long list item wraps at 72 columns with a hanging indent";
+};
+
 done_testing
