@@ -10,20 +10,21 @@ use experimental qw( signatures );
 
 use File::Temp qw( tempdir tempfile );
 
+use lib "t/lib";
+use TestSupport qw(
+  read_file
+  run_capture
+  skip_for_root
+  skip_on_windows
+  write_file
+);
+
 my $Script = "script/perl-quote-fix";
 
-sub write_file ($source, $mode = undef) {
+sub temp_source ($source, $mode = undef) {
   my ($fh, $file) = tempfile(UNLINK => 1);
-  print {$fh} $source;
   close $fh or die "Cannot close $file: $!";
-  chmod $mode, $file or die "Cannot chmod $file: $!" if defined $mode;
-  $file
-}
-
-sub write_path ($file, $source) {
-  open my $fh, ">", $file or die "Cannot write $file: $!";
-  print {$fh} $source;
-  close $fh or die "Cannot close $file: $!";
+  write_file($file, $source, $mode)
 }
 
 sub chmod_path ($mode, $path) {
@@ -32,12 +33,6 @@ sub chmod_path ($mode, $path) {
 
 sub make_symlink ($target, $link) {
   symlink $target, $link or skip_all "cannot create symlinks";
-}
-
-sub read_file ($file) {
-  open my $fh, "<", $file or die "Cannot read $file: $!";
-  local $/ = undef;
-  <$fh>
 }
 
 sub run_files (@args) {
@@ -49,21 +44,11 @@ sub run_files (@args) {
 }
 
 sub run_script ($source, @args) {
-  run_files(@args, write_file($source))
+  run_files(@args, temp_source($source))
 }
 
 sub run_inplace (@files) {
-  my $files = join " ", map "\Q$_\E", @files;
-  my $out   = qx($^X -Ilib $Script --inplace $files 2>&1);
-  ($out, $? >> 8)
-}
-
-sub skip_on_windows ($reason) {
-  skip_all $reason if $^O eq "MSWin32";
-}
-
-sub skip_as_root ($reason) {
-  skip_all $reason if $> == 0;
+  run_capture($^X, "-Ilib", $Script, "--inplace", @files)
 }
 
 subtest "Source is fixed from stdin to stdout" => sub {
@@ -79,7 +64,7 @@ subtest "Line ranges are honoured" => sub {
 };
 
 subtest "Bad arguments fail" => sub {
-  my $file = write_file("");
+  my $file = temp_source("");
   my $out  = qx($^X -Ilib $Script --lines nonsense \Q$file\E 2>/dev/null);
   isnt $?, 0, "invalid --lines exits non-zero";
   $out = qx($^X -Ilib $Script --lines 9-1 \Q$file\E 2>/dev/null);
@@ -95,8 +80,8 @@ subtest "Filter mode fails on unopenable input" => sub {
 };
 
 subtest "Every named file is processed in filter mode" => sub {
-  my $one = write_file(q(my $x = 'a';));
-  my $two = write_file(q(my $y = 'b';));
+  my $one = temp_source(q(my $x = 'a';));
+  my $two = temp_source(q(my $y = 'b';));
   is run_files($one, $two), 'my $x = "a";my $y = "b";',
     "both files appear fixed";
 };
@@ -110,9 +95,9 @@ subtest "Empty input produces empty output" => sub {
 
 subtest "Multiple files are fixed in place" => sub {
   skip_on_windows "shell quoting in the test helper is POSIX-specific";
-  my $one   = write_file(q(my $x = 'hello';));
-  my $two   = write_file(q(my $y = 'world';));
-  my $clean = write_file('my $n = 42;');
+  my $one   = temp_source(q(my $x = 'hello';));
+  my $two   = temp_source(q(my $y = 'world';));
+  my $clean = temp_source('my $n = 42;');
   my ($out, $exit) = run_inplace($one, $two, $clean);
   is $out,              "",                 "no output on success";
   is $exit,             0,                  "the script succeeds";
@@ -123,7 +108,7 @@ subtest "Multiple files are fixed in place" => sub {
 
 subtest "File modes are preserved" => sub {
   skip_on_windows "file modes are not enforced on Windows";
-  my $file = write_file(q(my $x = 'hello';), 0755);
+  my $file = temp_source(q(my $x = 'hello';), 0755);
   my ($out, $exit) = run_inplace($file);
   is $exit,                      0,    "the script succeeds";
   is +((stat $file)[2] & 07777), 0755, "the mode is preserved";
@@ -131,8 +116,8 @@ subtest "File modes are preserved" => sub {
 
 subtest "An unreadable file fails but the others are still fixed" => sub {
   skip_all "file permissions are not enforced for root" if $> == 0;
-  my $hidden = write_file(q(my $x = 'hello';), 0000);
-  my $good   = write_file(q(my $y = 'world';));
+  my $hidden = temp_source(q(my $x = 'hello';), 0000);
+  my $good   = temp_source(q(my $y = 'world';));
   my ($out, $exit) = run_inplace($hidden, $good);
   like $out, qr/Cannot read/, "the cause is reported";
   is $exit,            1,                  "the script fails";
@@ -144,7 +129,7 @@ subtest "A failed write leaves the original file intact" => sub {
   my $dir    = tempdir(CLEANUP => 1);
   my $file   = "$dir/big.pl";
   my $source = join "", map qq(my \$x$_ = 'value $_';\n), 1 .. 200;
-  write_path($file, $source);
+  write_file($file, $source);
   my $cmd = qq(ulimit -f 0; exec \Q$^X\E -Ilib \Q$Script\E )
     . qq(--inplace \Q$file\E >/dev/null 2>&1);
   system "sh", "-c", $cmd;
@@ -154,10 +139,10 @@ subtest "A failed write leaves the original file intact" => sub {
 
 subtest "An unwritable directory fails cleanly" => sub {
   skip_on_windows "directory permissions differ on Windows";
-  skip_as_root "directory permissions are not enforced for root";
+  skip_for_root "directory permissions are not enforced for root";
   my $dir  = tempdir(CLEANUP => 1);
   my $file = "$dir/a.pl";
-  write_path($file, q(my $x = 'hello';));
+  write_file($file, q(my $x = 'hello';));
   chmod_path(0555, $dir);
   my ($out, $exit) = run_inplace($file);
   chmod_path(0755, $dir);
@@ -168,7 +153,7 @@ subtest "An unwritable directory fails cleanly" => sub {
 
 subtest "A symlink target is fixed and the link preserved" => sub {
   skip_on_windows "symlinks are not reliable on Windows";
-  my $target = write_file(q(my $x = 'hello';));
+  my $target = temp_source(q(my $x = 'hello';));
   my $dir    = tempdir(CLEANUP => 1);
   my $link   = "$dir/link.pl";
   make_symlink($target, $link);
@@ -179,7 +164,7 @@ subtest "A symlink target is fixed and the link preserved" => sub {
 };
 
 subtest "In-place mode rejects bad usage" => sub {
-  my $file = write_file("");
+  my $file = temp_source("");
   my $out  = qx($^X -Ilib $Script --inplace --lines 1-2 \Q$file\E 2>&1);
   isnt $?, 0, "--inplace with --lines exits non-zero";
   $out = qx($^X -Ilib $Script --inplace 2>&1);

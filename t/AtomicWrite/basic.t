@@ -4,26 +4,14 @@ use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is like ok skip_all subtest );
+use Test2::V0    qw( done_testing is like ok subtest );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
 use File::Temp                      qw( tempdir );
-use lib                             qw( lib );
+use lib                             qw( lib t/lib );
 use Perl::Critic::PJCJ::AtomicWrite qw( write_atomic );
-
-sub write_file ($path, $content, $mode = 0644) {
-  open my $fh, ">", $path or die "Cannot write $path: $!\n";
-  print {$fh} $content;
-  close $fh or die "Cannot close $path: $!\n";
-  chmod $mode, $path or die "Cannot chmod $path: $!\n";
-}
-
-sub read_file ($path) {
-  open my $fh, "<", $path or die "Cannot read $path: $!\n";
-  local $/;
-  <$fh>
-}
+use TestSupport qw( read_file skip_for_root skip_on_windows write_file );
 
 sub set_mode ($path, $mode) {
   chmod $mode, $path or die "Cannot chmod $path: $!\n";
@@ -32,10 +20,6 @@ sub set_mode ($path, $mode) {
 sub make_link ($target, $link) {
   symlink $target, $link or die "Cannot symlink $link: $!\n";
 }
-
-sub skip_on_windows ($why) { skip_all $why if $^O eq "MSWin32" }
-
-sub skip_for_root ($why) { skip_all $why if $> == 0 }
 
 subtest "A successful write replaces the file and keeps the mode" => sub {
   my $dir  = tempdir(CLEANUP => 1);

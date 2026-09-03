@@ -12,17 +12,11 @@ use File::Basename qw( dirname );
 use File::Temp     qw( tempdir );
 use PPI            ();
 use Test2::V0      qw( done_testing is ok skip_all subtest );
+use TestSupport    qw( git_available read_file write_file );
 
 use Perl::Critic::Policy::CodeLayout::ProhibitLongLines ();
 
 my $Long_line = 'my $var = "' . ("x" x 68) . '";';  # 81 chars
-
-sub git_available () {
-  open my $fh, "-|", "git", "--version" or return 0;
-  my $out = do { local $/ = undef; <$fh> };
-  close $fh or return 0;
-  defined $out && $out =~ /git version/
-}
 
 sub setup_git_repo () {
   my $dir = tempdir(CLEANUP => 1);
@@ -32,25 +26,20 @@ sub setup_git_repo () {
 
   system("git", "-C", $dir, "init", "-q") == 0 or return;
 
-  # Write .gitattributes
-  open my $fh, ">", "$dir/.gitattributes" or die "open: $!";
-  print $fh "ignore.t custom-line-length=ignore\n";
-  print $fh "wide.t custom-line-length=200\n";
-  print $fh "deep/nested.t custom-line-length=200\n";
-  close $fh or die "close: $!";
+  write_file(
+    "$dir/.gitattributes",
+    join "",
+    "ignore.t custom-line-length=ignore\n",
+    "wide.t custom-line-length=200\n",
+    "deep/nested.t custom-line-length=200\n",
+  );
 
   mkdir "$dir/deep" or die "mkdir: $!";
 
   $dir
 }
 
-sub write_perl_file ($dir, $name, $code) {
-  my $path = "$dir/$name";
-  open my $fh, ">", $path or die "open $path: $!";
-  print $fh $code;
-  close $fh or die "close $path: $!";
-  $path
-}
+sub write_perl_file ($dir, $name, $code) { write_file("$dir/$name", $code) }
 
 sub violations_for_file ($policy, $path) {
   my $doc = PPI::Document->new($path);
@@ -111,9 +100,7 @@ sub test_fresh_instance_rereads () {
   my $policy_a = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
   is $policy_a->_get_gitattr_line_length($path), 200, "first instance";
 
-  open my $fh, ">", "$dir/.gitattributes" or die "open: $!";
-  print $fh "wide.t custom-line-length=120\n";
-  close $fh or die "close: $!";
+  write_file("$dir/.gitattributes", "wide.t custom-line-length=120\n");
 
   my $policy_b = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
   is $policy_b->_get_gitattr_line_length($path), 120,
@@ -230,11 +217,7 @@ sub test_stderr_suppressed () {
   my $value = $policy->_get_gitattr_line_length($path);
   open STDERR, ">&", $saved or die "restore: $!";
 
-  my $err = do {
-    open my $fh, "<", "$dir/stderr.txt" or die "open: $!";
-    local $/ = undef;
-    <$fh>
-  };
+  my $err = read_file("$dir/stderr.txt");
   is $err, "", "no stderr leakage";
   ok !defined $value, "no override outside a repository";
 }
