@@ -8,8 +8,9 @@ use Test2::V0    qw( done_testing is skip_all subtest unlike );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use Cwd        qw( abs_path );
-use File::Temp qw( tempdir );
+use Cwd            qw( abs_path );
+use File::Basename qw( dirname );
+use File::Temp     qw( tempdir );
 
 skip_all "the prepare-commit-msg hook needs a POSIX shell" if $^O eq "MSWin32";
 
@@ -25,6 +26,7 @@ sub run_hook ($bytes, $dir, @args) {
   close $fh or die "Cannot close $msg: $!\n";
 
   delete local @ENV{qw( GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR )};
+  local $ENV{GIT_CEILING_DIRECTORIES} = dirname(abs_path($Work));
   my $args = join " ", map "\Q$_\E", $msg, @args;
   my $out  = qx(cd \Q$dir\E && $^X \Q$Hook\E $args 2>&1);
   my $exit = $? >> 8;

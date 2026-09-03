@@ -8,8 +8,9 @@ use Test2::V0    qw( done_testing is like ok skip_all subtest unlike );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use Cwd        qw( abs_path getcwd );
-use File::Temp qw( tempdir );
+use Cwd            qw( abs_path getcwd );
+use File::Basename qw( dirname );
+use File::Temp     qw( tempdir );
 
 use lib "utils/lib";
 use GitHook qw( get_current_branch on_main ticket_re );
@@ -22,15 +23,17 @@ sub write_file ($path, $content) {
   close $fh or die "Cannot close $path: $!\n";
 }
 
-sub in_temp_dir ($code) {
+sub in_dir ($dir, $code) {
   delete local @ENV{qw( GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR )};
-  my $dir = tempdir(CLEANUP => 1);
+  local $ENV{GIT_CEILING_DIRECTORIES} = dirname(abs_path($dir));
   my $cwd = getcwd;
   chdir $dir or die "Cannot chdir $dir: $!\n";
   my @result = $code->();
   chdir $cwd or die "Cannot chdir $cwd: $!\n";
   @result
 }
+
+sub in_temp_dir ($code) { in_dir(tempdir(CLEANUP => 1), $code) }
 
 sub git_available () {
   open my $fh, "-|", "git", "--version" or return 0;
@@ -103,9 +106,25 @@ subtest "A symlinked hook finds the shared library" => sub {
   my $msg = "$dir/msg.txt";
   write_file($msg, "Improve the widget\n\nTicket GH-1234\n");
   delete local @ENV{qw( GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR )};
+  local $ENV{GIT_CEILING_DIRECTORIES} = dirname(abs_path($dir));
   my $out = qx(cd \Q$dir\E && \Q$link\E \Q$msg\E </dev/null 2>&1);
   is $? >> 8, 0,  "the hook runs and accepts a clean message";
   is $out,    "", "no output";
+};
+
+sub repo_with_subdir () {
+  my $dir = tempdir(CLEANUP => 1);
+  run_git("init", "-q", $dir);
+  my $work = "$dir/work";
+  mkdir $work or die "Cannot mkdir $work: $!\n";
+  $work
+}
+
+subtest "A repository above the temp directory is ignored" => sub {
+  my ($branch, $main)
+    = in_dir(repo_with_subdir(), sub { (get_current_branch, on_main) });
+  is $branch, "", "an enclosing repository does not leak in";
+  ok !$main, "not on main";
 };
 
 done_testing
