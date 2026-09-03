@@ -164,6 +164,39 @@ sub fix_data ($self, $description) {
   $map->{$description}
 }
 
+sub _balanced ($self, $content, $start, $end) {
+  my $depth = 0;
+  for my $char (split //, $content) {
+    $depth++ if $char eq $start;
+    if ($char eq $end) {
+      $depth--;
+      return 0 if $depth < 0;
+    }
+  }
+  $depth == 0
+}
+
+sub delimit_content ($self, $content, $start, $end) {
+  return $content if $content !~ /[\Q$start$end\E]/;
+  return $content if $self->_balanced($content, $start, $end);
+  return          if $content =~ /\\/;
+  $content =~ s/([\Q$start$end\E])/\\$1/gr
+}
+
+sub redelimit_feasible ($self, $content, $delim) {
+  defined $self->delimit_content($content, $delim->{start}, $delim->{end})
+}
+
+sub _redelimited_content ($self, $elem) {
+  my ($start, $end, $raw) = $self->parse_quote_token($elem);
+  $raw =~ s/\\([\Q$start$end\E])/$1/gr
+}
+
+sub _token_redelimit_feasible ($self, $elem, $delim) {
+  return 1 if $elem->isa("PPI::Token::Quote::Single");
+  $self->redelimit_feasible($self->_redelimited_content($elem), $delim)
+}
+
 sub check_delimiter_optimisation ($self, $elem) {
   my ($start, $end, $content, $operator) = $self->parse_quote_token($elem);
   return unless defined $start;
@@ -171,11 +204,10 @@ sub check_delimiter_optimisation ($self, $elem) {
   $operator //= "q" if $start eq "'";
   my ($optimal_delim, $current_is_optimal)
     = $self->find_optimal_delimiter($content, $operator, $start, $end);
-  return $self->_fix_violation(
-    $self->_operator_fix($operator, $optimal_delim), $elem
-  ) unless $current_is_optimal;
+  return () if $current_is_optimal;
+  return () unless $self->_token_redelimit_feasible($elem, $optimal_delim);
 
-  return
+  $self->_fix_violation($self->_operator_fix($operator, $optimal_delim), $elem)
 }
 
 sub _quote_token_complete ($self, $elem) {
@@ -198,7 +230,8 @@ sub _quote_token_complete ($self, $elem) {
 }
 
 sub has_quote_sensitive_escapes ($self, $string) {
-  $string =~ /
+  (my $cleaned = $string) =~ s/\\\\//g;
+  $cleaned =~ /
     \\(?:
       [tnrfbae]           |  # Single char escapes: \t \n \r \f \b \a \e
       x[0-9a-fA-F]*       |  # Hex escapes: \x1b \xff
@@ -264,7 +297,10 @@ sub _is_pragma ($self, $elem) {
 
 sub _any_arg_interpolates ($self, @args) {
   for my $arg (@args) {
-    next if $arg->isa("PPI::Token::QuoteLike::Words");
+    next
+      if $arg->isa("PPI::Token::QuoteLike::Words")
+      || $arg->isa("PPI::Token::Quote::Single")
+      || $arg->isa("PPI::Token::Quote::Literal");
     next unless $arg->can("string");
     return 1 if $self->would_interpolate($arg->string);
   }
@@ -390,6 +426,7 @@ sub check_double_quoted ($self, $elem) {
       if index($string, "'") == -1;
     my $value = $string =~ s/\\(.)/$1/gsr;
     my ($optimal) = $self->find_optimal_delimiter($value, "q", '"', '"');
+    return () unless $self->redelimit_feasible($value, $optimal);
     return $self->_fix_violation($self->_operator_fix("q", $optimal), $elem);
   }
 
@@ -413,6 +450,12 @@ sub check_q_literal ($self, $elem) {
   # Has both quote types - q() handles this cleanly
   return $self->check_delimiter_optimisation($elem)
     if $has_single_quotes && $has_double_quotes;
+
+  # q() reads these escapes the way '' does, so "" is never the answer
+  if ($self->has_quote_sensitive_escapes($string)) {
+    return $self->check_delimiter_optimisation($elem) if $has_single_quotes;
+    return $self->_fix_violation($Fix_single, $elem);
+  }
 
   if ($has_single_quotes) {
     return $self->would_interpolate_from_single_quotes($string)
@@ -490,18 +533,17 @@ sub check_quote_operators ($self, $elem) {
     $content, $operator, $current_start, $current_end
   );
 
-  return $self->_fix_violation(
-    $self->_operator_fix($operator, $optimal_delim), $elem
-  ) if !$current_is_optimal;
+  return () if $current_is_optimal;
+  return () unless $self->_token_redelimit_feasible($elem, $optimal_delim);
 
-  return
+  $self->_fix_violation($self->_operator_fix($operator, $optimal_delim), $elem)
 }
 
 sub statement_level_list ($self, $elem) {
   # No module means no arguments; ->arguments dies on a bare "use"
   return unless $elem->module;
-  my ($first) = $elem->arguments;
-  $first && $first->isa("PPI::Structure::List") ? $first : undef
+  my @args = $elem->arguments;
+  @args == 1 && $args[0]->isa("PPI::Structure::List") ? $args[0] : undef
 }
 
 sub _analyse_argument_types ($self, $elem, @args) {
@@ -572,7 +614,7 @@ sub collect_qw_words ($self, $words, @elements) {
 }
 
 sub qw_word_ok ($self, $word) {
-  $word =~ /\A[^\s()\\]+\z/
+  $word =~ /\A[^\s()\\#,]+\z/
 }
 
 sub _use_args_qw_representable ($self, @args) {
@@ -627,9 +669,11 @@ sub check_use_statement ($self, $elem) {
   # Pragmas with a single argument allow quotes
   return () if @args == 1 && $self->_is_pragma($elem);
 
+  my $interpolates = $self->_any_arg_interpolates(@args);
+
   # Rule 1: qw() without parens should use qw()
   return $self->_fix_violation($Fix_use_qw, $elem)
-    if $has_qw && !$qw_uses_parens;
+    if $has_qw && !$qw_uses_parens && !$interpolates;
 
   # Rules 2, 3: fat comma or complex expressions should have no parentheses
   if ($has_fat_comma || $has_complex_expr) {
@@ -638,7 +682,7 @@ sub check_use_statement ($self, $elem) {
   }
 
   # If interpolation is needed, don't suggest qw() - let normal rules apply
-  return () if $self->_any_arg_interpolates(@args);
+  return () if $interpolates;
 
   # Rule 1: string arguments, with or without qw(), should be qw() alone
   return $self->_use_qw_violation($elem, @args)
@@ -1092,6 +1136,39 @@ Returns a hashref describing the fix, or C<undef> for an unknown description:
     end   => ")",
   }
 
+=head2 _balanced ($content, $start, $end)
+
+Tests whether every C<$start> in C<$content> has a matching C<$end> after it,
+so the content can sit between those delimiters without escaping.
+
+=head2 delimit_content ($content, $start, $end)
+
+Returns C<$content> ready to sit between C<$start> and C<$end>, escaping the
+delimiter characters where needed, or C<undef> when that cannot be done
+safely. Content with no delimiter characters, or with balanced ones, is
+returned as is. Unbalanced content which already contains a backslash is
+refused, because adding escapes there could change the value.
+
+This method is shared with L<Perl::Critic::PJCJ::Fixer>, so the policy only
+suggests an operator rewrite the fixer can apply.
+
+=head2 redelimit_feasible ($content, $delim)
+
+Tests whether L<delimit_content|/"delimit_content ($content, $start, $end)">
+accepts C<$content> for the delimiter hashref C<$delim>.
+
+=head2 _redelimited_content ($elem)
+
+Returns the content of a quote-like token with the escapes for its current
+delimiters removed, which is the value the fixer hands to
+L<delimit_content|/"delimit_content ($content, $start, $end)">.
+
+=head2 _token_redelimit_feasible ($elem, $delim)
+
+Tests whether the fixer could rewrite C<$elem> with the delimiter hashref
+C<$delim>. A single-quoted token is always feasible, because the fixer
+re-escapes its literal value in full.
+
 =head2 check_delimiter_optimisation
 
 Validates that quote-like operators use optimal delimiters according to Rules 1
@@ -1128,10 +1205,12 @@ ensuring all argument types are properly identified for rule enforcement.
 =head2 _any_arg_interpolates
 
 Checks whether any string argument in a list would interpolate if placed in
-double quotes. Used by both C<check_use_statement> and C<_is_in_use_statement>
-to determine whether a use/no statement's arguments require interpolation,
-which affects whether C<qw()> can be suggested and whether individual tokens
-should be checked under normal quoting rules.
+double quotes. C<qw()>, C<''> and C<q()> arguments are skipped, because none of
+them interpolates and C<qw()> passes their values unchanged. Used by both
+C<check_use_statement> and C<_is_in_use_statement> to determine whether a use/no
+statement's arguments require interpolation, which affects whether C<qw()> can
+be suggested and whether individual tokens should be checked under normal
+quoting rules.
 
 =head2 violates
 
@@ -1183,6 +1262,11 @@ Allows C<q()> when the content has both single and double quotes (making it
 the cleanest option), but suggests simpler alternatives for basic content that
 could use C<''> or C<"">.
 
+Content holding an escape sequence that C<''> and C<""> read differently
+never goes to double quotes, because C<q()> reads such escapes the way
+C<''> does. Such content goes to C<''>, or keeps C<q()> when it also
+holds an apostrophe.
+
 =head2 check_qq_interpolate
 
 Enforces Rules 1 and 3 for C<qq()> operators. First ensures optimal
@@ -1203,9 +1287,12 @@ delimiters to handle unbalanced content gracefully.
 Returns the C<PPI::Structure::List> wrapping a use/no statement's whole
 argument list (the parentheses in C<use Foo ( ... );>), or C<undef> when
 there is none. A list nested inside the arguments, such as the parentheses
-of a function or method call, does not qualify. Shared with
-L<Perl::Critic::PJCJ::Fixer> so the policy and the fixer can never disagree
-about which parentheses a "remove parentheses" violation means.
+of a function or method call, does not qualify. A list followed by further
+arguments, as in C<use Foo (), $x;>, does not qualify either, because
+removing those parentheses would change the statement into a syntax error.
+Shared with L<Perl::Critic::PJCJ::Fixer> so the policy and the fixer can
+never disagree about which parentheses a "remove parentheses" violation
+means.
 
 =head2 _analyse_argument_types
 
@@ -1228,10 +1315,12 @@ when the fixer can rewrite the statement.
 
 =head2 qw_word_ok ($word)
 
-Tests whether a single decoded word can be written inside C<qw( )>: it must
-be non-empty and free of whitespace, parentheses and backslashes. This is
-the single word-representability predicate, shared with
-L<Perl::Critic::PJCJ::Fixer>.
+Tests whether a single decoded word can be written inside C<qw( )>. The word
+must be non-empty and free of whitespace, parentheses, backslashes, hashes
+and commas. Perl warns about a hash or a comma inside C<qw( )> under
+C<use warnings>, and no escape avoids the warning, so such a word has no
+C<qw( )> form. This is the single word-representability predicate, shared
+with L<Perl::Critic::PJCJ::Fixer>.
 
 =head2 _use_args_qw_representable
 

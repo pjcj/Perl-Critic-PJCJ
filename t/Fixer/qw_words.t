@@ -45,6 +45,16 @@ CODE
   is $Fixer->fix($in), $out, "re-delimiting preserves the raw words";
 };
 
+subtest "balanced backslash content is re-delimited" => sub {
+  my $in = <<'CODE';
+my @w = qw/(x) [y] <z> {w} \\/;
+CODE
+  my $out = <<'CODE';
+my @w = qw((x) [y] <z> {w} \\);
+CODE
+  is $Fixer->fix($in), $out, "balanced content with a backslash is fixed";
+};
+
 subtest "backslash words still decline the use rewrite" => sub {
   my $in = <<'CODE';
 use Foo qw( a\\b ), "c";

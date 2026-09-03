@@ -88,8 +88,8 @@ subtest "'no' statement argument rules" => sub {
   # Interpolation should prevent qw() suggestion
   good $Policy, 'no warnings "$x/d1", "$x/d2"',
     "double quotes with interpolation should not suggest qw()";
-  good $Policy, q(no warnings '$x/d1', '$x/d2'),
-    'single quotes with \$ characters should not suggest qw()';
+  bad $Policy, q(no warnings '$x/d1', '$x/d2'), desc_use_qw,
+    "single quotes never interpolate, so qw() passes the same words";
 
   # Mixed case - interpolation prevents qw() suggestion
   good $Policy, 'no warnings "$x/d1", "static"',
@@ -223,6 +223,8 @@ subtest "Call parentheses are not statement parentheses" => sub {
     "call parentheses inside an expression are left alone";
   bad $Policy, 'use Foo 1.23 ($x)', desc_remove_parens,
     "a wrapper list after a version number is still statement-level";
+  good $Policy, 'use Foo (), $x;',
+    "an empty list before more arguments is not statement-level";
 };
 
 subtest "Expressions among use arguments are complex" => sub {
@@ -244,6 +246,11 @@ subtest "qw() is only suggested for representable words" => sub {
   good $Policy, "use Foo 'a b', 'c'", "one bad word poisons the list";
   good $Policy, 'use Foo qw( a ), "b c"',
     "mixed qw and unrepresentable strings are left alone";
+  good $Policy, 'use Foo "a#b"',
+    "a hash makes perl warn about comments in qw()";
+  good $Policy, 'use Foo "a,b"',
+    "a comma makes perl warn about separating words";
+  good $Policy, 'use Foo "a", "b#c"', "one warning word poisons the list";
 };
 
 subtest "Special cases should not trigger violations" => sub {
@@ -270,10 +277,9 @@ subtest "Use statements with interpolation should not suggest qw()" => sub {
   good $Policy, 'use lib ( "$HOME/perl" );',
     "single interpolating pragma argument in parens is exempt";
 
-  # Single quotes with $ or @ should not suggest qw() because it would change
-  # meaning
-  good $Policy, q(use lib '$x/d1', '$x/d2'),
-    'single quotes with \$ characters should not suggest qw()';
+  # Single quotes never interpolate, so qw() passes the same words
+  bad $Policy, q(use lib '$x/d1', '$x/d2'), desc_use_qw,
+    "single-quoted sigils still merge into qw()";
 
   # Mixed case - interpolation in one, not in other
   # The non-interpolating string should follow normal rules
@@ -292,6 +298,13 @@ subtest "Use statements with interpolation should not suggest qw()" => sub {
   # rules
   bad $Policy, 'use lib qq{$HOME/perl}, "$HOME/lib"', desc_double,
     "qq{} should suggest double quotes per normal rules";
+};
+
+subtest "Interpolation leaves the delimiter fix to the qw token" => sub {
+  bad $Policy, 'use Foo "$x", qw[y];', desc_use_qw,
+    "an interpolating argument leaves one report, from the qw token";
+  bad $Policy, 'use Foo ("$x", key => "v");', desc_remove_parens,
+    "a fat comma list still reports its parentheses";
 };
 
 subtest "Simple strings in parentheses should use qw()" => sub {

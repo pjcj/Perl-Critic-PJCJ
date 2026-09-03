@@ -48,6 +48,10 @@ sub statement_level_list ($self, $elem) {
   $self->{real}->statement_level_list($elem)
 }
 
+sub delimit_content ($self, $content, $start, $end) {
+  $self->{real}->delimit_content($content, $start, $end)
+}
+
 "
 And if I only could
 I'd make a deal with God
@@ -116,6 +120,10 @@ Delegated to the real policy.
 Delegated to the real policy.
 
 =head2 statement_level_list ($elem)
+
+Delegated to the real policy.
+
+=head2 delimit_content ($content, $start, $end)
 
 Delegated to the real policy.
 

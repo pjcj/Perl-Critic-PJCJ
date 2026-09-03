@@ -7,7 +7,7 @@ use warnings;
 use Test2::V0 qw( done_testing subtest );
 
 use lib             qw( lib t/lib );
-use ViolationFinder qw( fixes unchanged );
+use ViolationFinder qw( declined fixes unchanged );
 
 subtest "Unparsable and empty sources pass through" => sub {
   unchanged "",   "empty source is returned as is";
@@ -17,7 +17,7 @@ subtest "Unparsable and empty sources pass through" => sub {
 subtest "Line endings are preserved in accepted source" => sub {
   unchanged qq(my \$x = 1;\r\n), "clean CRLF source is byte-identical";
   unchanged "my \@w = qw/( [ < { \\\\/;\r\n",
-    "CRLF source whose only fix is declined is byte-identical";
+    "CRLF source which cannot be re-delimited is byte-identical";
 };
 
 subtest "Line endings are preserved in fixed source" => sub {
@@ -48,8 +48,8 @@ subtest "Fallback re-delimiting inside use statements" => sub {
     "interpolating argument restricts the fix to the qw token";
   fixes 'use Foo qw[ a ], qw{ b }, $v;', 'use Foo qw( a ), qw( b ), $v;',
     "every qw token is re-delimited when a full rewrite is unsafe";
-  unchanged 'use Foo qw[ a\( ], $v;',
-    "a qw token whose re-delimiting is unsafe is left alone";
+  declined 'use Foo qw[ a\( ], $v;',
+    "a qw token whose re-delimiting is unsafe is left alone and reported";
 };
 
 subtest "Unterminated quote tokens pass through" => sub {

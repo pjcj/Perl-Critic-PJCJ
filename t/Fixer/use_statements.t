@@ -7,7 +7,7 @@ use warnings;
 use Test2::V0 qw( done_testing subtest );
 
 use lib             qw( lib t/lib );
-use ViolationFinder qw( fixes unchanged );
+use ViolationFinder qw( declined fixes unchanged );
 
 subtest "String import lists become qw()" => sub {
   fixes "use Foo 'single_arg';", "use Foo qw( single_arg );",
@@ -40,7 +40,9 @@ subtest "Leading-hyphen barewords become qw words" => sub {
 subtest "Arguments which cannot become qw words are declined" => sub {
   unchanged 'use Foo bar, "baz";', "a plain bareword is not a string";
   unchanged 'use Foo "a" . "b";',  "an expression is not a list of words";
-  unchanged 'use Foo (), "a";',    "an empty list yields no words";
+  declined 'use Foo (), "a";', "an empty list yields no words";
+  unchanged "use Foo ('a#b');", "a hash word is not rewritten to qw()";
+  unchanged "use Foo ('a,b');", "a comma word is not rewritten to qw()";
 };
 
 subtest "Module versions stay in place" => sub {
@@ -74,6 +76,7 @@ subtest "Parentheses are removed" => sub {
     "fat comma arguments lose parentheses";
   fixes 'use Quux ( $VERSION );', 'use Quux $VERSION;',
     "complex expressions lose parentheses";
+  unchanged 'use Foo (), $x;', "an empty leading list is not removed";
 };
 
 subtest "Call parentheses are left alone" => sub {
@@ -83,9 +86,9 @@ subtest "Call parentheses are left alone" => sub {
 };
 
 subtest "Comments in argument lists survive" => sub {
-  unchanged qq(use Foo "a", # keep me\n  "b";),
+  declined qq(use Foo "a", # keep me\n  "b";),
     "a commented argument list is left alone";
-  unchanged qq[use Foo ("a", # keep me\n  "b");],
+  declined qq[use Foo ("a", # keep me\n  "b");],
     "a comment nested in parentheses is left alone";
 };
 

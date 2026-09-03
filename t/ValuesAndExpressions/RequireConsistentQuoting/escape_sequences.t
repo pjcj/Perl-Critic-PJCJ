@@ -143,12 +143,12 @@ subtest "q() with escape sequences should recommend changes" => sub {
   # So q() with escape sequences should be preserved to maintain literal meaning
 
   # Single character escapes in q()
-  bad $Policy, 'my $text = q(Line with \\n newline)', desc_double,
-    'q() with literal \n should suggest double quotes';
-  bad $Policy, 'my $text = q(Tab \\t here)', desc_double,
-    'q() with literal \t should suggest double quotes';
-  bad $Policy, 'my $text = q(Return \\r here)', desc_double,
-    'q() with literal \r should suggest double quotes';
+  bad $Policy, 'my $text = q(Line with \\n newline)', desc_single,
+    'q() with literal \n should suggest single quotes';
+  bad $Policy, 'my $text = q(Tab \\t here)', desc_single,
+    'q() with literal \t should suggest single quotes';
+  bad $Policy, 'my $text = q(Return \\r here)', desc_single,
+    'q() with literal \r should suggest single quotes';
 
   # Variable sigils in q() - these are literal backslash-dollar/at
   # Since \$ in q() is literal (two characters), it's preserved
@@ -158,16 +158,21 @@ subtest "q() with escape sequences should recommend changes" => sub {
     'q() with literal \@ should suggest single quotes';
 
   # Hex/octal escapes in q()
-  bad $Policy, 'my $hex = q(Hex \\x1b escape)', desc_double,
-    'q() with literal \x hex should suggest double quotes';
-  bad $Policy, 'my $oct = q(Octal \\033 escape)', desc_double,
-    'q() with literal \033 should suggest double quotes';
+  bad $Policy, 'my $hex = q(Hex \\x1b escape)', desc_single,
+    'q() with literal \x hex should suggest single quotes';
+  bad $Policy, 'my $oct = q(Octal \\033 escape)', desc_single,
+    'q() with literal \033 should suggest single quotes';
 
   # Control and named escapes in q()
-  bad $Policy, 'my $ctrl = q(Control \\c[ char)', desc_double,
-    'q() with literal \c should suggest double quotes';
-  bad $Policy, 'my $named = q(Named \\N{SMILEY} char)', desc_double,
-    "q() with literal \\N should suggest double quotes";
+  bad $Policy, 'my $ctrl = q(Control \\c[ char)', desc_single,
+    'q() with literal \c should suggest single quotes';
+  bad $Policy, 'my $named = q(Named \\N{SMILEY} char)', desc_single,
+    "q() with literal \\N should suggest single quotes";
+
+  good $Policy, q[my $x = q(it's a \n here)],
+    "an apostrophe alongside escapes keeps q()";
+  bad $Policy, 'my $x = q(say "hi" \\n now)', desc_single,
+    "a double quote alongside escapes still goes to single quotes";
 };
 
 subtest "qq() with escape sequences should stay qq()" => sub {
@@ -476,6 +481,19 @@ subtest "Strings with conflicting quoting requirements" => sub {
     "Double quotes with only quote and newline should stay double quotes";
   bad $Policy, 'my $minimal = "\"\t"', desc_optimal("qq()"),
     "Double quotes with escaped quote and tab should use qq()";
+};
+
+subtest "Escaped backslashes do not veto double quotes" => sub {
+  # An escaped backslash pair means the same in both quote styles
+
+  bad $Policy, q(my $path = 'a\\\\b'), desc_double,
+    "Escaped backslash before b should suggest double quotes";
+
+  bad $Policy, q(my $text = 'a\\\\nb'), desc_double,
+    "Escaped backslash before n should suggest double quotes";
+
+  good $Policy, q(my $text = 'a\\nb'),
+    "A lone backslash before n should stay single quotes";
 };
 
 done_testing;

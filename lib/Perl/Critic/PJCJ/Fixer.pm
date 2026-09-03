@@ -67,25 +67,6 @@ sub _normalised_value ($self, $elem) {
   $self->_decode_double($raw)
 }
 
-sub _balanced ($self, $content, $start, $end) {
-  my $depth = 0;
-  for my $char (split //, $content) {
-    $depth++ if $char eq $start;
-    if ($char eq $end) {
-      $depth--;
-      return 0 if $depth < 0;
-    }
-  }
-  $depth == 0
-}
-
-sub _delimit_content ($self, $content, $start, $end) {
-  return $content if $content !~ /[\Q$start$end\E]/;
-  return          if $content =~ /\\/;
-  return $content if $self->_balanced($content, $start, $end);
-  $content =~ s/([\Q$start$end\E])/\\$1/gr
-}
-
 sub _operator_replacement ($self, $elem, $op, $start, $end) {
   my $class = ref $elem;
   my $content;
@@ -107,7 +88,7 @@ sub _operator_replacement ($self, $elem, $op, $start, $end) {
     $content = $raw =~ s/\\([\Q$old_start$old_end\E])/$1/gr;
   }
 
-  $content = $self->_delimit_content($content, $start, $end);
+  $content = $self->{policy}->delimit_content($content, $start, $end);
   defined $content ? "$op$start$content$end" : undef
 }
 
@@ -259,6 +240,13 @@ sub _shift_range ($self, $lines, $delta) {
   $lines->[1] += $delta if $lines;
 }
 
+sub _warn_declined ($self, $desc, $line) {
+  my $where = $self->{file} ? " of $self->{file}" : "";
+  warn "Perl::Critic::PJCJ::Fixer: cannot apply '$desc' at line $line"
+    . "$where; the violation remains\n"
+    unless $self->{warned}{"$desc\0$line"}++;
+}
+
 sub _fix_once ($self, $source, $lines) {
   my $doc = PPI::Document->new(\$source) or return $source;
 
@@ -273,7 +261,7 @@ sub _fix_once ($self, $source, $lines) {
         ? $violation->fix
         : $self->{policy}->fix_data($violation->description);
       if ($fix) {
-        push @fixes, [$elem, $fix];
+        push @fixes, [$elem, $fix, $violation->description];
       } else {
         my $msg = $violation->description;
         warn "Perl::Critic::PJCJ::Fixer: no fix mapping for '$msg' at line "
@@ -286,9 +274,12 @@ sub _fix_once ($self, $source, $lines) {
   return $source unless @fixes;
   my $applied = 0;
   for my $entry (@fixes) {
-    my ($elem, $fix) = @$entry;
+    my ($elem, $fix, $desc) = @$entry;
     my $before = $elem->content =~ tr/\n//;
-    $applied = 1 if $self->_apply_fix($elem, $fix);
+    my $line   = $elem->line_number;
+    $self->_apply_fix($elem, $fix)
+      ? $applied = 1
+      : $self->_warn_declined($desc, $line);
     $self->_shift_range($lines, ($elem->content =~ tr/\n//) - $before);
   }
   return $source unless $applied;
@@ -310,6 +301,7 @@ sub _finish ($self, $source, $current) {
 sub fix ($self, $source, %opts) {
   my $lines   = $opts{lines} ? [$opts{lines}->@*] : undef;
   my $current = $source;
+  $self->{file}   = $opts{file};
   $self->{warned} = {};
   my %seen;
   for (1 .. $Max_passes) {
@@ -381,6 +373,12 @@ Each violation from the policy carries its own structured fix, which the fixer
 uses directly; for other violation sources it falls back to the policy's
 C<fix_data> lookup keyed on the description. A violation with no fix by either
 route is reported once on standard error and left unchanged.
+
+A fix the fixer cannot apply safely is also reported once on standard error,
+with the suggestion and line number, and the source is left unchanged. The
+C<file> option names the file in that report:
+
+  my $fixed = $fixer->fix($source, file => $path);
 
 A repeating or non-converging sequence of fixes is reported on standard
 error and the current state returned.

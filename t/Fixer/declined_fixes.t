@@ -26,6 +26,12 @@ sub fixer ($flags, $description) {
   $fixer
 }
 
+sub fix_quietly ($flags, $description, $code) {
+  my $out;
+  warnings { $out = fixer($flags, $description)->fix($code) };
+  $out
+}
+
 subtest "Class and explanation pairs the policy cannot produce" => sub {
   my @cases = (
     ["PPI::Token::Quote::Single",      desc_single,        q(my $x = 'a';)],
@@ -36,7 +42,7 @@ subtest "Class and explanation pairs the policy cannot produce" => sub {
   );
   for my $case (@cases) {
     my ($class, $expl, $code) = @$case;
-    is fixer($class, $expl)->fix($code), $code, "$class with $expl declines";
+    is fix_quietly($class, $expl, $code), $code, "$class with $expl declines";
   }
 };
 
@@ -56,54 +62,71 @@ subtest "Unmapped descriptions warn" => sub {
 };
 
 subtest "Include descriptions without matching structure" => sub {
-  is fixer("PPI::Statement::Include", desc_single)->fix('use Foo "a";'),
+  is fix_quietly("PPI::Statement::Include", desc_single, 'use Foo "a";'),
     'use Foo "a";', "a non-operator include explanation declines";
-  is fixer("PPI::Statement::Include", desc_optimal("q()"))
-    ->fix('use Foo "a";'), 'use Foo "a";',
+  is fix_quietly("PPI::Statement::Include", desc_optimal("q()"),
+    'use Foo "a";'), 'use Foo "a";',
     "a non-qw operator include explanation declines";
-  is fixer("PPI::Statement::Include", desc_use_qw)->fix("use Foo;"),
+  is fix_quietly("PPI::Statement::Include", desc_use_qw, "use Foo;"),
     "use Foo;", "a use statement without arguments declines";
-  is fixer("PPI::Statement::Include", desc_use_qw)->fix("use"), "use",
+  is fix_quietly("PPI::Statement::Include", desc_use_qw, "use"), "use",
     "a degenerate use statement passes through the fixer";
-  is fixer("PPI::Statement::Include", desc_remove_parens)->fix("use Foo;"),
+  is fix_quietly("PPI::Statement::Include", desc_remove_parens, "use Foo;"),
     "use Foo;", "a use statement without parentheses declines";
-  is fixer("PPI::Statement::Include", desc_remove_parens)->fix("use Foo ();"),
-    "use Foo;", "empty parentheses are removed with their leading space";
-  is fixer("PPI::Statement::Include", desc_remove_parens)->fix("use Foo();"),
+  is fix_quietly("PPI::Statement::Include", desc_remove_parens,
+    "use Foo ();"), "use Foo;",
+    "empty parentheses are removed with their leading space";
+  is fix_quietly("PPI::Statement::Include", desc_remove_parens, "use Foo();"),
     "use Foo;", "empty parentheses without a leading space are removed";
 };
 
 subtest "Replacements which do not preserve the value are declined" => sub {
-  is fixer("PPI::Token::Quote::Single", desc_use_qw)->fix(q(my $x = ' ';)),
+  is fix_quietly("PPI::Token::Quote::Single", desc_use_qw, q(my $x = ' ';)),
     q(my $x = ' ';), "a space cannot survive as a qw word";
 };
 
 subtest "Quote-sensitive escapes decline single-quote conversion" => sub {
   my $double = 'my $x = "\$a\FBAR";';
-  is fixer("PPI::Token::Quote::Double", desc_single)->fix($double), $double,
+  is fix_quietly("PPI::Token::Quote::Double", desc_single, $double), $double,
     "a double-quoted string with \\F is not rewritten to single quotes";
 
   my $interp = 'my $x = qq(\$a\FBAR);';
-  is fixer("PPI::Token::Quote::Interpolate", desc_single)->fix($interp),
+  is fix_quietly("PPI::Token::Quote::Interpolate", desc_single, $interp),
     $interp, "a qq string with \\F is not rewritten to single quotes";
 
   my $plain = 'my $x = "\$aBAR";';
-  is fixer("PPI::Token::Quote::Double", desc_single)->fix($plain),
+  is fix_quietly("PPI::Token::Quote::Double", desc_single, $plain),
     q(my $x = '$aBAR';), "escape-free content still converts to single quotes";
 };
 
 subtest "Interpolation-changing command fixes are declined" => sub {
   my $qx_single = q(my $out = qx'echo $$';);
-  is fixer("PPI::Token::QuoteLike::Command", desc_optimal("qx()"))
-    ->fix($qx_single), $qx_single, "qx'' keeps its non-interpolating delimiter";
+  is fix_quietly(
+    "PPI::Token::QuoteLike::Command",
+    desc_optimal("qx()"), $qx_single,
+    ),
+    $qx_single, "qx'' keeps its non-interpolating delimiter";
 
-  is fixer("PPI::Token::QuoteLike::Command", desc_optimal("qx()"))
-    ->fix('my $out = qx"echo $$";'), 'my $out = qx(echo $$);',
-    "interpolating qx is still re-delimited";
+  is fix_quietly(
+    "PPI::Token::QuoteLike::Command", desc_optimal("qx()"),
+    'my $out = qx"echo $$";',
+    ),
+    'my $out = qx(echo $$);', "interpolating qx is still re-delimited";
 
-  is fixer("PPI::Token::Quote::Single", desc_optimal("qx()"))
-    ->fix(q(my $x = 'a';)), q(my $x = 'a';),
-    "a plain string does not become an interpolating command";
+  is fix_quietly(
+    "PPI::Token::Quote::Single", desc_optimal("qx()"), q(my $x = 'a';)
+    ),
+    q(my $x = 'a';), "a plain string does not become an interpolating command";
+};
+
+subtest "Declined fixes are reported" => sub {
+  my $fixer = Perl::Critic::PJCJ::Fixer->new;
+  my $code  = 'use Foo qw[ a\( ], $v;';
+  my $out;
+  like warning { $out = $fixer->fix($code, file => "demo.pl") },
+    qr/cannot apply 'use qw\(\)' at line 1 of demo\.pl/,
+    "a declined fix is reported";
+  is $out, $code, "and the source is unchanged";
 };
 
 done_testing

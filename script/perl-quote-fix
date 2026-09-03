@@ -31,7 +31,7 @@ sub fix_in_place ($fixer, $file) {
   my $source = do { local $/ = undef; <$fh> };
   my $mode   = (stat $fh)[2] & 07777;
   close $fh or warn "Cannot close $file: $!\n";
-  my $fixed = $fixer->fix($source);
+  my $fixed = $fixer->fix($source, file => $file);
   return 1 if $fixed eq $source;
   my $error = write_atomic($file, $fixed, $mode);
   return 1 unless defined $error;
@@ -73,7 +73,7 @@ sub run_filter ($lines) {
     print $fixer->fix($source, lines => $lines);
     return;
   }
-  print $fixer->fix(read_source($_), lines => $lines) for @ARGV;
+  print $fixer->fix(read_source($_), lines => $lines, file => $_) for @ARGV;
 }
 
 sub main () {
