@@ -81,12 +81,13 @@ sub _gitattr_lookup ($self, $attr, $filename) {
   my $dir     = dirname($filename);
   my $abs_dir = File::Spec->rel2abs($dir);
   $Lookup_needed{$abs_dir} //= _lookup_needed($abs_dir);
-  return unless $Lookup_needed{$abs_dir};
+  return (1, undef) unless $Lookup_needed{$abs_dir};
 
   my $base   = basename($filename);
   my $output = eval {
-    open my $saved_err, ">&", \*STDERR or return;
-    my $quiet  = open STDERR, ">", File::Spec->devnull;
+    my $saved_err;
+    my $saved  = open $saved_err, ">&", \*STDERR;
+    my $quiet  = $saved && open STDERR, ">", File::Spec->devnull;
     my $opened = open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr,
       "--", $base;
     if ($quiet) {
@@ -99,12 +100,13 @@ sub _gitattr_lookup ($self, $attr, $filename) {
     close $fh or return;
     $result
   };
-  return unless defined $output && $output =~ /: \Q$attr\E: (.+)$/m;
+  return (0, undef) unless defined $output;
+  return (1, undef) unless $output =~ /^.*: \Q$attr\E: (.+)$/m;
 
   my $value = $1;
-  return "ignore" if $value eq "ignore";
-  return $value   if $value =~ /^\d+$/;
-  return
+  return (1, "ignore") if $value eq "ignore";
+  return (1, $value)   if $value =~ /^\d+$/;
+  (1, undef)
 }
 
 sub _get_gitattr_line_length ($self, $filename) {
@@ -114,7 +116,9 @@ sub _get_gitattr_line_length ($self, $filename) {
 
   my $key = join "\0", $attr, File::Spec->rel2abs($filename);
   return $Attr_value{$key} if exists $Attr_value{$key};
-  $Attr_value{$key} = $self->_gitattr_lookup($attr, $filename)
+  my ($ok, $value) = $self->_gitattr_lookup($attr, $filename);
+  return unless $ok;
+  $Attr_value{$key} = $value
 }
 
 sub _first_tokens_by_line ($self, $doc) {

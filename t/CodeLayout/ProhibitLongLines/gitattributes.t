@@ -7,10 +7,11 @@ use feature "signatures";
 use experimental "signatures";
 use lib qw( lib t/lib );
 
-use Cwd        qw( getcwd );
-use File::Temp qw( tempdir );
-use PPI        ();
-use Test2::V0  qw( done_testing is ok skip_all subtest );
+use Cwd            qw( abs_path getcwd );
+use File::Basename qw( dirname );
+use File::Temp     qw( tempdir );
+use PPI            ();
+use Test2::V0      qw( done_testing is ok skip_all subtest );
 
 use Perl::Critic::Policy::CodeLayout::ProhibitLongLines ();
 
@@ -221,6 +222,58 @@ sub test_stderr_suppressed () {
   ok !defined $value, "no override outside a repository";
 }
 
+sub test_lookup_without_stderr () {
+  my $dir = require_git();
+  local $ENV{GIT_CEILING_DIRECTORIES} = dirname(abs_path($dir));
+  my $path = write_perl_file($dir, "wide.t", "1;\n");
+
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
+  open my $saved, ">&", \*STDERR or die "dup: $!";
+  close STDERR or die "close: $!";
+  my $value = $policy->_get_gitattr_line_length($path);
+  open STDERR, ">&", $saved or die "restore: $!";
+
+  is $value, 200, "the override is found with STDERR closed";
+}
+
+sub test_failed_lookup_not_cached () {
+  skip_all "shim needs /bin/sh" if $^O eq "MSWin32";
+  my $dir = tempdir(CLEANUP => 1);
+  mkdir "$dir/.git" or die "mkdir: $!";
+  write_perl_file($dir, ".gitattributes", "wide.t custom-line-length=200\n");
+  my $path = write_perl_file($dir, "wide.t", "1;\n");
+  my ($failing) = setup_git_shim($dir, "");
+
+  my $good = tempdir(CLEANUP => 1);
+  my ($working) = setup_git_shim($good, "wide.t: custom-line-length: 200");
+
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
+
+  {
+    local $ENV{PATH} = $failing;
+    ok !defined $policy->_get_gitattr_line_length($path), "the lookup fails";
+  }
+  local $ENV{PATH} = $working;
+  is $policy->_get_gitattr_line_length($path), 200,
+    "a failed lookup is not cached";
+}
+
+sub test_attribute_text_in_filename () {
+  skip_all "shim needs /bin/sh" if $^O eq "MSWin32";
+  my $dir = tempdir(CLEANUP => 1);
+  mkdir "$dir/.git" or die "mkdir: $!";
+  write_perl_file($dir, ".gitattributes", "* custom-line-length=200\n");
+  my $path = write_perl_file($dir, "odd.t", "1;\n");
+  my ($bin) = setup_git_shim(
+    $dir, "a: custom-line-length: 999.t: custom-line-length: 200"
+  );
+  local $ENV{PATH} = $bin;
+
+  my $policy = Perl::Critic::Policy::CodeLayout::ProhibitLongLines->new;
+  is $policy->_get_gitattr_line_length($path), 200,
+    "the value is read from the end of the line";
+}
+
 subtest "ignore attribute suppresses violations" => \&test_ignore_attribute;
 subtest "numeric attribute overrides limit"      => \&test_numeric_attribute;
 subtest "unspecified attribute uses default"    => \&test_unspecified_attribute;
@@ -231,5 +284,8 @@ subtest "relative paths honour gitattributes" => \&test_relative_path;
 subtest "no spawn when nothing can match" => \&test_no_spawn_without_attributes;
 subtest "lookup cached per file"          => \&test_lookup_cached_per_file;
 subtest "stderr suppressed on spawn"      => \&test_stderr_suppressed;
+subtest "lookup survives a closed STDERR" => \&test_lookup_without_stderr;
+subtest "failed lookups are not cached"   => \&test_failed_lookup_not_cached;
+subtest "attribute text in the file name" => \&test_attribute_text_in_filename;
 
 done_testing;
