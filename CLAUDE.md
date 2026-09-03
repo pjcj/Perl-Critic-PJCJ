@@ -93,16 +93,17 @@ formats show. The `explanation` is a single static rationale. Tests check
 policy that provides `fix_data`, keyed on that capability rather than on a
 policy class name.
 
-Each violation is a `Perl::Critic::PJCJ::Violation` that carries its structured
+Each violation is a `Perl::Critic::PJCJ::Violation` that holds its structured
 fix (`->fix`). The Fixer reads that attached fix directly and only falls back to
 `fix_data($description)` for test doubles. A violation with no fix mapping, and
 a fix the Fixer declines to apply, are each reported once on standard error. The
-suggestion wording lives in one place: the exported constant subs `desc_double`,
-`desc_single`, `desc_use_qw`, `desc_remove_parens` and `desc_optimal($display)`,
-which tests import rather than duplicating literals. The plain fix types are
-listed once in `%Plain_fixes`, which pairs each type with its `desc_*` sub and
-fix structure. `_render_fix` and `_known_fixes` both read that table, and
-`_render_fix` dies on a type that is neither in the table nor `operator`.
+suggestion wording is kept in one place: the exported constant subs
+`desc_double`, `desc_single`, `desc_use_qw`, `desc_remove_parens` and
+`desc_optimal($display)`, which tests import rather than duplicating literals.
+The plain fix types are listed once in `%Plain_fixes`, which pairs each type
+with its `desc_*` sub and fix structure. `_render_fix` and `_known_fixes` both
+read that table, and `_render_fix` dies on a type that is neither in the table
+nor `operator`.
 
 ## Style Notes
 

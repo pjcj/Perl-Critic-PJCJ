@@ -199,7 +199,7 @@ include = RequireConsistentQuoting ProhibitLongLines
 max_line_length = 72
 ```
 
-Both policies also carry the `pjcj` theme, so `perlcritic --theme pjcj` selects
+Both policies also have the `pjcj` theme, so `perlcritic --theme pjcj` selects
 them.
 
 Then run perlcritic on your code:

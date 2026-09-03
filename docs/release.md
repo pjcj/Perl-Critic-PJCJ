@@ -22,7 +22,7 @@ From `main`, with `Changes.md` uncommitted:
 make release
 ```
 
-The command walks through the full release with confirmation checkpoints (type
+The command steps through the full release with confirmation checkpoints (type
 "yes" to proceed at each one):
 
 01. Prompts for a version bump if the version in `dist.ini` still matches the

@@ -1010,9 +1010,9 @@ This Policy is not configurable except for the standard options.
 
 =head2 desc_optimal ($display)
 
-The suggestion wording exported for tests, so the strings live in one place
+The suggestion wording exported for tests, so the strings are kept in one place
 instead of being duplicated as literals. Each returns the description a
-violation carries: C<< use "" >>, C<use ''>, C<use qw()>,
+violation holds: C<< use "" >>, C<use ''>, C<use qw()>,
 C<remove parentheses> and C<< use $display >> respectively. They are available
 via C<@EXPORT_OK>.
 
@@ -1031,7 +1031,7 @@ single place the wording of a suggestion is produced.
 
 Builds a L<Perl::Critic::PJCJ::Violation> for C<$elem> whose description is
 L<_render_fix|/"_render_fix ($fix)"> of C<$fix>, whose explanation is the
-static rationale, and which carries C<$fix> directly via C<< ->fix >>.
+static rationale, and which holds C<$fix> directly via C<< ->fix >>.
 
 =head2 supported_parameters
 
@@ -1121,7 +1121,7 @@ Maps a violation's description string to structured fix data, so that tools
 such as L<Perl::Critic::PJCJ::Fixer> can resolve a fix without a live violation
 object. The map is generated from L<_known_fixes|/"_known_fixes"> via
 L<_render_fix|/"_render_fix ($fix)">, so it cannot drift from the wording the
-policy actually emits. Violations from this policy also carry their fix
+policy actually emits. Violations from this policy also hold their fix
 directly, so this lookup is only a fallback.
 
 Returns a hashref describing the fix, or C<undef> for an unknown description:

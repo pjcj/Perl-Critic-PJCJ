@@ -369,7 +369,7 @@ Source receiving no applied fix is returned byte for byte, and a file using
 CRLF line endings throughout keeps them. A file with mixed line endings is
 normalised to LF when a fix applies.
 
-Each violation from the policy carries its own structured fix, which the fixer
+Each violation from the policy holds its own structured fix, which the fixer
 uses directly; for other violation sources it falls back to the policy's
 C<fix_data> lookup keyed on the description. A violation with no fix by either
 route is reported once on standard error and left unchanged.

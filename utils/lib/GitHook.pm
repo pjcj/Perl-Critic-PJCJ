@@ -45,7 +45,7 @@ GitHook - shared helpers for the git commit-message hooks
 
 An L<Exporter>-based module holding the git helpers shared by the
 C<commit-msg> and C<prepare-commit-msg> hooks, so the branch name and
-ticket-reference logic live in one place. Nothing is exported by default;
+ticket-reference logic are kept in one place. Nothing is exported by default;
 request each function explicitly.
 
 =head1 FUNCTIONS

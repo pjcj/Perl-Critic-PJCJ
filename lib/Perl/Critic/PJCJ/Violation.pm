@@ -28,7 +28,7 @@ __END__
 
 =head1 NAME
 
-Perl::Critic::PJCJ::Violation - a violation that carries its own fix
+Perl::Critic::PJCJ::Violation - a violation that holds its own fix
 
 =head1 SYNOPSIS
 

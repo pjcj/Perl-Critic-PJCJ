@@ -2,7 +2,7 @@
 name: release
 description: >
   Release workflow for Perl-Critic-PJCJ. Use when preparing or performing
-  a CPAN release. Both commands live in utils/run and support --dryrun.
+  a CPAN release. Both commands are in utils/run and support --dryrun.
 user_invocable: true
 ---
 
