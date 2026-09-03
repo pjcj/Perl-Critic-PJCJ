@@ -164,6 +164,39 @@ sub fix_data ($self, $description) {
   $map->{$description}
 }
 
+sub _balanced ($self, $content, $start, $end) {
+  my $depth = 0;
+  for my $char (split //, $content) {
+    $depth++ if $char eq $start;
+    if ($char eq $end) {
+      $depth--;
+      return 0 if $depth < 0;
+    }
+  }
+  $depth == 0
+}
+
+sub delimit_content ($self, $content, $start, $end) {
+  return $content if $content !~ /[\Q$start$end\E]/;
+  return $content if $self->_balanced($content, $start, $end);
+  return          if $content =~ /\\/;
+  $content =~ s/([\Q$start$end\E])/\\$1/gr
+}
+
+sub redelimit_feasible ($self, $content, $delim) {
+  defined $self->delimit_content($content, $delim->{start}, $delim->{end})
+}
+
+sub _redelimited_content ($self, $elem) {
+  my ($start, $end, $raw) = $self->parse_quote_token($elem);
+  $raw =~ s/\\([\Q$start$end\E])/$1/gr
+}
+
+sub _token_redelimit_feasible ($self, $elem, $delim) {
+  return 1 if $elem->isa("PPI::Token::Quote::Single");
+  $self->redelimit_feasible($self->_redelimited_content($elem), $delim)
+}
+
 sub check_delimiter_optimisation ($self, $elem) {
   my ($start, $end, $content, $operator) = $self->parse_quote_token($elem);
   return unless defined $start;
@@ -171,11 +204,10 @@ sub check_delimiter_optimisation ($self, $elem) {
   $operator //= "q" if $start eq "'";
   my ($optimal_delim, $current_is_optimal)
     = $self->find_optimal_delimiter($content, $operator, $start, $end);
-  return $self->_fix_violation(
-    $self->_operator_fix($operator, $optimal_delim), $elem
-  ) unless $current_is_optimal;
+  return () if $current_is_optimal;
+  return () unless $self->_token_redelimit_feasible($elem, $optimal_delim);
 
-  return
+  $self->_fix_violation($self->_operator_fix($operator, $optimal_delim), $elem)
 }
 
 sub _quote_token_complete ($self, $elem) {
@@ -390,6 +422,7 @@ sub check_double_quoted ($self, $elem) {
       if index($string, "'") == -1;
     my $value = $string =~ s/\\(.)/$1/gsr;
     my ($optimal) = $self->find_optimal_delimiter($value, "q", '"', '"');
+    return () unless $self->redelimit_feasible($value, $optimal);
     return $self->_fix_violation($self->_operator_fix("q", $optimal), $elem);
   }
 
@@ -490,11 +523,10 @@ sub check_quote_operators ($self, $elem) {
     $content, $operator, $current_start, $current_end
   );
 
-  return $self->_fix_violation(
-    $self->_operator_fix($operator, $optimal_delim), $elem
-  ) if !$current_is_optimal;
+  return () if $current_is_optimal;
+  return () unless $self->_token_redelimit_feasible($elem, $optimal_delim);
 
-  return
+  $self->_fix_violation($self->_operator_fix($operator, $optimal_delim), $elem)
 }
 
 sub statement_level_list ($self, $elem) {
@@ -1091,6 +1123,39 @@ Returns a hashref describing the fix, or C<undef> for an unknown description:
     start => "(",
     end   => ")",
   }
+
+=head2 _balanced ($content, $start, $end)
+
+Tests whether every C<$start> in C<$content> has a matching C<$end> after it,
+so the content can sit between those delimiters without escaping.
+
+=head2 delimit_content ($content, $start, $end)
+
+Returns C<$content> ready to sit between C<$start> and C<$end>, escaping the
+delimiter characters where needed, or C<undef> when that cannot be done
+safely. Content with no delimiter characters, or with balanced ones, is
+returned as is. Unbalanced content which already contains a backslash is
+refused, because adding escapes there could change the value.
+
+This method is shared with L<Perl::Critic::PJCJ::Fixer>, so the policy only
+suggests an operator rewrite the fixer can apply.
+
+=head2 redelimit_feasible ($content, $delim)
+
+Tests whether L<delimit_content|/"delimit_content ($content, $start, $end)">
+accepts C<$content> for the delimiter hashref C<$delim>.
+
+=head2 _redelimited_content ($elem)
+
+Returns the content of a quote-like token with the escapes for its current
+delimiters removed, which is the value the fixer hands to
+L<delimit_content|/"delimit_content ($content, $start, $end)">.
+
+=head2 _token_redelimit_feasible ($elem, $delim)
+
+Tests whether the fixer could rewrite C<$elem> with the delimiter hashref
+C<$delim>. A single-quoted token is always feasible, because the fixer
+re-escapes its literal value in full.
 
 =head2 check_delimiter_optimisation
 

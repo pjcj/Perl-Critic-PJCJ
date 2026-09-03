@@ -16,8 +16,8 @@ subtest "Unparsable and empty sources pass through" => sub {
 
 subtest "Line endings are preserved in accepted source" => sub {
   unchanged qq(my \$x = 1;\r\n), "clean CRLF source is byte-identical";
-  declined "my \@w = qw/( [ < { \\\\/;\r\n",
-    "CRLF source whose only fix is declined is byte-identical";
+  unchanged "my \@w = qw/( [ < { \\\\/;\r\n",
+    "CRLF source which cannot be re-delimited is byte-identical";
 };
 
 subtest "Line endings are preserved in fixed source" => sub {
@@ -37,7 +37,7 @@ subtest "Delimiters are escaped when no clean delimiter exists" => sub {
 };
 
 subtest "Unsafe fixes are declined" => sub {
-  declined 'my @w = qw/( [ < { \\\\/;',
+  unchanged 'my @w = qw/( [ < { \\\\/;',
     "content with a backslash and every delimiter is left alone";
   unchanged "use Foo 'a b';",
     "an import name containing a space cannot become a qw word";

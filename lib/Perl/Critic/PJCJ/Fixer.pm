@@ -67,25 +67,6 @@ sub _normalised_value ($self, $elem) {
   $self->_decode_double($raw)
 }
 
-sub _balanced ($self, $content, $start, $end) {
-  my $depth = 0;
-  for my $char (split //, $content) {
-    $depth++ if $char eq $start;
-    if ($char eq $end) {
-      $depth--;
-      return 0 if $depth < 0;
-    }
-  }
-  $depth == 0
-}
-
-sub _delimit_content ($self, $content, $start, $end) {
-  return $content if $content !~ /[\Q$start$end\E]/;
-  return $content if $self->_balanced($content, $start, $end);
-  return          if $content =~ /\\/;
-  $content =~ s/([\Q$start$end\E])/\\$1/gr
-}
-
 sub _operator_replacement ($self, $elem, $op, $start, $end) {
   my $class = ref $elem;
   my $content;
@@ -107,7 +88,7 @@ sub _operator_replacement ($self, $elem, $op, $start, $end) {
     $content = $raw =~ s/\\([\Q$old_start$old_end\E])/$1/gr;
   }
 
-  $content = $self->_delimit_content($content, $start, $end);
+  $content = $self->{policy}->delimit_content($content, $start, $end);
   defined $content ? "$op$start$content$end" : undef
 }
 

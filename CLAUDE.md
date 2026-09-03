@@ -52,6 +52,9 @@ Single test file: `yath test -j20 --qvf -T t/path/to/test.t`
 - `find_optimal_delimiter($content, $op, $start, $end)` - determines best
   bracket delimiter (`()` > `[]` > `<>` > `{}`), accounting for unbalanced
   content.
+- `delimit_content($content, $start, $end)` - escapes delimiter characters in
+  content or returns undef when that is unsafe. Shared with the Fixer, so the
+  policy only suggests rewrites the fixer can apply.
 - `parse_quote_token($elem)` - extracts operator, delimiters, and content from
   any quote-like token.
 

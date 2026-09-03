@@ -237,4 +237,15 @@ subtest "q() delimiter optimisation path coverage" => sub {
     "q() with double quotes and interpolation should use single quotes";
 };
 
+subtest "Infeasible re-delimiting is not suggested" => sub {
+  good $Policy, q(my $x = "it's \([<{ \\\\\\$";),
+    "a double-quoted value which cannot be re-delimited is left alone";
+  good $Policy, q(my $y = q/it's "a" \([<{ \\\\/;),
+    "a q() value which cannot be re-delimited is left alone";
+  good $Policy, 'my @w = qw/( [ < { \\\\/;',
+    "unbalanced backslash content keeps its delimiter";
+  bad $Policy, q(my $a = 'it\\'s "x" \([<{ \\\\';), desc_optimal("q()"),
+    "a single-quoted token is always re-encodable, so it is still flagged";
+};
+
 done_testing;
