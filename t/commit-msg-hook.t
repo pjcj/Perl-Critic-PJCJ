@@ -132,4 +132,13 @@ subtest "A ticket branch still demands a ticket" => sub {
   is $exit, 1, "the commit is rejected";
 };
 
+subtest "Body line numbers count the comment lines" => sub {
+  my $long = "x" x 98;
+  my ($out, $exit)
+    = run_hook("Improve the widget\n\nTicket GH-1234\n# a comment\n$long\n");
+  like $out, qr/Line 5 is longer than 72 characters/,
+    "the reported number matches the file";
+  is $exit, 1, "the commit is rejected";
+};
+
 done_testing
