@@ -57,6 +57,10 @@ repos:
       # Shell/bash scripts, detected by type and shebang
       - id: shellcheck
         args: [ -a ]
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.13.1-1
+    hooks:
       - id: shfmt
         args: [ -w, -i, "2", -s, -d ]
 
