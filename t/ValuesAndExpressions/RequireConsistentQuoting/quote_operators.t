@@ -173,7 +173,7 @@ subtest "Additional q() operator coverage tests" => sub {
   bad $Policy, 'my $x = q(user@domain.com "needs" quoting)', desc_single,
     'q() with @ and double quotes should suggest single quotes';
 
-  # Try case that might have interpolation issues with complex content
+  # Try case that might have interpolation problems with complex content
   bad $Policy, 'my $x = q(complex@email.com with "embedded quotes" text)',
     desc_single, 'q() with @ and double quotes should suggest single quotes';
 
