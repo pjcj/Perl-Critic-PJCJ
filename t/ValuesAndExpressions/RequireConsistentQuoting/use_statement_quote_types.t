@@ -88,8 +88,8 @@ subtest "'no' statement argument rules" => sub {
   # Interpolation should prevent qw() suggestion
   good $Policy, 'no warnings "$x/d1", "$x/d2"',
     "double quotes with interpolation should not suggest qw()";
-  good $Policy, q(no warnings '$x/d1', '$x/d2'),
-    'single quotes with \$ characters should not suggest qw()';
+  bad $Policy, q(no warnings '$x/d1', '$x/d2'), desc_use_qw,
+    "single quotes never interpolate, so qw() passes the same words";
 
   # Mixed case - interpolation prevents qw() suggestion
   good $Policy, 'no warnings "$x/d1", "static"',
@@ -272,10 +272,9 @@ subtest "Use statements with interpolation should not suggest qw()" => sub {
   good $Policy, 'use lib ( "$HOME/perl" );',
     "single interpolating pragma argument in parens is exempt";
 
-  # Single quotes with $ or @ should not suggest qw() because it would change
-  # meaning
-  good $Policy, q(use lib '$x/d1', '$x/d2'),
-    'single quotes with \$ characters should not suggest qw()';
+  # Single quotes never interpolate, so qw() passes the same words
+  bad $Policy, q(use lib '$x/d1', '$x/d2'), desc_use_qw,
+    "single-quoted sigils still merge into qw()";
 
   # Mixed case - interpolation in one, not in other
   # The non-interpolating string should follow normal rules

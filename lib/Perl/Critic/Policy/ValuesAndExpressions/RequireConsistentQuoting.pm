@@ -296,7 +296,10 @@ sub _is_pragma ($self, $elem) {
 
 sub _any_arg_interpolates ($self, @args) {
   for my $arg (@args) {
-    next if $arg->isa("PPI::Token::QuoteLike::Words");
+    next
+      if $arg->isa("PPI::Token::QuoteLike::Words")
+      || $arg->isa("PPI::Token::Quote::Single")
+      || $arg->isa("PPI::Token::Quote::Literal");
     next unless $arg->can("string");
     return 1 if $self->would_interpolate($arg->string);
   }
@@ -1195,10 +1198,12 @@ ensuring all argument types are properly identified for rule enforcement.
 =head2 _any_arg_interpolates
 
 Checks whether any string argument in a list would interpolate if placed in
-double quotes. Used by both C<check_use_statement> and C<_is_in_use_statement>
-to determine whether a use/no statement's arguments require interpolation,
-which affects whether C<qw()> can be suggested and whether individual tokens
-should be checked under normal quoting rules.
+double quotes. C<qw()>, C<''> and C<q()> arguments are skipped, because none of
+them interpolates and C<qw()> passes their values unchanged. Used by both
+C<check_use_statement> and C<_is_in_use_statement> to determine whether a use/no
+statement's arguments require interpolation, which affects whether C<qw()> can
+be suggested and whether individual tokens should be checked under normal
+quoting rules.
 
 =head2 violates
 
