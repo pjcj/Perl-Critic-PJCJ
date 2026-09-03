@@ -33,6 +33,13 @@ my $Fix_single        = { type => "single" };
 my $Fix_remove_parens = { type => "remove_parens" };
 my $Fix_use_qw = { type => "operator", op => "qw", start => "(", end => ")" };
 
+my %Plain_fixes = (
+  double        => { desc => \&desc_double, fix => $Fix_double },
+  single        => { desc => \&desc_single, fix => $Fix_single },
+  remove_parens =>
+    { desc => \&desc_remove_parens, fix => $Fix_remove_parens },
+);
+
 my %Interpolating = map { $_ => 1 } qw(
   PPI::Token::Quote::Double
   PPI::Token::Quote::Interpolate
@@ -48,10 +55,10 @@ sub _operator_fix ($self, $op, $delim) { {
 
 sub _render_fix ($self, $fix) {
   my $type = $fix->{type};
-  return desc_double        if $type eq "double";
-  return desc_single        if $type eq "single";
-  return desc_remove_parens if $type eq "remove_parens";
-  desc_optimal("$fix->{op}$fix->{start}$fix->{end}")
+  return $Plain_fixes{$type}{desc}->() if $Plain_fixes{$type};
+  return desc_optimal("$fix->{op}$fix->{start}$fix->{end}")
+    if $type eq "operator";
+  die "unknown fix type '$type'"
 }
 
 sub _fix_violation ($self, $fix, $elem) {
@@ -147,7 +154,7 @@ sub find_optimal_delimiter ($self, $content, $operator, $start, $end) {
 }
 
 sub _known_fixes ($self) {
-  my @fixes = ($Fix_double, $Fix_single, $Fix_remove_parens);
+  my @fixes = map $Plain_fixes{$_}{fix}, sort keys %Plain_fixes;
   for my $op (qw( q qq qw qx )) {
     push @fixes, map $self->_operator_fix($op, $_),
       $self->_get_supported_delimiters($op);

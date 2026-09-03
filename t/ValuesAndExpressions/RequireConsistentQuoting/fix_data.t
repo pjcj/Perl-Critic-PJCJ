@@ -4,7 +4,7 @@ use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is ok subtest );
+use Test2::V0    qw( dies done_testing is like ok subtest );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
@@ -52,6 +52,11 @@ subtest "Operator explanations" => sub {
 subtest "Unknown explanations" => sub {
   is $Policy->fix_data("use say"), undef,
     "an unknown explanation returns undef";
+};
+
+subtest "Unknown fix types are a hard error" => sub {
+  like dies { $Policy->_render_fix({ type => "bogus" }) },
+    qr/unknown fix type 'bogus'/, "rendering an unknown fix type dies";
 };
 
 my @Snippets = (
