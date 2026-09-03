@@ -383,7 +383,7 @@ recipe_release() {
 run_recipe() {
   local fn="recipe_$recipe"
   if declare -F "$fn" >/dev/null 2>&1; then
-    "$fn" "${args[@]:-}"
+    "$fn" "${args[@]}"
   else
     pf "Unknown recipe: $recipe"
   fi
@@ -394,7 +394,7 @@ main() {
   ((verbose)) && pi "Running $recipe ${args[*]:-}"
   ((verbose)) && pi "Logging to $LOG_FILE"
   [[ -z ${recipe:-} ]] && pf "Missing recipe"
-  run_recipe "${args[@]:-}"
+  run_recipe
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
