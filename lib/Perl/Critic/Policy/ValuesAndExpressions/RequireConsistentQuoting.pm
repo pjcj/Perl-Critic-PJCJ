@@ -659,9 +659,11 @@ sub check_use_statement ($self, $elem) {
   # Pragmas with a single argument allow quotes
   return () if @args == 1 && $self->_is_pragma($elem);
 
+  my $interpolates = $self->_any_arg_interpolates(@args);
+
   # Rule 1: qw() without parens should use qw()
   return $self->_fix_violation($Fix_use_qw, $elem)
-    if $has_qw && !$qw_uses_parens;
+    if $has_qw && !$qw_uses_parens && !$interpolates;
 
   # Rules 2, 3: fat comma or complex expressions should have no parentheses
   if ($has_fat_comma || $has_complex_expr) {
@@ -670,7 +672,7 @@ sub check_use_statement ($self, $elem) {
   }
 
   # If interpolation is needed, don't suggest qw() - let normal rules apply
-  return () if $self->_any_arg_interpolates(@args);
+  return () if $interpolates;
 
   # Rule 1: string arguments, with or without qw(), should be qw() alone
   return $self->_use_qw_violation($elem, @args)

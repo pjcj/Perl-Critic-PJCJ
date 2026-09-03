@@ -296,6 +296,13 @@ subtest "Use statements with interpolation should not suggest qw()" => sub {
     "qq{} should suggest double quotes per normal rules";
 };
 
+subtest "Interpolation leaves the delimiter fix to the qw token" => sub {
+  bad $Policy, 'use Foo "$x", qw[y];', desc_use_qw,
+    "an interpolating argument leaves one report, from the qw token";
+  bad $Policy, 'use Foo ("$x", key => "v");', desc_remove_parens,
+    "a fat comma list still reports its parentheses";
+};
+
 subtest "Simple strings in parentheses should use qw()" => sub {
   # These were previously good but should now be bad
   bad $Policy, 'use Foo ("arg1", "arg2")', desc_use_qw,
