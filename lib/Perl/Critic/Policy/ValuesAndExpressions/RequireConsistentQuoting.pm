@@ -230,7 +230,8 @@ sub _quote_token_complete ($self, $elem) {
 }
 
 sub has_quote_sensitive_escapes ($self, $string) {
-  $string =~ /
+  (my $cleaned = $string) =~ s/\\\\//g;
+  $cleaned =~ /
     \\(?:
       [tnrfbae]           |  # Single char escapes: \t \n \r \f \b \a \e
       x[0-9a-fA-F]*       |  # Hex escapes: \x1b \xff

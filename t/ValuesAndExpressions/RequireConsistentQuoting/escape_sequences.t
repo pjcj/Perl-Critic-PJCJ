@@ -483,4 +483,17 @@ subtest "Strings with conflicting quoting requirements" => sub {
     "Double quotes with escaped quote and tab should use qq()";
 };
 
+subtest "Escaped backslashes do not veto double quotes" => sub {
+  # An escaped backslash pair means the same in both quote styles
+
+  bad $Policy, q(my $path = 'a\\\\b'), desc_double,
+    "Escaped backslash before b should suggest double quotes";
+
+  bad $Policy, q(my $text = 'a\\\\nb'), desc_double,
+    "Escaped backslash before n should suggest double quotes";
+
+  good $Policy, q(my $text = 'a\\nb'),
+    "A lone backslash before n should stay single quotes";
+};
+
 done_testing;
