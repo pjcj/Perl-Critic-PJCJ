@@ -15,8 +15,6 @@ use File::Basename qw( dirname );
 use lib dirname(abs_path(__FILE__)) . "/lib";
 use GitHook qw( get_current_branch ticket_re );
 
-my $Version = "1.00";
-
 $|++;
 binmode STDOUT, ":encoding(UTF-8)";
 
