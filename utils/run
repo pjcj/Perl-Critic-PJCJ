@@ -33,13 +33,9 @@ $script --help
 $script --verbose --dryrun release-ticket
 $script --dryrun release
 $script release
+$script options  # list flags and recipes for shell completion
 EOT
   exit 0
-}
-
-cleanup() {
-  declare -r res=$?
-  exit "$res"
 }
 
 parse_options() {
@@ -83,7 +79,8 @@ setup() {
   readl=readlink
   if command -v greadlink >&/dev/null; then readl=greadlink; fi
   srcdir=$("$readl" -f "$(dirname "$0")")
-  readonly LOG_FILE="/tmp/$script.log"
+  readonly LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/perl-critic-pjcj"
+  readonly LOG_FILE="$LOG_DIR/$script.log"
 
   PATH="$srcdir:$PATH"
 
@@ -93,6 +90,7 @@ setup() {
   args=()
 
   parse_options "$@"
+  mkdir -p "$LOG_DIR"
 }
 
 setup_hooks() {
@@ -100,14 +98,6 @@ setup_hooks() {
     pi "No .git/hooks directory - skipping hook setup"
     return 0
   fi
-  for hook in commit-msg prepare-commit-msg; do
-    for link in ".git/hooks/$hook" ".git/hooks/$hook.legacy"; do
-      if [[ -L $link && $(readlink "$link") == *"utils/${hook}-hook" ]]; then
-        rm "$link"
-        pi "Removed legacy $hook symlink"
-      fi
-    done
-  done
   if command -v pre-commit >/dev/null 2>&1; then
     pre-commit install --install-hooks
   else
@@ -123,6 +113,7 @@ recipe_setup() {
 
 confirm() {
   local description="$1"
+  local prompt="${2:-Continue? [yes/NO] }"
   if ((dryrun)); then
     pi "[dry run] would: $description"
     return 0
@@ -130,7 +121,7 @@ confirm() {
   echo ""
   pi "About to: $description"
   local answer
-  read -rp "Continue? [yes/NO] " answer
+  read -rp "$prompt" answer
   if [[ ${answer,,} != "yes" && ${answer,,} != "y" ]]; then
     pf "Aborted"
   fi
@@ -314,7 +305,10 @@ release() {
   local next_content
   next_content=$(
     perl -0777 -nE '
-      if (/\{\{\$NEXT\}\}\n\n(.+?)(?=\n##|\z)/s) { say $1; exit }
+      if (/^\{\{\$NEXT\}\}\n(.*?)(?=^## |\z)/ms) {
+        my $body = $1;
+        say $body if $body =~ /\S/;
+      }
     ' Changes.md
   )
   if [[ -z $next_content ]]; then
@@ -331,15 +325,7 @@ release() {
   echo ""
   pi "PR ready for review: $release_pr_url"
   pi "Review the PR, then continue to merge and release."
-  if ((dryrun)); then
-    pi "[dry run] skipping PR review pause"
-  else
-    local answer
-    read -rp "Continue after PR review? [yes/NO] " answer
-    if [[ ${answer,,} != "yes" && ${answer,,} != "y" ]]; then
-      pf "Aborted"
-    fi
-  fi
+  confirm "continue past PR review" "Continue after PR review? [yes/NO] "
 
   # Step 7: Merge PR
   confirm "merge PR"
@@ -378,7 +364,7 @@ recipe_release() {
 run_recipe() {
   local fn="recipe_$recipe"
   if declare -F "$fn" >/dev/null 2>&1; then
-    "$fn" "${args[@]:-}"
+    "$fn" "${args[@]}"
   else
     pf "Unknown recipe: $recipe"
   fi
@@ -387,11 +373,11 @@ run_recipe() {
 main() {
   setup "$@"
   ((verbose)) && pi "Running $recipe ${args[*]:-}"
+  ((verbose)) && pi "Logging to $LOG_FILE"
   [[ -z ${recipe:-} ]] && pf "Missing recipe"
-  run_recipe "${args[@]:-}"
+  run_recipe
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
-  trap cleanup EXIT INT
   main "$@"
 fi
