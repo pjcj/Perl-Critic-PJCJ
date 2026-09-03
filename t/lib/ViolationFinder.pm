@@ -9,12 +9,12 @@ use experimental "signatures";
 use Exporter   qw( import );
 use List::Util qw( any );
 use PPI        ();
-use Test2::V0  qw( diag fail is like );
+use Test2::V0  qw( diag fail is like warnings );
 
 use Perl::Critic::PJCJ::Fixer ();
 
 our @EXPORT_OK = qw( find_violations count_violations good bad fixes
-  unchanged );
+  unchanged declined );
 
 my $Fixer = Perl::Critic::PJCJ::Fixer->new;
 
@@ -82,6 +82,13 @@ sub fixes ($in, $out, $desc) {
 
 sub unchanged ($in, $desc) {
   is $Fixer->fix($in), $in, $desc;
+}
+
+sub declined ($in, $desc) {
+  my $out;
+  my $w = warnings { $out = $Fixer->fix($in) };
+  like "@$w", qr/cannot apply/, "$desc - decline is reported";
+  is $out, $in, $desc;
 }
 
 "
@@ -217,6 +224,13 @@ Tests that L<Perl::Critic::PJCJ::Fixer> rewrites C<$code> to C<$expected>.
   unchanged $code, $description;
 
 Tests that L<Perl::Critic::PJCJ::Fixer> leaves C<$code> unchanged.
+
+=head2 declined
+
+  declined $code, $description;
+
+Tests that L<Perl::Critic::PJCJ::Fixer> leaves C<$code> unchanged and reports
+the fix it could not apply.
 
 =head1 AUTHOR
 
