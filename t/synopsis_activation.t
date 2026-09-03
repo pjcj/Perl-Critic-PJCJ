@@ -52,7 +52,13 @@ subtest "SYNOPSIS include line activates both policies" => sub {
 };
 
 subtest "pjcj theme selects exactly the two policies" => sub {
-  my $critic   = Perl::Critic->new(-theme => "pjcj", -severity => 1);
+  my ($fh, $foreign) = tempfile(UNLINK => 1);
+  print $fh "exclude = ProhibitLongLines\n";
+  close $fh or die "Cannot close $foreign: $!";
+  local $ENV{PERLCRITIC} = $foreign;
+
+  my $critic
+    = Perl::Critic->new(-theme => "pjcj", -severity => 1, -profile => "");
   my @policies = sort map ref, $critic->policies;
   is \@policies, [sort $Long_lines_policy, $Quoting_policy],
     "theme pjcj selects both policies and nothing else";
