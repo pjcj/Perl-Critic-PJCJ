@@ -116,7 +116,7 @@ sub check_subject ($l, $ticket_branch, $merge, $skip) {
   push @Errors, ["Line 1 does not start with an expected character", $l]
     if $start !~ /\w/;
   push @Errors, ["Line 1 does not start with a capital letter", $l]
-    if !$skip && $start eq lc $start;
+    if !$skip && $start ne uc $start;
   my $verb = $l =~ $Blocklist ? "does" : $l =~ /^\w+ing\b/ ? "might" : "";
   push @Errors, ["Line 1 $verb not use imperative present tense", $l]
     if !$skip && $verb;

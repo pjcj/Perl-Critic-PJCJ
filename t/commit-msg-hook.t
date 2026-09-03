@@ -141,4 +141,22 @@ subtest "Body line numbers count the comment lines" => sub {
   is $exit, 1, "the commit is rejected";
 };
 
+subtest "A subject may start with a digit or an underscore" => sub {
+  my ($out, $exit)
+    = run_hook("2x speedup for the parser\n\nTicket GH-1234\n");
+  is $out,  "", "a digit start is accepted";
+  is $exit, 0,  "the commit is accepted";
+
+  ($out, $exit) = run_hook("_internal rework\n\nTicket GH-1234\n");
+  is $out,  "", "an underscore start is accepted";
+  is $exit, 0,  "the commit is accepted";
+};
+
+subtest "A lower case subject is still rejected" => sub {
+  my ($out, $exit) = run_hook("improve the widget\n\nTicket GH-1234\n");
+  like $out, qr/does not start with a capital letter/,
+    "the lower case start is reported";
+  is $exit, 1, "the commit is rejected";
+};
+
 done_testing
