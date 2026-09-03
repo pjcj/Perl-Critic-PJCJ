@@ -16,8 +16,9 @@ Always use the `development` and `perl` skills when working on this codebase.
 
 Run these after every change:
 
-- **Format**: `make format` (runs perlimports + perltidy; always run before
-  other formatting)
+- **Format**: `make format` (runs `utils/perl-hook fix`, which backs up each
+  tracked Perl file to `tmp/perltidy/` and then runs perlimports,
+  `script/perl-quote-fix` and perltidy; always run before other formatting)
 - **Test**: `make test` (dzil clean + dzil test)
 - **Lint**: `make lint` (pre-commit run --all-files, includes perlcritic)
 - **Coverage**: `make cover-compilation` (statement/branch/condition report)

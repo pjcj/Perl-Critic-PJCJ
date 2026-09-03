@@ -39,20 +39,7 @@ test: zt
 	:
 
 format:
-	@mkdir -p tmp/perltidy
-	@files=$$(git ls-files -z | xargs -0 utils/perl-hook list); \
-	test -n "$$files" || exit 0; \
-	for file in $$files; do cp "$$file" "$$file.tdybak"; done; \
-	perlimports --inplace-edit --no-preserve-unused $$files 2>/dev/null \
-		|| true; \
-	perl -Ilib script/perl-quote-fix --inplace $$files || exit 1; \
-	utils/perl-hook format $$files || exit 1; \
-	for file in $$files; do \
-		if ! diff -q "$$file.tdybak" "$$file" >/dev/null 2>&1; then \
-			echo "Formatted $$file"; \
-		fi; \
-		mv "$$file.tdybak" tmp/perltidy/; \
-	done
+	@git ls-files -z | xargs -0 utils/perl-hook fix
 
 lint:
 	pre-commit run --all-files
