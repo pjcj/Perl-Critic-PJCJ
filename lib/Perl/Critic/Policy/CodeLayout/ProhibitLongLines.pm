@@ -17,9 +17,6 @@ use Perl::Critic::Utils::SourceLocation ();
 
 my $Expl = "Keep lines under the configured maximum for readability";
 
-my %Lookup_needed;  # abs dir             -> can a lookup possibly answer?
-my %Attr_value;     # "$attr\0$abs_file"  -> computed override (may be undef)
-
 sub _parse_allow_lines_matching ($self, $parameter, $config_string) {
   my $string = $config_string // $parameter->get_default_string // "";
   my @patterns;
@@ -80,13 +77,14 @@ sub _lookup_needed ($dir) {
 sub _gitattr_lookup ($self, $attr, $filename) {
   my $dir     = dirname($filename);
   my $abs_dir = File::Spec->rel2abs($dir);
-  $Lookup_needed{$abs_dir} //= _lookup_needed($abs_dir);
-  return unless $Lookup_needed{$abs_dir};
+  $self->{_lookup_needed}{$abs_dir} //= _lookup_needed($abs_dir);
+  return (1, undef) unless $self->{_lookup_needed}{$abs_dir};
 
   my $base   = basename($filename);
   my $output = eval {
-    open my $saved_err, ">&", \*STDERR or return;
-    my $quiet  = open STDERR, ">", File::Spec->devnull;
+    my $saved_err;
+    my $saved  = open $saved_err, ">&", \*STDERR;
+    my $quiet  = $saved && open STDERR, ">", File::Spec->devnull;
     my $opened = open my $fh, "-|", "git", "-C", $dir, "check-attr", $attr,
       "--", $base;
     if ($quiet) {
@@ -99,12 +97,13 @@ sub _gitattr_lookup ($self, $attr, $filename) {
     close $fh or return;
     $result
   };
-  return unless defined $output && $output =~ /: \Q$attr\E: (.+)$/m;
+  return (0, undef) unless defined $output;
+  return (1, undef) unless $output =~ /^.*: \Q$attr\E: (.+)$/m;
 
   my $value = $1;
-  return "ignore" if $value eq "ignore";
-  return $value   if $value =~ /^\d+$/;
-  return
+  return (1, "ignore") if $value eq "ignore";
+  return (1, $value)   if $value =~ /^\d+$/;
+  (1, undef)
 }
 
 sub _get_gitattr_line_length ($self, $filename) {
@@ -113,8 +112,10 @@ sub _get_gitattr_line_length ($self, $filename) {
   return unless defined $attr && length $attr;
 
   my $key = join "\0", $attr, File::Spec->rel2abs($filename);
-  return $Attr_value{$key} if exists $Attr_value{$key};
-  $Attr_value{$key} = $self->_gitattr_lookup($attr, $filename)
+  return $self->{_attr_value}{$key} if exists $self->{_attr_value}{$key};
+  my ($ok, $value) = $self->_gitattr_lookup($attr, $filename);
+  return unless $ok;
+  $self->{_attr_value}{$key} = $value
 }
 
 sub _first_tokens_by_line ($self, $doc) {
@@ -272,6 +273,9 @@ repository, or the attribute is unspecified.
 Overrides are read from C<.gitattributes> files and the repository's
 C<.git/info/attributes>. Attribute sources configured elsewhere (such as
 C<core.attributesFile>) are not consulted.
+
+Lookups are cached on the policy instance, so one run reads the attribute
+of each file once and a new run reads it afresh.
 
 =head1 EXAMPLES
 
