@@ -13,7 +13,7 @@ use Encode         ();
 use Cwd            qw( abs_path );
 use File::Basename qw( dirname );
 use lib dirname(abs_path(__FILE__)) . "/lib";
-use GitHook qw( on_main ticket_re );
+use GitHook qw( get_current_branch ticket_re );
 
 my $Version = "1.00";
 
@@ -104,14 +104,14 @@ sub check_line_endings ($msg) {
   }
 }
 
-sub check_subject ($l, $main, $merge, $skip) {
+sub check_subject ($l, $ticket_branch, $merge, $skip) {
   push @Errors, ["Line 1 is longer than 50 characters", $l]
     if !$skip && length $l > 50;
   push @Errors, ["Line 1 should not reference ticket id", $l]
     if !$skip && $l =~ /[-#]\w?(?:\d{3,})/;
   push @Errors,
     ["Merge should reference ticket rather than full branch name", $l]
-    if !$main && $merge && $l !~ /'$Ticket_re'/;
+    if $ticket_branch && $merge && $l !~ /'$Ticket_re'/;
   my $start = substr($l, 0, 1) // "";
   push @Errors, ["Line 1 does not start with an expected character", $l]
     if $start !~ /\w/;
@@ -127,20 +127,21 @@ sub check_subject ($l, $main, $merge, $skip) {
 sub check_beginning ($msg) {
   return unless @$msg;
 
-  my $main       = on_main;
-  my $l          = shift @$msg;
-  my $merge      = $l =~ /^Merge /;
-  my $autosquash = $l =~ /^(?:fixup|squash|amend)! /;
-  my $skip       = $merge || $autosquash;
+  my $branch        = get_current_branch;
+  my $ticket_branch = $branch ne "" && $branch ne "main";
+  my $l             = shift @$msg;
+  my $merge         = $l =~ /^Merge /;
+  my $autosquash    = $l =~ /^(?:fixup|squash|amend)! /;
+  my $skip          = $merge || $autosquash;
 
-  check_subject($l, $main, $merge, $skip);
+  check_subject($l, $ticket_branch, $merge, $skip);
 
   my $l2 = $msg->[0] // "";
   push @Errors, ["Line 2 is not empty", $l2] if !$skip && length $l2;
 
   my $l3 = $msg->[1] // "";
   push @Errors, ["Line 3 does not reference ticket id", $l3]
-    if !$main && !$skip && $l3 !~ /^Ticket $Ticket_re$/;
+    if $ticket_branch && !$skip && $l3 !~ /^Ticket $Ticket_re$/;
 }
 
 sub check_end ($msg) {
