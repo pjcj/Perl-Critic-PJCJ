@@ -12,6 +12,9 @@ use Cwd            qw( abs_path );
 use File::Basename qw( dirname );
 use File::Temp     qw( tempdir );
 
+use lib "t/lib";
+use TestSupport qw( git_available read_file write_file );
+
 skip_all "the prepare-commit-msg hook needs a POSIX shell" if $^O eq "MSWin32";
 
 my $Hook = abs_path("utils/prepare-commit-msg-hook");
@@ -21,9 +24,7 @@ my $N    = 0;
 sub run_hook ($bytes, $dir, @args) {
   $N++;
   my $msg = "$Work/msg$N.txt";
-  open my $fh, ">:raw", $msg or die "Cannot write $msg: $!\n";
-  print {$fh} $bytes;
-  close $fh or die "Cannot close $msg: $!\n";
+  write_file($msg, $bytes);
 
   delete local @ENV{qw( GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR )};
   local $ENV{GIT_CEILING_DIRECTORIES} = dirname(abs_path($Work));
@@ -31,18 +32,7 @@ sub run_hook ($bytes, $dir, @args) {
   my $out  = qx(cd \Q$dir\E && $^X \Q$Hook\E $args 2>&1);
   my $exit = $? >> 8;
 
-  open my $rd, "<:raw", $msg or die "Cannot read $msg: $!\n";
-  my $content = do { local $/; <$rd> }
-    // "";
-  close $rd or die "Cannot close $msg: $!\n";
-  ($content, $out, $exit)
-}
-
-sub git_available () {
-  open my $fh, "-|", "git", "--version" or return 0;
-  my $out = do { local $/ = undef; <$fh> };
-  close $fh or return 0;
-  defined $out && $out =~ /git version/
+  (read_file($msg), $out, $exit)
 }
 
 sub init_repo ($name, @setup) {

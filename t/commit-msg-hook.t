@@ -12,6 +12,9 @@ use Cwd            qw( abs_path );
 use File::Basename qw( dirname );
 use File::Temp     qw( tempdir );
 
+use lib "t/lib";
+use TestSupport qw( git_available read_file write_file );
+
 skip_all "the commit-msg hook needs POSIX process control" if $^O eq "MSWin32";
 
 use POSIX qw( setsid );
@@ -24,9 +27,7 @@ sub run_hook ($bytes, $dir = $Work) {
   $N++;
   my $msg = "$Work/msg$N.txt";
   my $out = "$Work/out$N.txt";
-  open my $fh, ">:raw", $msg or die "Cannot write $msg: $!\n";
-  print {$fh} $bytes;
-  close $fh or die "Cannot close $msg: $!\n";
+  write_file($msg, $bytes);
 
   my $pid = fork // die "Cannot fork: $!\n";
   unless ($pid) {
@@ -41,18 +42,7 @@ sub run_hook ($bytes, $dir = $Work) {
   }
   waitpid $pid, 0;
   my $exit = $? >> 8;
-  open my $rd, "<:raw", $out or die "Cannot read $out: $!\n";
-  my $output = do { local $/; <$rd> }
-    // "";
-  close $rd or die "Cannot close $out: $!\n";
-  ($output, $exit)
-}
-
-sub git_available () {
-  open my $fh, "-|", "git", "--version" or return 0;
-  my $out = do { local $/ = undef; <$fh> };
-  close $fh or return 0;
-  defined $out && $out =~ /git version/
+  (read_file($out), $exit)
 }
 
 sub init_repo ($name, @setup) {

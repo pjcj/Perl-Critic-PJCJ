@@ -12,16 +12,11 @@ use Cwd            qw( abs_path getcwd );
 use File::Basename qw( dirname );
 use File::Temp     qw( tempdir );
 
-use lib "utils/lib";
-use GitHook qw( get_current_branch on_main ticket_re );
+use lib         qw( t/lib utils/lib );
+use GitHook     qw( get_current_branch on_main ticket_re );
+use TestSupport qw( git_available write_file );
 
 my $Ticket_re = ticket_re;
-
-sub write_file ($path, $content) {
-  open my $fh, ">", $path or die "Cannot write $path: $!\n";
-  print {$fh} $content;
-  close $fh or die "Cannot close $path: $!\n";
-}
 
 sub in_dir ($dir, $code) {
   delete local @ENV{qw( GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR )};
@@ -34,13 +29,6 @@ sub in_dir ($dir, $code) {
 }
 
 sub in_temp_dir ($code) { in_dir(tempdir(CLEANUP => 1), $code) }
-
-sub git_available () {
-  open my $fh, "-|", "git", "--version" or return 0;
-  my $out = do { local $/ = undef; <$fh> };
-  close $fh or return 0;
-  defined $out && $out =~ /git version/
-}
 
 sub skip_without_git () { skip_all "git not available" unless git_available() }
 

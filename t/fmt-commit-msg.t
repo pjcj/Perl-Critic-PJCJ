@@ -4,28 +4,17 @@ use v5.26.0;
 use strict;
 use warnings;
 
-use Test2::V0    qw( done_testing is isnt skip_all subtest );
+use Test2::V0    qw( done_testing is isnt subtest );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
 use File::Temp qw( tempdir );
 
+use lib "t/lib";
+use TestSupport qw( read_file skip_on_windows write_file );
+
 my $Fmt  = "utils/fmt-commit-msg";
 my $Work = tempdir(CLEANUP => 1);
-
-sub write_file ($path, $content) {
-  open my $fh, ">", $path or die "Cannot write $path: $!\n";
-  print {$fh} $content;
-  close $fh or die "Cannot close $path: $!\n";
-}
-
-sub read_file ($path) {
-  open my $fh, "<", $path or die "Cannot read $path: $!\n";
-  local $/;
-  <$fh>
-}
-
-sub skip_on_windows ($why) { skip_all $why if $^O eq "MSWin32" }
 
 my $Body = "Improve the widget\n\nA body which is short enough to survive"
   . " a reflow unchanged.\n";

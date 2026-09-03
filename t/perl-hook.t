@@ -13,39 +13,20 @@ use File::Path qw( make_path );
 use File::Temp qw( tempdir );
 use IPC::Cmd   qw( can_run );
 
+use lib "t/lib";
+use TestSupport qw( read_file run_capture write_file );
+
 skip_all "file permissions are not enforced for root" if $> == 0;
 
 my $Hook     = "utils/perl-hook";
 my $Hook_abs = abs_path($Hook);
 
-sub write_file ($path, $content, $mode = 0644) {
-  open my $fh, ">", $path or die "Cannot write $path: $!\n";
-  print {$fh} $content;
-  close $fh or die "Cannot close $path: $!\n";
-  chmod $mode, $path or die "Cannot chmod $path: $!\n";
-}
-
-sub run_tidy (@files) {
-  my $files = join " ", map "\Q$_\E", @files;
-  my $out   = qx($^X $Hook tidy $files 2>&1);
-  ($out, $? >> 8)
-}
-
-sub run_format (@files) {
-  my $files = join " ", map "\Q$_\E", @files;
-  my $out   = qx($^X $Hook format $files 2>&1);
-  ($out, $? >> 8)
-}
+sub run_tidy   (@files) { run_capture($^X, $Hook, "tidy",   @files) }
+sub run_format (@files) { run_capture($^X, $Hook, "format", @files) }
 
 sub link_or_skip ($target, $link) {
   skip_all "symlinks are not supported here"
     unless eval { symlink $target, $link };
-}
-
-sub read_file ($path) {
-  open my $fh, "<", $path or die "Cannot read $path: $!\n";
-  local $/;
-  <$fh>
 }
 
 sub fix_dir () {
@@ -111,10 +92,13 @@ subtest "List mode prints only the Perl files" => sub {
   write_file("$Work/tool",      "#!/usr/bin/env perl\nsay 1;\n");
   write_file("$Work/shelly",    "#!/bin/sh\necho hi\n");
   write_file("$Work/notes.txt", "hello\n");
-  my $files = join " ", map "\Q$_\E", "$Work/clean.pm", "$Work/app.psgi",
-    "$Work/tool", "$Work/shelly", "$Work/notes.txt";
-  my $out = qx($^X $Hook list $files 2>&1);
-  is $? >> 8, 0, "the hook succeeds";
+  my ($out, $exit) = run_capture(
+    $^X,              $Hook,
+    "list",           "$Work/clean.pm",
+    "$Work/app.psgi", "$Work/tool",
+    "$Work/shelly",   "$Work/notes.txt",
+  );
+  is $exit, 0, "the hook succeeds";
   is $out, "$Work/clean.pm\n$Work/app.psgi\n$Work/tool\n",
     "only the Perl files are listed, in order";
 };
