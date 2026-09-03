@@ -32,6 +32,10 @@ sub parse_quote_token ($self, $elem) {
   $self->{real}->parse_quote_token($elem)
 }
 
+sub probe_quote_token ($self, $code) {
+  $self->{real}->probe_quote_token($code)
+}
+
 sub would_interpolate ($self, $string) {
   $self->{real}->would_interpolate($string)
 }
@@ -104,6 +108,10 @@ The configured description.
 Delegated to the real policy.
 
 =head2 parse_quote_token ($elem)
+
+Delegated to the real policy.
+
+=head2 probe_quote_token ($code)
 
 Delegated to the real policy.
 

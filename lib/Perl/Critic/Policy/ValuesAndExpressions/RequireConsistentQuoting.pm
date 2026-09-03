@@ -210,6 +210,15 @@ sub check_delimiter_optimisation ($self, $elem) {
   $self->_fix_violation($self->_operator_fix($operator, $optimal_delim), $elem)
 }
 
+sub probe_quote_token ($self, $code) {
+  # uncoverable branch true note:the probe code is never empty
+  my $doc = PPI::Document->new(\$code) or return;
+  my $token
+    = first { $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike") }
+    $doc->tokens;
+  ($token, $doc)
+}
+
 sub _quote_token_complete ($self, $elem) {
   # Only the final token of a document can be unterminated: the
   # tokeniser runs an unterminated quote to end of file
@@ -217,13 +226,10 @@ sub _quote_token_complete ($self, $elem) {
 
   # A terminated token reparses to itself; an unterminated one absorbs
   # the appended semicolon
-  my $code = $elem->content . ";";
+  my ($token, $doc) = $self->probe_quote_token($elem->content . ";");
 
   # uncoverable branch true note:the probe code is never empty
-  my $doc = PPI::Document->new(\$code) or return 0;
-  my $token
-    = first { $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike") }
-    $doc->tokens;
+  return 0 unless $doc;
 
   # uncoverable branch false note:the probe starts with a quote token
   $token && $token->content eq $elem->content
@@ -1061,6 +1067,16 @@ and end delimiters differ) and symmetric delimiters (where they're the same).
 
 This parsing is essential for delimiter optimisation, as it separates the
 operator, delimiters, and content for independent analysis.
+
+=head2 probe_quote_token ($code)
+
+Parses C<$code> as a document and returns the first quote or quote-like token
+in it, followed by the document. The caller must keep the document in scope
+for as long as it reads the token, because PPI empties every token of a
+document when the document is freed. Returns an empty list when the code does
+not parse. Shared with L<Perl::Critic::PJCJ::Fixer>, so the policy and the
+fixer agree about which classes count as a quote token when they probe
+source.
 
 =head2 find_optimal_delimiter
 
