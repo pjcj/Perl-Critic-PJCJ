@@ -628,25 +628,17 @@ sub _use_qw_violation ($self, $elem, @args) {
   $self->_fix_violation($Fix_use_qw, $elem)
 }
 
-sub _scan_qw ($self, $elem, $qw_ref, $qw_parens_ref) {
-  if ($elem->isa("PPI::Token::QuoteLike::Words")) {
-    $$qw_ref        = 1;
-    $$qw_parens_ref = 0 if $elem->content !~ /\Aqw\s*\(/;
+sub _any_qw_without_parens ($self, @elements) {
+  for my $el (@elements) {
+    return 1
+      if $el->isa("PPI::Token::QuoteLike::Words")
+      && $el->content !~ /\Aqw\s*\(/;
+
+    # Recurse into structures such as lists
+    return 1
+      if $el->can("children") && $self->_any_qw_without_parens($el->children);
   }
-
-  # Recursively check children (for structures like lists)
-  if ($elem->can("children")) {
-    $self->_scan_qw($_, $qw_ref, $qw_parens_ref) for $elem->children;
-  }
-}
-
-sub _summarise_use_arguments ($self, @args) {
-  my $has_qw         = 0;
-  my $qw_uses_parens = 1;
-
-  $self->_scan_qw($_, \$has_qw, \$qw_uses_parens) for @args;
-
-  ($has_qw, $qw_uses_parens)
+  0
 }
 
 sub check_use_statement ($self, $elem) {
@@ -654,8 +646,6 @@ sub check_use_statement ($self, $elem) {
   return unless $elem->type =~ /^(use|no)$/;
 
   my @args = $self->_extract_use_arguments($elem) or return;
-
-  my ($has_qw, $qw_uses_parens) = $self->_summarise_use_arguments(@args);
 
   # Check for different types of arguments
   my (
@@ -673,7 +663,7 @@ sub check_use_statement ($self, $elem) {
 
   # Rule 1: qw() without parens should use qw()
   return $self->_fix_violation($Fix_use_qw, $elem)
-    if $has_qw && !$qw_uses_parens && !$interpolates;
+    if !$interpolates && $self->_any_qw_without_parens(@args);
 
   # Rules 2, 3: fat comma or complex expressions should have no parentheses
   if ($has_fat_comma || $has_complex_expr) {
@@ -1333,11 +1323,12 @@ C<use qw()> suggestion is only emitted when this holds.
 Emits the C<use qw()> violation for a use/no statement, or nothing when the
 arguments are not qw-representable.
 
-=head2 _summarise_use_arguments
+=head2 _any_qw_without_parens
 
-Detects C<qw()> usage among use/no statement arguments and whether those
-C<qw()> operators use parentheses rather than other delimiters. This
-information drives the violation logic in C<check_use_statement>.
+Tests whether any C<qw()> operator among use/no statement arguments,
+including those nested inside lists, uses a delimiter other than
+parentheses. C<check_use_statement> reports such a statement so that it
+is rewritten as C<qw( )>.
 
 =head2 check_use_statement
 
