@@ -52,9 +52,8 @@ sub filter_conflicting_targets ($targets_content) {
         # in "install-deps"
         $line =~ s/\b$target\b(?!\-)//g;
       }
-      # Clean up extra spaces and backslashes
+      # Clean up extra spaces
       $line =~ s/ +/ /g;
-      $line =~ s/ +\\$/ \\/;
     }
 
     push @filtered_lines, $line;
