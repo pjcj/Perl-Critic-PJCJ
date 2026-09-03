@@ -8,8 +8,9 @@ use Test2::V0    qw( done_testing is like skip_all subtest unlike );
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use Cwd        qw( abs_path );
-use File::Temp qw( tempdir );
+use Cwd            qw( abs_path );
+use File::Basename qw( dirname );
+use File::Temp     qw( tempdir );
 
 skip_all "the commit-msg hook needs POSIX process control" if $^O eq "MSWin32";
 
@@ -30,6 +31,7 @@ sub run_hook ($bytes, $dir = $Work) {
   my $pid = fork // die "Cannot fork: $!\n";
   unless ($pid) {
     delete @ENV{qw( GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR )};
+    $ENV{GIT_CEILING_DIRECTORIES} = dirname(abs_path($Work));
     setsid() != -1 or die "Cannot setsid: $!\n";
     chdir $dir     or die "Cannot chdir $dir: $!\n";
     open STDIN,  "<",  "/dev/null" or die "Cannot open /dev/null: $!\n";
