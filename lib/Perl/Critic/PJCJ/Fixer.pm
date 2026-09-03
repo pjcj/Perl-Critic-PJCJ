@@ -124,7 +124,7 @@ sub _canonical ($self, $elem) {
   $self->_decode_delimiters($raw, $start, $end)
 }
 
-sub _value_preserved ($self, $elem, $new_source) {
+sub _probe_value_preserved ($self, $elem, $new_source) {
   my $code = "$new_source;";
   my ($token, $doc) = $self->{policy}->probe_quote_token($code);
 
@@ -142,6 +142,12 @@ sub _value_preserved ($self, $elem, $new_source) {
   return $self->_canonical($token) eq $self->_canonical($elem)
     if $Interpolating{ ref $token } && $Interpolating{ ref $elem };
   $self->_normalised_value($token) eq $self->_normalised_value($elem)
+}
+
+sub _value_preserved ($self, $elem, $new_source) {
+  state %cache;
+  $cache{ ref $elem }{ $elem->content }{$new_source}
+    //= $self->_probe_value_preserved($elem, $new_source)
 }
 
 sub _apply_replacement ($self, $elem, $fix) {
