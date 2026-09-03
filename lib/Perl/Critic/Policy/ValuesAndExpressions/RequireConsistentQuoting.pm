@@ -33,6 +33,12 @@ my $Fix_single        = { type => "single" };
 my $Fix_remove_parens = { type => "remove_parens" };
 my $Fix_use_qw = { type => "operator", op => "qw", start => "(", end => ")" };
 
+my %Interpolating = map { $_ => 1 } qw(
+  PPI::Token::Quote::Double
+  PPI::Token::Quote::Interpolate
+  PPI::Token::QuoteLike::Command
+);
+
 sub _operator_fix ($self, $op, $delim) { {
   type  => "operator",
   op    => $op,
@@ -514,15 +520,22 @@ sub check_qq_interpolate ($self, $elem) {
   $self->_fix_violation($Fix_double, $elem)
 }
 
+sub token_interpolates ($self, $elem) {
+  # perlop: qx interpolates "unless the delimiter is ''"
+  return 0
+    if $elem->isa("PPI::Token::QuoteLike::Command")
+    && $elem->content =~ /\Aqx\s*'/;
+  $Interpolating{ ref $elem } // 0
+}
+
 sub check_quote_operators ($self, $elem) {
   my ($current_start, $current_end, $content, $operator)
     = $self->parse_quote_token($elem);
   return unless defined $current_start;
 
-  # perlop: qx interpolates "unless the delimiter is ''". The single-quote
-  # delimiter is semantic, not stylistic, so it is exempt from the
+  # The qx'' delimiter is semantic, not stylistic, so it is exempt from the
   # delimiter rules
-  return if $operator eq "qx" && $current_start eq "'";
+  return if $operator eq "qx" && !$self->token_interpolates($elem);
 
   # Don't skip empty content - () is preferred even for empty quotes
   my ($optimal_delim, $current_is_optimal) = $self->find_optimal_delimiter(
@@ -1253,6 +1266,14 @@ delimiter choice, then determines whether simple double quotes would suffice.
 
 The policy prefers C<""> over C<qq()> when the content doesn't contain double
 quotes, as this reduces visual noise and follows common Perl conventions.
+
+=head2 token_interpolates ($elem)
+
+Returns 1 when the quote-like token C<$elem> interpolates and 0 when it does
+not. Double-quoted strings, C<qq()> and C<qx()> interpolate, except that
+perlop defines C<qx> with a single-quote delimiter as non-interpolating.
+Shared with L<Perl::Critic::PJCJ::Fixer>, so the policy and the fixer agree
+about which tokens interpolate.
 
 =head2 check_quote_operators
 

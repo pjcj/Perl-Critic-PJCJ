@@ -10,19 +10,10 @@ use List::Util qw( all any );
 use PPI        ();
 use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 
-my $Max_passes    = 10;
-my %Interpolating = map { $_ => 1 } qw(
-  PPI::Token::Quote::Double
-  PPI::Token::Quote::Interpolate
-  PPI::Token::QuoteLike::Command
-);
+my $Max_passes = 10;
 
 sub _interpolates ($self, $elem) {
-  # perlop: qx does not interpolate when its delimiter is ''
-  return 0
-    if ref $elem eq "PPI::Token::QuoteLike::Command"
-    && $elem->content =~ /\Aqx\s*'/;
-  $Interpolating{ ref $elem } // 0
+  $self->{policy}->token_interpolates($elem)
 }
 
 sub new ($class) {
@@ -140,7 +131,7 @@ sub _probe_value_preserved ($self, $elem, $new_source) {
     return $self->_canonical($token) eq $self->_canonical($elem);
   }
   return $self->_canonical($token) eq $self->_canonical($elem)
-    if $Interpolating{ ref $token } && $Interpolating{ ref $elem };
+    if $self->_interpolates($token) && $self->_interpolates($elem);
   $self->_normalised_value($token) eq $self->_normalised_value($elem)
 }
 
