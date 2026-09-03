@@ -114,6 +114,10 @@ sub parse_quote_token ($self, $elem) {
   }
 }
 
+sub decode_q_literal ($self, $raw, $start, $end) {
+  $raw =~ s/\\([\\\Q$start$end\E])/$1/gr
+}
+
 sub _get_supported_delimiters ($self, $operator) {
   state %tables;
   (
@@ -560,7 +564,7 @@ sub collect_qw_words ($self, $words, @elements) {
       push @$words, $el->literal;
     } elsif ($class eq "PPI::Token::Quote::Literal") {
       my ($start, $end, $raw) = $self->parse_quote_token($el);
-      push @$words, $raw =~ s/\\([\\\Q$start$end\E])/$1/gr;
+      push @$words, $self->decode_q_literal($raw, $start, $end);
     } elsif (
       $class eq "PPI::Token::Quote::Double"
       || $class eq "PPI::Token::Quote::Interpolate"
@@ -1067,6 +1071,14 @@ and end delimiters differ) and symmetric delimiters (where they're the same).
 
 This parsing is essential for delimiter optimisation, as it separates the
 operator, delimiters, and content for independent analysis.
+
+=head2 decode_q_literal ($raw, $start, $end)
+
+Decodes the raw content of a C<q()> literal into its value by removing the
+backslash from an escaped backslash or delimiter. PPI decodes an escaped
+delimiter that is not a quote character wrongly, so this is used in its
+place. Shared with L<Perl::Critic::PJCJ::Fixer>, so the policy and the fixer
+agree about the words of a C<use qw()> rewrite.
 
 =head2 probe_quote_token ($code)
 

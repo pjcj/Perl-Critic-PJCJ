@@ -32,6 +32,10 @@ sub parse_quote_token ($self, $elem) {
   $self->{real}->parse_quote_token($elem)
 }
 
+sub decode_q_literal ($self, $raw, $start, $end) {
+  $self->{real}->decode_q_literal($raw, $start, $end)
+}
+
 sub probe_quote_token ($self, $code) {
   $self->{real}->probe_quote_token($code)
 }
@@ -108,6 +112,10 @@ The configured description.
 Delegated to the real policy.
 
 =head2 parse_quote_token ($elem)
+
+Delegated to the real policy.
+
+=head2 decode_q_literal ($raw, $start, $end)
 
 Delegated to the real policy.
 

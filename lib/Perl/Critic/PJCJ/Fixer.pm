@@ -35,10 +35,6 @@ sub new ($class) {
 # sites guard with the policy's has_quote_sensitive_escapes predicate
 sub _decode_double ($self, $raw) { $raw =~ s/\\(.)/$1/gsr }
 
-sub _decode_q ($self, $raw, $start, $end) {
-  $raw =~ s/\\([\\\Q$start$end\E])/$1/gr
-}
-
 sub _decode_delimiters ($self, $raw, $start, $end) {
   $raw =~ s/\\(.)/$1 eq $start || $1 eq $end ? $1 : "\\$1"/gser
 }
@@ -59,7 +55,7 @@ sub _normalised_value ($self, $elem) {
   return join "\0", $elem->literal if $class eq "PPI::Token::QuoteLike::Words";
 
   my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
-  return $self->_decode_q($raw, $start, $end)
+  return $self->{policy}->decode_q_literal($raw, $start, $end)
     if $class eq "PPI::Token::Quote::Literal";
 
   # Interpolate; a Command never reaches here because _value_preserved
@@ -108,7 +104,7 @@ sub _replacement ($self, $elem, $fix) {
       && !$self->{policy}->has_quote_sensitive_escapes($elem->string);
   } elsif ($class eq "PPI::Token::Quote::Literal") {
     my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
-    my $value = $self->_decode_q($raw, $start, $end);
+    my $value = $self->{policy}->decode_q_literal($raw, $start, $end);
     return $self->_encode_double($value) if $type eq "double";
     return $self->_encode_single($value) if $type eq "single";
   } elsif ($class eq "PPI::Token::Quote::Interpolate") {
