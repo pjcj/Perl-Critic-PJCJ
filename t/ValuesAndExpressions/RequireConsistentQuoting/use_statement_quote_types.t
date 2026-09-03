@@ -223,6 +223,8 @@ subtest "Call parentheses are not statement parentheses" => sub {
     "call parentheses inside an expression are left alone";
   bad $Policy, 'use Foo 1.23 ($x)', desc_remove_parens,
     "a wrapper list after a version number is still statement-level";
+  good $Policy, 'use Foo (), $x;',
+    "an empty list before more arguments is not statement-level";
 };
 
 subtest "Expressions among use arguments are complex" => sub {

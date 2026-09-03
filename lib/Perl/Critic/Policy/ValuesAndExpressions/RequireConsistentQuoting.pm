@@ -500,8 +500,8 @@ sub check_quote_operators ($self, $elem) {
 sub statement_level_list ($self, $elem) {
   # No module means no arguments; ->arguments dies on a bare "use"
   return unless $elem->module;
-  my ($first) = $elem->arguments;
-  $first && $first->isa("PPI::Structure::List") ? $first : undef
+  my @args = $elem->arguments;
+  @args == 1 && $args[0]->isa("PPI::Structure::List") ? $args[0] : undef
 }
 
 sub _analyse_argument_types ($self, $elem, @args) {
@@ -1203,9 +1203,12 @@ delimiters to handle unbalanced content gracefully.
 Returns the C<PPI::Structure::List> wrapping a use/no statement's whole
 argument list (the parentheses in C<use Foo ( ... );>), or C<undef> when
 there is none. A list nested inside the arguments, such as the parentheses
-of a function or method call, does not qualify. Shared with
-L<Perl::Critic::PJCJ::Fixer> so the policy and the fixer can never disagree
-about which parentheses a "remove parentheses" violation means.
+of a function or method call, does not qualify. A list followed by further
+arguments, as in C<use Foo (), $x;>, does not qualify either, because
+removing those parentheses would change the statement into a syntax error.
+Shared with L<Perl::Critic::PJCJ::Fixer> so the policy and the fixer can
+never disagree about which parentheses a "remove parentheses" violation
+means.
 
 =head2 _analyse_argument_types
 

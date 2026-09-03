@@ -74,6 +74,7 @@ subtest "Parentheses are removed" => sub {
     "fat comma arguments lose parentheses";
   fixes 'use Quux ( $VERSION );', 'use Quux $VERSION;',
     "complex expressions lose parentheses";
+  unchanged 'use Foo (), $x;', "an empty leading list is not removed";
 };
 
 subtest "Call parentheses are left alone" => sub {
