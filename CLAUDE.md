@@ -97,7 +97,10 @@ fix (`->fix`). The Fixer reads that attached fix directly and only falls back to
 a fix the Fixer declines to apply, are each reported once on standard error. The
 suggestion wording lives in one place: the exported constant subs `desc_double`,
 `desc_single`, `desc_use_qw`, `desc_remove_parens` and `desc_optimal($display)`,
-which tests import rather than duplicating literals.
+which tests import rather than duplicating literals. The plain fix types are
+listed once in `%Plain_fixes`, which pairs each type with its `desc_*` sub and
+fix structure. `_render_fix` and `_known_fixes` both read that table, and
+`_render_fix` dies on a type that is neither in the table nor `operator`.
 
 ## Style Notes
 

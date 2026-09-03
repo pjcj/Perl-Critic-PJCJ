@@ -40,6 +40,10 @@ sub probe_quote_token ($self, $code) {
   $self->{real}->probe_quote_token($code)
 }
 
+sub token_interpolates ($self, $elem) {
+  $self->{real}->token_interpolates($elem)
+}
+
 sub would_interpolate ($self, $string) {
   $self->{real}->would_interpolate($string)
 }
@@ -133,6 +137,10 @@ Delegated to the real policy.
 Delegated to the real policy.
 
 =head2 probe_quote_token ($code)
+
+Delegated to the real policy.
+
+=head2 token_interpolates ($elem)
 
 Delegated to the real policy.
 
