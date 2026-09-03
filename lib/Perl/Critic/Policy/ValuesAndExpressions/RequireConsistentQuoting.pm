@@ -10,6 +10,7 @@ use parent qw( Perl::Critic::Policy );
 
 use Exporter            qw( import );
 use List::Util          qw( all any first );
+use PPI                 ();
 use Perl::Critic::Utils qw( $SEVERITY_MEDIUM );
 use Scalar::Util        qw( refaddr weaken );
 
@@ -73,25 +74,10 @@ sub applies_to ($self) {
 }
 
 sub would_interpolate ($self, $string) {
-  # This is the authoritative way to check - let PPI decide
-  state %cache;
-  return $cache{$string} if exists $cache{$string};
-
-  # Neutralise embedded double quotes so wrapping in "..." is valid PPI
-  my $safe         = $string =~ s/"/ /gr;
-  my $test_content = qq("$safe");
-  my $test_doc     = PPI::Document->new(\$test_content);
-
-  my $would_interpolate = 0;
-  $test_doc->find(
-    sub ($top, $test_elem) {
-      $would_interpolate = $test_elem->interpolations
-        if $test_elem->isa("PPI::Token::Quote::Double");
-      0
-    }
-  );
-
-  $cache{$string} = $would_interpolate
+  # Neutralise embedded double quotes so the probe content is one "..."
+  # token; PPI's interpolations method is the authority
+  my $safe = $string =~ s/"/ /gr;
+  PPI::Token::Quote::Double->new(qq("$safe"))->interpolations
 }
 
 sub escape_single_quoted ($self, $string) {
@@ -112,6 +98,10 @@ sub parse_quote_token ($self, $elem) {
     my ($op, $start_delim, $str, $end_delim) = ($1, $2, $3, $4);
     ($start_delim, $end_delim, $str, $op)
   }
+}
+
+sub decode_q_literal ($self, $raw, $start, $end) {
+  $raw =~ s/\\([\\\Q$start$end\E])/$1/gr
 }
 
 sub _get_supported_delimiters ($self, $operator) {
@@ -210,6 +200,15 @@ sub check_delimiter_optimisation ($self, $elem) {
   $self->_fix_violation($self->_operator_fix($operator, $optimal_delim), $elem)
 }
 
+sub probe_quote_token ($self, $code) {
+  # uncoverable branch true note:the probe code is never empty
+  my $doc = PPI::Document->new(\$code) or return;
+  my $token
+    = first { $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike") }
+    $doc->tokens;
+  ($token, $doc)
+}
+
 sub _quote_token_complete ($self, $elem) {
   # Only the final token of a document can be unterminated: the
   # tokeniser runs an unterminated quote to end of file
@@ -217,13 +216,10 @@ sub _quote_token_complete ($self, $elem) {
 
   # A terminated token reparses to itself; an unterminated one absorbs
   # the appended semicolon
-  my $code = $elem->content . ";";
+  my ($token, $doc) = $self->probe_quote_token($elem->content . ";");
 
   # uncoverable branch true note:the probe code is never empty
-  my $doc = PPI::Document->new(\$code) or return 0;
-  my $token
-    = first { $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike") }
-    $doc->tokens;
+  return 0 unless $doc;
 
   # uncoverable branch false note:the probe starts with a quote token
   $token && $token->content eq $elem->content
@@ -554,7 +550,7 @@ sub collect_qw_words ($self, $words, @elements) {
       push @$words, $el->literal;
     } elsif ($class eq "PPI::Token::Quote::Literal") {
       my ($start, $end, $raw) = $self->parse_quote_token($el);
-      push @$words, $raw =~ s/\\([\\\Q$start$end\E])/$1/gr;
+      push @$words, $self->decode_q_literal($raw, $start, $end);
     } elsif (
       $class eq "PPI::Token::Quote::Double"
       || $class eq "PPI::Token::Quote::Interpolate"
@@ -1029,8 +1025,9 @@ strings that would interpolate variables should use single quotes to preserve
 literal content, while non-interpolating strings should use double quotes for
 consistency.
 
-Uses PPI's authoritative parsing to detect interpolation rather than regex
-patterns, ensuring accurate detection of complex cases like literal variables.
+Builds a C<PPI::Token::Quote::Double> probe token from the string and asks
+PPI's own C<interpolations> method, so the answer is the one PPI gives for
+real source rather than a separate regex.
 
 =head2 escape_single_quoted ($string)
 
@@ -1061,6 +1058,24 @@ and end delimiters differ) and symmetric delimiters (where they're the same).
 
 This parsing is essential for delimiter optimisation, as it separates the
 operator, delimiters, and content for independent analysis.
+
+=head2 decode_q_literal ($raw, $start, $end)
+
+Decodes the raw content of a C<q()> literal into its value by removing the
+backslash from an escaped backslash or delimiter. PPI decodes an escaped
+delimiter that is not a quote character wrongly, so this is used in its
+place. Shared with L<Perl::Critic::PJCJ::Fixer>, so the policy and the fixer
+agree about the words of a C<use qw()> rewrite.
+
+=head2 probe_quote_token ($code)
+
+Parses C<$code> as a document and returns the first quote or quote-like token
+in it, followed by the document. The caller must keep the document in scope
+for as long as it reads the token, because PPI empties every token of a
+document when the document is freed. Returns an empty list when the code does
+not parse. Shared with L<Perl::Critic::PJCJ::Fixer>, so the policy and the
+fixer agree about which classes count as a quote token when they probe
+source.
 
 =head2 find_optimal_delimiter
 

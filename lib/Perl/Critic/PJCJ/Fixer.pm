@@ -6,7 +6,7 @@ use warnings;
 use feature      qw( signatures );
 use experimental qw( signatures );
 
-use List::Util qw( all any first );
+use List::Util qw( all any );
 use PPI        ();
 use Perl::Critic::Policy::ValuesAndExpressions::RequireConsistentQuoting ();
 
@@ -35,10 +35,6 @@ sub new ($class) {
 # sites guard with the policy's has_quote_sensitive_escapes predicate
 sub _decode_double ($self, $raw) { $raw =~ s/\\(.)/$1/gsr }
 
-sub _decode_q ($self, $raw, $start, $end) {
-  $raw =~ s/\\([\\\Q$start$end\E])/$1/gr
-}
-
 sub _decode_delimiters ($self, $raw, $start, $end) {
   $raw =~ s/\\(.)/$1 eq $start || $1 eq $end ? $1 : "\\$1"/gser
 }
@@ -59,7 +55,7 @@ sub _normalised_value ($self, $elem) {
   return join "\0", $elem->literal if $class eq "PPI::Token::QuoteLike::Words";
 
   my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
-  return $self->_decode_q($raw, $start, $end)
+  return $self->{policy}->decode_q_literal($raw, $start, $end)
     if $class eq "PPI::Token::Quote::Literal";
 
   # Interpolate; a Command never reaches here because _value_preserved
@@ -108,7 +104,7 @@ sub _replacement ($self, $elem, $fix) {
       && !$self->{policy}->has_quote_sensitive_escapes($elem->string);
   } elsif ($class eq "PPI::Token::Quote::Literal") {
     my ($start, $end, $raw) = $self->{policy}->parse_quote_token($elem);
-    my $value = $self->_decode_q($raw, $start, $end);
+    my $value = $self->{policy}->decode_q_literal($raw, $start, $end);
     return $self->_encode_double($value) if $type eq "double";
     return $self->_encode_single($value) if $type eq "single";
   } elsif ($class eq "PPI::Token::Quote::Interpolate") {
@@ -128,14 +124,9 @@ sub _canonical ($self, $elem) {
   $self->_decode_delimiters($raw, $start, $end)
 }
 
-sub _value_preserved ($self, $elem, $new_source) {
+sub _probe_value_preserved ($self, $elem, $new_source) {
   my $code = "$new_source;";
-
-  # uncoverable branch true note:code is never empty so PPI always parses
-  my $doc = PPI::Document->new(\$code) or return 0;
-  my $token
-    = first { $_->isa("PPI::Token::Quote") || $_->isa("PPI::Token::QuoteLike") }
-    $doc->tokens;
+  my ($token, $doc) = $self->{policy}->probe_quote_token($code);
 
   # uncoverable branch true
   # uncoverable condition left note:every replacement contains a quote token
@@ -151,6 +142,12 @@ sub _value_preserved ($self, $elem, $new_source) {
   return $self->_canonical($token) eq $self->_canonical($elem)
     if $Interpolating{ ref $token } && $Interpolating{ ref $elem };
   $self->_normalised_value($token) eq $self->_normalised_value($elem)
+}
+
+sub _value_preserved ($self, $elem, $new_source) {
+  state %cache;
+  $cache{ ref $elem }{ $elem->content }{$new_source}
+    //= $self->_probe_value_preserved($elem, $new_source)
 }
 
 sub _apply_replacement ($self, $elem, $fix) {
@@ -196,6 +193,20 @@ sub _span_has_comment ($self, @span) {
   } @span
 }
 
+sub _qw_replacement ($self, @words) {
+  my $source = "qw( @words )";
+  my ($token, $doc) = $self->{policy}->probe_quote_token("$source;");
+
+  # uncoverable branch true
+  # uncoverable condition left note:the probe code is never empty
+  # uncoverable condition right note:qw( ... ); always parses to one qw token
+  return unless $doc && $token->isa("PPI::Token::QuoteLike::Words");
+  my @parsed = $token->literal;
+  return unless @parsed == @words;
+  return if any { $parsed[$_] ne $words[$_] } 0 .. $#words;
+  $source
+}
+
 sub _fix_include ($self, $elem, $fix) {
   return $self->_remove_include_parens($elem)
     if $fix->{type} eq "remove_parens";
@@ -210,9 +221,12 @@ sub _fix_include ($self, $elem, $fix) {
     && $self->{policy}->collect_qw_words(\@words, @span)
     && all { $self->{policy}->qw_word_ok($_) } @words
   ) {
-    $span[0]->insert_before(PPI::Token->new("qw( @words )"));
-    $_->delete for @span;
-    return 1;
+    my $source = $self->_qw_replacement(@words);
+    if (defined $source) {
+      $span[0]->insert_before(PPI::Token->new($source));
+      $_->delete for @span;
+      return 1;
+    }
   }
 
   my $qw_tokens = $elem->find("PPI::Token::QuoteLike::Words") or return 0;

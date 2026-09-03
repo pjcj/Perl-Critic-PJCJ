@@ -32,6 +32,14 @@ sub parse_quote_token ($self, $elem) {
   $self->{real}->parse_quote_token($elem)
 }
 
+sub decode_q_literal ($self, $raw, $start, $end) {
+  $self->{real}->decode_q_literal($raw, $start, $end)
+}
+
+sub probe_quote_token ($self, $code) {
+  $self->{real}->probe_quote_token($code)
+}
+
 sub would_interpolate ($self, $string) {
   $self->{real}->would_interpolate($string)
 }
@@ -50,6 +58,17 @@ sub statement_level_list ($self, $elem) {
 
 sub delimit_content ($self, $content, $start, $end) {
   $self->{real}->delimit_content($content, $start, $end)
+}
+
+sub collect_qw_words ($self, $words, @elements) {
+  return $self->{real}->collect_qw_words($words, @elements)
+    unless $self->{words};
+  push @$words, $self->{words}->@*;
+  1
+}
+
+sub qw_word_ok ($self, $word) {
+  $self->{words} ? 1 : $self->{real}->qw_word_ok($word)
 }
 
 "
@@ -87,7 +106,9 @@ fixer down those defensive paths and assert that unsafe fixes are declined.
 Create a policy double. C<flags> is the PPI class to flag and C<description>
 is the description each violation carries. Alternatively C<flags> may be a
 hashref mapping PPI classes to descriptions, so different classes can carry
-different descriptions.
+different descriptions. C<words> is an optional arrayref of words that
+C<collect_qw_words> returns in place of the real decode, so tests can drive
+the fixer with a word list the real policy never produces.
 
 =head2 violates ($elem, $doc)
 
@@ -104,6 +125,14 @@ The configured description.
 Delegated to the real policy.
 
 =head2 parse_quote_token ($elem)
+
+Delegated to the real policy.
+
+=head2 decode_q_literal ($raw, $start, $end)
+
+Delegated to the real policy.
+
+=head2 probe_quote_token ($code)
 
 Delegated to the real policy.
 
@@ -126,6 +155,16 @@ Delegated to the real policy.
 =head2 delimit_content ($content, $start, $end)
 
 Delegated to the real policy.
+
+=head2 collect_qw_words ($words, @elements)
+
+Delegated to the real policy, unless C<words> was given to C<new>, in which
+case that fixed list is pushed onto C<$words> and true is returned.
+
+=head2 qw_word_ok ($word)
+
+Delegated to the real policy, unless C<words> was given to C<new>, in which
+case every word is accepted.
 
 =head1 AUTHOR
 
