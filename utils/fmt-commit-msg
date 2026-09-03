@@ -11,6 +11,8 @@
 #     continuation lines to align with the text after the prefix
 #   - Blank lines separate paragraphs
 #   - Don't break a line after a single-character word
+#   - Pass indented blocks through unchanged, so example code survives
+#   - Pass fenced blocks and their fences through unchanged
 #
 # Run as a git commit-msg hook (edits each file argument in place) or as a
 # filter (reads stdin, writes stdout) for use from an editor.
@@ -31,11 +33,9 @@ my $Width = 72;
 sub is_list_item ($line) { $line =~ /^\s*(?:[-*+]|\d+[.)])\s/ }
 
 sub reflow ($out, @pl) {
-  # Detect prefix: bullet/number or plain leading whitespace
+  # Detect prefix: bullet or number
   my ($prefix, $text);
   if ($pl[0] =~ /^(\s*(?:[-*+]|\d+[.)])\s+)(.*)/) {
-    ($prefix, $text) = ($1, $2);
-  } elsif ($pl[0] =~ /^(\s+)(.*)/) {
     ($prefix, $text) = ($1, $2);
   } else {
     ($prefix, $text) = ("", $pl[0]);
@@ -107,6 +107,7 @@ sub format_message (@lines) {
 
   my @para;
   my $verbatim = 0;
+  my $fenced   = 0;
 
   for my $line (@lines) {
     if ($verbatim) {
@@ -122,6 +123,19 @@ sub format_message (@lines) {
       next;
     }
 
+    # Fenced block - pass the fences and their contents through
+    if ($line =~ /^\s*(?:```|~~~)/) {
+      flush(\@out, \@para);
+      $fenced = !$fenced;
+      push @out, $line;
+      next;
+    }
+
+    if ($fenced) {
+      push @out, $line;
+      next;
+    }
+
     # Comment lines - pass through
     if ($line =~ /^#/) {
       flush(\@out, \@para);
@@ -133,6 +147,17 @@ sub format_message (@lines) {
     if ($line =~ /^\s*$/) {
       flush(\@out, \@para);
       push @out, "";
+      next;
+    }
+
+    # Indented block - verbatim unless it continues a list item
+    if (
+         $line =~ /^\s/
+      && !is_list_item($line)
+      && !(@para && is_list_item($para[0]))
+    ) {
+      flush(\@out, \@para);
+      push @out, $line;
       next;
     }
 

@@ -19,7 +19,7 @@ my $Hook = abs_path("utils/commit-msg-hook");
 my $Work = tempdir(CLEANUP => 1);
 my $N    = 0;
 
-sub run_hook ($bytes) {
+sub run_hook ($bytes, $dir = $Work) {
   $N++;
   my $msg = "$Work/msg$N.txt";
   my $out = "$Work/out$N.txt";
@@ -31,7 +31,7 @@ sub run_hook ($bytes) {
   unless ($pid) {
     delete @ENV{qw( GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR )};
     setsid() != -1 or die "Cannot setsid: $!\n";
-    chdir $Work    or die "Cannot chdir $Work: $!\n";
+    chdir $dir     or die "Cannot chdir $dir: $!\n";
     open STDIN,  "<",  "/dev/null" or die "Cannot open /dev/null: $!\n";
     open STDOUT, ">",  $out        or die "Cannot open $out: $!\n";
     open STDERR, ">&", \*STDOUT    or die "Cannot dup stdout: $!\n";
@@ -45,6 +45,27 @@ sub run_hook ($bytes) {
   close $rd or die "Cannot close $out: $!\n";
   ($output, $exit)
 }
+
+sub git_available () {
+  open my $fh, "-|", "git", "--version" or return 0;
+  my $out = do { local $/ = undef; <$fh> };
+  close $fh or return 0;
+  defined $out && $out =~ /git version/
+}
+
+sub init_repo ($name, @setup) {
+  return unless git_available();
+  local $ENV{GIT_CONFIG_GLOBAL} = "/dev/null";
+  local $ENV{GIT_CONFIG_SYSTEM} = "/dev/null";
+  my $dir = "$Work/$name";
+  return unless system("git", "init", "-q", $dir) == 0;
+  for my $step (@setup) {
+    return unless system("git", "-C", $dir, @$step) == 0;
+  }
+  $dir
+}
+
+sub skip_without ($repo) { skip_all "git not available" unless $repo }
 
 subtest "Without a terminal the hook declines cleanly" => sub {
   my ($out, $exit) = run_hook("bad subject line\n\nTicket GH-1234\n");
@@ -86,6 +107,56 @@ subtest "Subject length is counted in characters, not bytes" => sub {
   my $subject = "Improve " . "\xC3\xA9" x 42;  # 50 characters, 92 bytes
   my ($out, $exit) = run_hook("$subject\n\nTicket GH-1234\n");
   is $exit, 0, "a 50-character multibyte subject is accepted";
+};
+
+subtest "A detached HEAD does not demand a ticket" => sub {
+  my $repo = init_repo(
+    "detached", [
+      qw( -c user.email=t@t -c user.name=t commit -q --allow-empty -m Initial )
+    ],
+    [qw( checkout -q --detach )],
+  );
+  skip_without($repo);
+  my ($out, $exit) = run_hook("Improve the widget\n", $repo);
+  is $out,  "", "no error report";
+  is $exit, 0,  "the reworded message is accepted";
+};
+
+subtest "A ticket branch still demands a ticket" => sub {
+  my $repo
+    = init_repo("ticket", [qw( symbolic-ref HEAD refs/heads/GH-1234-test )]);
+  skip_without($repo);
+  my ($out, $exit) = run_hook("Improve the widget\n", $repo);
+  like $out, qr/Line 3 does not reference ticket id/,
+    "the ticket is asked for";
+  is $exit, 1, "the commit is rejected";
+};
+
+subtest "Body line numbers count the comment lines" => sub {
+  my $long = "x" x 98;
+  my ($out, $exit)
+    = run_hook("Improve the widget\n\nTicket GH-1234\n# a comment\n$long\n");
+  like $out, qr/Line 5 is longer than 72 characters/,
+    "the reported number matches the file";
+  is $exit, 1, "the commit is rejected";
+};
+
+subtest "A subject may start with a digit or an underscore" => sub {
+  my ($out, $exit)
+    = run_hook("2x speedup for the parser\n\nTicket GH-1234\n");
+  is $out,  "", "a digit start is accepted";
+  is $exit, 0,  "the commit is accepted";
+
+  ($out, $exit) = run_hook("_internal rework\n\nTicket GH-1234\n");
+  is $out,  "", "an underscore start is accepted";
+  is $exit, 0,  "the commit is accepted";
+};
+
+subtest "A lower case subject is still rejected" => sub {
+  my ($out, $exit) = run_hook("improve the widget\n\nTicket GH-1234\n");
+  like $out, qr/does not start with a capital letter/,
+    "the lower case start is reported";
+  is $exit, 1, "the commit is rejected";
 };
 
 done_testing

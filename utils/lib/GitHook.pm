@@ -11,7 +11,7 @@ our @EXPORT_OK = qw( get_current_branch on_main ticket_re );
 sub ticket_re () { qr/[A-Z]{2,8}-\d+/ }
 
 sub get_current_branch () {
-  my $branch = `git rev-parse --abbrev-ref HEAD 2>/dev/null` // "";
+  my $branch = `git symbolic-ref -q --short HEAD 2>/dev/null` // "";
   chomp $branch;
   $branch
 }
@@ -58,8 +58,9 @@ anchors or captures, so a caller can embed it in a larger match.
 
 =head2 get_current_branch
 
-Return the name of the current git branch, or the empty string if it cannot
-be determined, for example outside a repository or on a detached HEAD.
+Return the name of the current git branch. An unborn branch (one with no
+commits yet) reports its name. When there is no branch to name, for example
+on a detached HEAD or outside a repository, return the empty string.
 
 =head2 on_main
 
