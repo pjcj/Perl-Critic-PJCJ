@@ -83,7 +83,9 @@ setup() {
   readl=readlink
   if command -v greadlink >&/dev/null; then readl=greadlink; fi
   srcdir=$("$readl" -f "$(dirname "$0")")
-  readonly LOG_FILE="/tmp/$script.log"
+  readonly LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/perl-critic-pjcj"
+  mkdir -p "$LOG_DIR"
+  readonly LOG_FILE="$LOG_DIR/$script.log"
 
   PATH="$srcdir:$PATH"
 
@@ -390,6 +392,7 @@ run_recipe() {
 main() {
   setup "$@"
   ((verbose)) && pi "Running $recipe ${args[*]:-}"
+  ((verbose)) && pi "Logging to $LOG_FILE"
   [[ -z ${recipe:-} ]] && pf "Missing recipe"
   run_recipe "${args[@]:-}"
 }
