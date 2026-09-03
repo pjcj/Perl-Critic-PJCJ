@@ -58,6 +58,12 @@ Single test file: `yath test -j20 --qvf -T t/path/to/test.t`
   policy only suggests rewrites the fixer can apply.
 - `parse_quote_token($elem)` - extracts operator, delimiters, and content from
   any quote-like token.
+- `decode_q_literal($raw, $start, $end)` - decodes the raw content of a `q()`
+  literal. Shared with the Fixer, so the words the policy approves for
+  `use qw()` are the words the fixer writes.
+- `probe_quote_token($code)` - parses `$code` and returns the first quote-like
+  token with its document. Shared with the Fixer for reading source back.
+  Callers must keep the document in scope while they read the token.
 
 ### Test framework
 
