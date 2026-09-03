@@ -8,7 +8,7 @@ user_invocable: true
 
 # Release workflow for Perl-Critic-PJCJ
 
-## IMPORTANT — interactive commands
+## IMPORTANT - interactive commands
 
 `make release` and `utils/run release-ticket` are **interactive** scripts with
 multiple confirmation prompts. **Do not run them yourself.** Instead, tell the
@@ -17,10 +17,10 @@ command in their own terminal.
 
 ## Commands
 
-- **`make release`** — full release: creates a GitHub ticket, branch, PR,
+- **`make release`** - full release: creates a GitHub ticket, branch, PR,
   merges, then runs `dzil release` (CPAN upload, tag, push). Confirmation
   checkpoints before every external action.
-- **`utils/run release-ticket`** — creates only the ticket, branch, and PR. Use
+- **`utils/run release-ticket`** - creates only the ticket, branch, and PR. Use
   when you want to prepare without releasing.
 
 Both support `--dryrun` and must be run from `main` with a clean working tree
