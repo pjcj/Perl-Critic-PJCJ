@@ -99,7 +99,9 @@ setup_hooks() {
     return 0
   fi
   if command -v pre-commit >/dev/null 2>&1; then
-    pre-commit install --install-hooks
+    # pre-commit refuses to install hooks while core.hooksPath is set
+    GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0='' \
+      pre-commit install --install-hooks
   else
     pi "pre-commit not found, skipping"
     pi "  Install with: brew install pre-commit"
