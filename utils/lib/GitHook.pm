@@ -4,16 +4,18 @@ use v5.26.0;
 use warnings;
 use experimental "signatures";
 
-use Exporter qw( import );
+use Exporter   qw( import );
+use File::Spec ();
 
 our @EXPORT_OK = qw( get_current_branch on_main ticket_re );
+
+my $Null = File::Spec->devnull;
 
 sub ticket_re () { qr/[A-Z]{2,8}-\d+/ }
 
 sub get_current_branch () {
-  my $branch = `git symbolic-ref -q --short HEAD 2>/dev/null` // "";
-  chomp $branch;
-  $branch
+  my $ref = `git symbolic-ref -q HEAD 2>$Null` // "";
+  $ref =~ m|^refs/heads/(.+)| ? $1 : ""
 }
 
 sub on_main () { get_current_branch eq "main" }
@@ -58,9 +60,10 @@ anchors or captures, so a caller can embed it in a larger match.
 
 =head2 get_current_branch
 
-Return the name of the current git branch. An unborn branch (one with no
-commits yet) reports its name. When there is no branch to name, for example
-on a detached HEAD or outside a repository, return the empty string.
+Return the name of the current git branch, in full even when a tag has the
+same name. An unborn branch (one with no commits yet) reports its name. When
+there is no branch to name, for example on a detached HEAD or outside a
+repository, return the empty string.
 
 =head2 on_main
 

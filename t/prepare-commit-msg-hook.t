@@ -99,4 +99,37 @@ subtest "An unborn main gets no placeholder" => sub {
   unlike $content, qr/Ticket GH-XXXXX/, "no placeholder ticket is appended";
 };
 
+subtest "A tag named like the branch keeps the ticket" => sub {
+  my $repo = init_repo(
+    "tagged-ticket",
+    [qw( symbolic-ref HEAD refs/heads/GH-1234-test )],
+    [
+      qw( -c user.email=t@t -c user.name=t commit -q --allow-empty -m Initial )
+    ],
+    [qw( tag GH-1234-test )],
+  );
+  skip_without($repo);
+  my ($content, $out, $exit)
+    = run_hook("Improve the widget\n", $repo, "message");
+  is $exit, 0, "the hook succeeds";
+  is $content, "Improve the widget\n\nTicket GH-1234\n",
+    "the ticket comes from the branch name";
+};
+
+subtest "A tag named main gets no placeholder" => sub {
+  my $repo = init_repo(
+    "tagged-main",
+    [qw( symbolic-ref HEAD refs/heads/main )],
+    [
+      qw( -c user.email=t@t -c user.name=t commit -q --allow-empty -m Initial )
+    ],
+    [qw( tag main )],
+  );
+  skip_without($repo);
+  my ($content, $out, $exit)
+    = run_hook("Improve the widget\n", $repo, "message");
+  is $exit,    0,                      "the hook succeeds";
+  is $content, "Improve the widget\n", "the message is untouched";
+};
+
 done_testing

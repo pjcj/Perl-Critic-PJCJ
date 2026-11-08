@@ -56,6 +56,16 @@ sub detached_head () {
   (1, get_current_branch, on_main)
 }
 
+sub tagged_branch ($branch) {
+  return 0
+    unless run_git(qw( init -q ))
+    && run_git("symbolic-ref", "HEAD", "refs/heads/$branch")
+    && run_git(
+      qw( -c user.email=t@t -c user.name=t commit -q --allow-empty -m Initial ))
+    && run_git("tag", $branch);
+  (1, get_current_branch)
+}
+
 subtest "Ticket regex" => sub {
   like "GH-1234",       qr/^$Ticket_re$/, "typical ticket matches";
   like "ABCDEFGH-1",    qr/^$Ticket_re$/, "eight-letter project matches";
@@ -83,6 +93,20 @@ subtest "Branch detection on a detached HEAD" => sub {
   skip_unless($ok, "could not prepare a detached repository");
   is $branch, "", "a detached HEAD reports no branch";
   ok !$main, "not on main";
+};
+
+subtest "A tag named main does not hide the branch" => sub {
+  skip_without_git();
+  my ($ok, $branch) = in_temp_dir(sub { tagged_branch("main") });
+  skip_unless($ok, "could not prepare a tagged repository");
+  is $branch, "main", "the branch is named in full";
+};
+
+subtest "A tag named like a ticket branch does not hide it" => sub {
+  skip_without_git();
+  my ($ok, $branch) = in_temp_dir(sub { tagged_branch("GH-1234-test") });
+  skip_unless($ok, "could not prepare a tagged repository");
+  is $branch, "GH-1234-test", "the branch is named in full";
 };
 
 subtest "A symlinked hook finds the shared library" => sub {
