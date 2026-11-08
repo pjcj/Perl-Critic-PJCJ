@@ -124,6 +124,21 @@ subtest "A ticket branch still demands a ticket" => sub {
   is $exit, 1, "the commit is rejected";
 };
 
+subtest "A tag named main does not make main a ticket branch" => sub {
+  my $repo = init_repo(
+    "tagged-main",
+    [qw( symbolic-ref HEAD refs/heads/main )],
+    [
+      qw( -c user.email=t@t -c user.name=t commit -q --allow-empty -m Initial )
+    ],
+    [qw( tag main )],
+  );
+  skip_without($repo);
+  my ($out, $exit) = run_hook("Improve the widget\n", $repo);
+  is $out,  "", "no ticket is asked for";
+  is $exit, 0,  "the commit is accepted";
+};
+
 subtest "Body line numbers count the comment lines" => sub {
   my $long = "x" x 98;
   my ($out, $exit)
