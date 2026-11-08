@@ -2,6 +2,8 @@
 
 {{$NEXT}}
 
+- Make the tests pass on Windows
+
 ## v0.3.0 - 2026-07-13
 
 - Add perl-quote-fix, a stdin to stdout filter fixing RequireConsistentQuoting

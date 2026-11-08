@@ -21,13 +21,21 @@ sub make_link ($target, $link) {
   symlink $target, $link or die "Cannot symlink $link: $!\n";
 }
 
-subtest "A successful write replaces the file and keeps the mode" => sub {
+subtest "A successful write replaces the file" => sub {
   my $dir  = tempdir(CLEANUP => 1);
   my $file = "$dir/a.txt";
   write_file($file, "old\n", 0640);
   is write_atomic($file, "new\n", 0640), undef,   "no error is returned";
   is read_file($file),                   "new\n", "the content is replaced";
-  is + ((stat $file)[2] & 07777),        0640,    "the mode is preserved";
+};
+
+subtest "A successful write keeps the mode" => sub {
+  skip_on_windows "file modes are not enforced on Windows";
+  my $dir  = tempdir(CLEANUP => 1);
+  my $file = "$dir/a.txt";
+  write_file($file, "old\n", 0640);
+  is write_atomic($file, "new\n", 0640), undef, "no error is returned";
+  is + ((stat $file)[2] & 07777),        0640,  "the mode is preserved";
 };
 
 subtest "A symlink keeps pointing at its target" => sub {
